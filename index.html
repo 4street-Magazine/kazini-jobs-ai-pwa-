@@ -8,7 +8,7 @@
     <!-- PWA Metadata Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#FF5500">
-    <link rel="apple-touch-icon" href="https://placehold.co/192x192/FF5500/FFF.png?text=KAZINI">
+    <link rel="apple-touch-icon" href="icon-192.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -40,6 +40,11 @@
             --border-color: #f1f5f9;
             --border-subtle: #e2e8f0;
             --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+
+            /* Floating Action Button Theme Defaults (Light Mode) */
+            --fab-bg: #FFFFFF;
+            --fab-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+            --fab-border: 1px solid rgba(0, 0, 0, 0.08);
         }
 
         /* True Black Dark Mode */
@@ -54,6 +59,11 @@
             --border-color: #1a1a1a;
             --border-subtle: #262626;
             --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+
+            /* Dynamic FAB Overrides for Dark Mode */
+            --fab-bg: #000000;
+            --fab-shadow: 0 6px 24px rgba(0, 0, 0, 0.8), 0 0 14px rgba(255, 85, 0, 0.25);
+            --fab-border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         * {
@@ -136,16 +146,12 @@
             gap: 10px;
         }
 
-        .briefcase-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--accent-orange) 0%, #FF7733 100%);
-            border-radius: 10px;
+        .svg-logo-icon {
+            width: 34px;
+            height: 34px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            box-shadow: 0 4px 14px var(--accent-orange-glow);
         }
 
         .brand-text {
@@ -236,10 +242,34 @@
             padding: 16px;
             background: var(--bg-app);
             scroll-behavior: smooth;
+            position: relative;
         }
 
         .app-body::-webkit-scrollbar {
             display: none;
+        }
+
+        /* Floating Action Button (FAB) */
+        .fab-kazini {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: var(--fab-bg);
+            border: var(--fab-border);
+            box-shadow: var(--fab-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 30;
+            transition: all 0.3s ease;
+        }
+
+        .fab-kazini:active {
+            transform: scale(0.90);
         }
 
         /* Tab Views */
@@ -652,8 +682,13 @@
             <!-- App Logo & Theme Toggle Header -->
             <div class="app-header">
                 <div class="brand-logo">
-                    <div class="briefcase-icon">
-                        <i data-lucide="briefcase" style="width: 20px; height: 20px;"></i>
+                    <!-- SVG Logo Symbol with Briefcase + AI Spark Star -->
+                    <div class="svg-logo-icon">
+                        <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="20" y="35" width="60" height="45" rx="10" stroke="#FF5500" stroke-width="8" fill="none"/>
+                            <path d="M40 35 V25 C40 22 43 20 46 20 H54 C57 20 60 22 60 25 V35" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
+                            <path d="M80 12 Q80 22 90 22 Q80 22 80 32 Q80 22 70 22 Q80 22 80 12 Z" fill="#FF5500"/>
+                        </svg>
                     </div>
                     <div class="brand-text">Kazini <span>AI</span></div>
                 </div>
@@ -681,6 +716,15 @@
         <!-- Scrollable Body Content -->
         <div class="app-body">
             
+            <!-- Floating Action Button (FAB) -->
+            <button class="fab-kazini" aria-label="Kazini Action">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="20" y="35" width="60" height="45" rx="10" stroke="#FF5500" stroke-width="8" fill="none"/>
+                    <path d="M40 35 V25 C40 22 43 20 46 20 H54 C57 20 60 22 60 25 V35" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
+                    <path d="M80 12 Q80 22 90 22 Q80 22 80 32 Q80 22 70 22 Q80 22 80 12 Z" fill="#FF5500"/>
+                </svg>
+            </button>
+
             <!-- TAB 1: DISCOVER (FOR YOU) -->
             <div class="tab-view active" id="discoverTab">
                 <div class="job-list" id="jobList">
