@@ -1,0 +1,21 @@
+{
+  "name": "Kazini AI - Smart Job Matching",
+  "short_name": "Kazini AI",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#FF5500",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/FF5500/FFF.png?text=KAZINI",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://placehold.co/512x512/FF5500/FFF.png?text=KAZINI",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
