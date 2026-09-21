@@ -17,13 +17,13 @@
             /* Vivid Orange Premium Accent Color */
             --accent-orange: #FF5500;
             --accent-orange-hover: #E04B00;
-            --accent-orange-light: rgba(255, 85, 0, 0.12);
-            --accent-orange-glow: rgba(255, 85, 0, 0.28);
+            --accent-orange-light: rgba(255, 85, 0, 0.10);
+            --accent-orange-glow: rgba(255, 85, 0, 0.22);
             
             /* Deep Vivid Premium Blue Color for Verification Badges */
             --deep-vivid-blue: #0052FF;
-            --deep-vivid-blue-light: rgba(0, 82, 255, 0.12);
-            --deep-vivid-blue-glow: rgba(0, 82, 255, 0.25);
+            --deep-vivid-blue-light: rgba(0, 82, 255, 0.10);
+            --deep-vivid-blue-glow: rgba(0, 82, 255, 0.22);
             
             /* Status Colors */
             --status-applied-bg: rgba(16, 185, 129, 0.12);
@@ -39,12 +39,12 @@
             --text-muted: #64748b;
             --border-color: #f1f5f9;
             --border-subtle: #e2e8f0;
-            --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+            --card-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
 
-            /* Floating Action Button Theme Defaults (Light Mode) */
+            /* Floating Action Button Theme Defaults */
             --fab-bg: #FFFFFF;
-            --fab-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
-            --fab-border: 1px solid rgba(0, 0, 0, 0.1);
+            --fab-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+            --fab-border: 1px solid rgba(0, 0, 0, 0.08);
         }
 
         /* True Black Dark Mode */
@@ -56,14 +56,13 @@
             --text-primary: #ffffff;
             --text-secondary: #cbd5e1;
             --text-muted: #94a3b8;
-            --border-color: #1a1a1a;
-            --border-subtle: #262626;
-            --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+            --border-color: #161616;
+            --border-subtle: #242424;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 
-            /* Dynamic FAB Overrides for Dark Mode */
             --fab-bg: #0d0d0d;
-            --fab-shadow: 0 8px 28px rgba(0, 0, 0, 0.9), 0 0 16px rgba(255, 85, 0, 0.3);
-            --fab-border: 1px solid rgba(255, 255, 255, 0.18);
+            --fab-shadow: 0 8px 24px rgba(0, 0, 0, 0.9), 0 0 12px rgba(255, 85, 0, 0.25);
+            --fab-border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         * {
@@ -74,7 +73,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* True Full-Width Web Canvas */
         body {
             background-color: var(--bg-app);
             color: var(--text-primary);
@@ -102,7 +100,7 @@
             background: var(--bg-sticky);
             z-index: 50;
             border-bottom: 1px solid var(--border-color);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
             flex-shrink: 0;
             padding-top: env(safe-area-inset-top);
             width: 100%;
@@ -110,7 +108,7 @@
 
         /* App Header */
         .app-header {
-            padding: 16px 24px;
+            padding: 12px 20px 8px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -122,22 +120,21 @@
         .brand-logo {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 8px;
         }
 
-        /* Enlarged Logo Symbol Container */
         .svg-logo-icon {
-            width: 56px;
-            height: 56px;
+            width: 34px;
+            height: 34px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .brand-text {
-            font-size: 26px;
+            font-size: 20px;
             font-weight: 800;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.4px;
             color: var(--text-primary);
         }
 
@@ -146,8 +143,8 @@
         }
 
         .theme-toggle {
-            width: 44px;
-            height: 44px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             background: var(--bg-surface);
             border: 1px solid var(--border-subtle);
@@ -163,81 +160,95 @@
             transform: scale(0.92);
         }
 
-        /* Greeting & Headers Inner Constraint */
-        .greeting-card {
+        /* Top-Bar Control Area */
+        .header-context-bar {
             background: var(--bg-sticky);
-            padding: 8px 24px 14px 24px;
+            padding: 6px 20px 12px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .header-context-bar.hidden {
+            display: none;
+        }
+
+        /* Filter Chips Bar (Only 3 Chips: All Matches, Remote, Full-Time) */
+        .chip-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filter-chip {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border-subtle);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-chip.active {
+            background: var(--accent-orange);
+            color: white;
+            border-color: var(--accent-orange);
+            font-weight: 700;
+        }
+
+        /* Summary Counter Panel (for Saved / Applied) */
+        .summary-banner {
+            background: var(--bg-surface);
+            border-radius: 12px;
+            padding: 10px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
+            border: 1px solid var(--border-subtle);
         }
 
-        .greeting-card.hidden {
-            display: none;
-        }
-
-        /* Non-bold user greeting style */
-        .user-greeting {
+        .summary-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 19px;
-            font-weight: 500;
-            color: var(--text-primary);
+            gap: 6px;
         }
 
-        .matches-badge {
-            background: var(--accent-orange);
-            color: white;
+        .summary-count {
+            background: var(--accent-orange-light);
+            color: var(--accent-orange);
             font-size: 11px;
             font-weight: 800;
-            padding: 8px 14px;
-            border-radius: 20px;
-            letter-spacing: 0.5px;
-            box-shadow: 0 4px 12px var(--accent-orange-glow);
-            cursor: pointer;
+            padding: 3px 8px;
+            border-radius: 10px;
         }
 
-        .section-header {
-            padding: 4px 24px 12px 24px;
-            background: var(--bg-sticky);
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .section-header.hidden {
-            display: none;
-        }
-
-        .section-title {
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        /* App Scrollable Container */
+        /* App Body Scroll Container */
         .app-body {
             flex: 1;
-            padding: 20px 24px 100px 24px;
+            padding: 16px 20px 90px 20px;
             background: var(--bg-app);
             max-width: 800px;
             margin: 0 auto;
             width: 100%;
         }
 
-        /* Floating Action Button (FAB) - Fixed Viewport Overlay */
+        /* Floating Action Button (FAB) */
         .fab-kazini {
             position: fixed;
-            bottom: 84px;
-            right: 24px;
-            width: 62px;
-            height: 62px;
+            bottom: 80px;
+            right: 20px;
+            width: 54px;
+            height: 54px;
             border-radius: 50%;
             background: var(--fab-bg);
             border: var(--fab-border);
@@ -247,33 +258,33 @@
             justify-content: center;
             cursor: pointer;
             z-index: 999;
-            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .fab-kazini:active {
             transform: scale(0.90);
         }
 
-        /* Scalloped Badge Styling */
+        /* Scalloped Badge */
         .scalloped-badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             flex-shrink: 0;
-            filter: drop-shadow(0px 2px 4px var(--deep-vivid-blue-glow));
+            filter: drop-shadow(0px 1px 3px var(--deep-vivid-blue-glow));
         }
 
         .scalloped-badge.lg {
-            width: 26px;
-            height: 26px;
+            width: 22px;
+            height: 22px;
         }
 
         /* Tab Views */
         .tab-view {
             display: none;
-            animation: fadeIn 0.25s ease-in-out;
+            animation: fadeIn 0.2s ease-in-out;
         }
 
         .tab-view.active {
@@ -281,60 +292,55 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
+            from { opacity: 0; transform: translateY(3px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Full Job Card (Discover Tab) */
+        /* Job Cards Styling */
         .job-list {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
         }
 
         .job-card {
             background: var(--bg-card);
-            border-radius: 20px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 16px;
             box-shadow: var(--card-shadow);
             border: 1px solid var(--border-color);
             position: relative;
             transition: all 0.2s ease;
         }
 
-        .job-card:hover {
-            border-color: var(--border-subtle);
-            transform: translateY(-2px);
-        }
-
         .card-header-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .job-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             line-height: 1.3;
         }
 
         .company-info {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 14px;
+            gap: 5px;
+            font-size: 13px;
             color: var(--text-secondary);
             font-weight: 600;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         .location-dot {
             color: var(--text-muted);
-            font-size: 12px;
+            font-size: 10px;
         }
 
         .bookmark-btn {
@@ -352,48 +358,46 @@
 
         .skills-row {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
-            margin-bottom: 14px;
+            margin-bottom: 10px;
         }
 
         .skill-badge {
             background: var(--bg-surface);
             color: var(--text-secondary);
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            padding: 6px 12px;
-            border-radius: 10px;
+            padding: 4px 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
         }
 
         .skill-badge.more {
             background: var(--accent-orange-light);
             color: var(--accent-orange);
-            font-weight: 800;
+            font-weight: 700;
         }
 
-        /* Reduced salary size and weight so it doesn't compete with job titles */
         .salary-text {
-            font-size: 13.5px;
+            font-size: 12.5px;
             font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 16px;
-            letter-spacing: -0.1px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
         }
 
         .card-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-top: 14px;
+            padding-top: 12px;
             border-top: 1px dashed var(--border-color);
         }
 
         .match-score {
-            font-size: 13.5px;
+            font-size: 12.5px;
             font-weight: 700;
             color: var(--deep-vivid-blue);
         }
@@ -402,37 +406,33 @@
             background: var(--accent-orange);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 13px;
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 4px;
-            box-shadow: 0 4px 12px var(--accent-orange-glow);
+            box-shadow: 0 3px 10px var(--accent-orange-glow);
             transition: all 0.2s;
-        }
-
-        .view-btn:hover {
-            background: var(--accent-orange-hover);
         }
 
         .view-btn:active {
             transform: scale(0.95);
         }
 
-        /* SLIM MINIMALIST CARDS */
+        /* Slim Cards */
         .slim-card-list {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
         .slim-card {
             background: var(--bg-card);
-            border-radius: 16px;
-            padding: 16px 18px;
+            border-radius: 14px;
+            padding: 14px 16px;
             box-shadow: var(--card-shadow);
             border: 1px solid var(--border-color);
             display: flex;
@@ -442,30 +442,25 @@
             transition: all 0.2s ease;
         }
 
-        .slim-card:hover {
-            border-color: var(--border-subtle);
-            transform: translateY(-1px);
-        }
-
         .slim-job-title {
-            font-size: 15.5px;
+            font-size: 14.5px;
             font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .slim-company-name {
-            font-size: 13px;
+            font-size: 12.5px;
             color: var(--text-secondary);
             font-weight: 600;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .slim-meta-text {
-            font-size: 12px;
+            font-size: 11.5px;
             color: var(--text-muted);
             font-weight: 500;
         }
@@ -473,90 +468,89 @@
         .status-applied-pill {
             background: var(--status-applied-bg);
             color: var(--status-applied-text);
-            font-size: 12px;
-            font-weight: 800;
-            padding: 6px 12px;
-            border-radius: 20px;
-            letter-spacing: 0.3px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 16px;
             display: inline-flex;
             align-items: center;
             gap: 4px;
         }
 
-        /* Profile & Glass Panels */
+        /* Profile Section */
         .glass-panel {
             background: var(--bg-card);
-            border-radius: 20px;
-            padding: 22px;
+            border-radius: 16px;
+            padding: 18px;
             border: 1px solid var(--border-color);
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             box-shadow: var(--card-shadow);
         }
 
         .profile-header {
             display: flex;
             align-items: center;
-            gap: 16px;
-            margin-bottom: 20px;
+            gap: 14px;
+            margin-bottom: 16px;
         }
 
         .avatar-box {
-            width: 64px;
-            height: 64px;
-            border-radius: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
             background: linear-gradient(135deg, var(--accent-orange) 0%, #FF8800 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 800;
-            box-shadow: 0 6px 18px var(--accent-orange-glow);
+            box-shadow: 0 4px 14px var(--accent-orange-glow);
         }
 
         .stat-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
+            gap: 10px;
         }
 
         .stat-card {
             background: var(--bg-surface);
-            padding: 14px;
-            border-radius: 14px;
+            padding: 12px;
+            border-radius: 12px;
             text-align: center;
         }
 
         .stat-value {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
             color: var(--text-primary);
         }
 
         .stat-label {
-            font-size: 11px;
+            font-size: 10.5px;
             color: var(--text-muted);
             font-weight: 600;
             margin-top: 2px;
         }
 
         .section-label-modal {
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: 800;
             color: var(--accent-orange);
-            letter-spacing: 0.8px;
+            letter-spacing: 0.6px;
             text-transform: uppercase;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .detail-block {
             background: var(--bg-surface);
-            border-radius: 14px;
-            padding: 14px 16px;
-            margin-bottom: 14px;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
             border: 1px solid var(--border-subtle);
         }
 
@@ -568,7 +562,7 @@
             right: 0;
             background: var(--bg-sticky);
             border-top: 1px solid var(--border-color);
-            padding: 10px 16px max(14px, env(safe-area-inset-bottom)) 16px;
+            padding: 8px 16px max(12px, env(safe-area-inset-bottom)) 16px;
             display: flex;
             justify-content: space-around;
             align-items: center;
@@ -587,13 +581,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             color: var(--text-muted);
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 600;
             cursor: pointer;
             transition: color 0.2s;
-            padding: 4px 16px;
+            padding: 2px 12px;
         }
 
         .nav-item.active {
@@ -618,16 +612,16 @@
 
         .modal-card {
             background: var(--bg-card);
-            border-radius: 28px 28px 0 0;
-            padding: 24px;
-            max-height: 88vh;
+            border-radius: 24px 24px 0 0;
+            padding: 20px;
+            max-height: 85vh;
             width: 100%;
             max-width: 800px;
             overflow-y: auto;
             border-top: 1px solid var(--border-subtle);
             box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
-            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            padding-bottom: max(24px, env(safe-area-inset-bottom));
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
         }
 
         @keyframes slideUp {
@@ -644,13 +638,13 @@
             background: var(--accent-orange);
             color: white;
             border: none;
-            padding: 16px;
-            border-radius: 18px;
-            font-size: 15px;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 14px;
             font-weight: 800;
-            margin-top: 16px;
+            margin-top: 14px;
             cursor: pointer;
-            box-shadow: 0 6px 20px var(--accent-orange-glow);
+            box-shadow: 0 4px 16px var(--accent-orange-glow);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -670,9 +664,8 @@
         <div class="sticky-top-section">
             <div class="app-header">
                 <div class="brand-logo">
-                    <!-- ENLARGED Kazini SVG Logo Symbol (56x56) -->
                     <div class="svg-logo-icon">
-                        <svg width="56" height="56" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
                             <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
                             <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
@@ -681,57 +674,48 @@
                     <div class="brand-text">Kazini <span>AI</span></div>
                 </div>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
-                    <i data-lucide="sun" id="themeIcon" style="width:20px; height:20px;"></i>
+                    <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
                 </button>
             </div>
 
-            <div class="greeting-card" id="greetingContainer">
-                <div class="user-greeting" id="dynamicTitle">
-                    Hi Robin <span style="font-size: 18px;">😊</span>
-                </div>
-                <div class="matches-badge" id="dynamicBadge">
-                    8 MATCHES
-                </div>
-            </div>
-
-            <div class="section-header" id="sectionHeaderContainer">
-                <span class="section-title" id="tabHeaderTitle">FOR YOU</span>
+            <!-- Header Filter Bar with Exactly 3 Filter Chips -->
+            <div class="header-context-bar" id="headerContextContainer">
+                <!-- Dynamic Content injected via JS based on Tab -->
             </div>
         </div>
 
         <!-- Scrollable Body Content -->
         <div class="app-body">
             
-            <!-- TAB 1: DISCOVER (FOR YOU) -->
+            <!-- TAB 1: DISCOVER -->
             <div class="tab-view active" id="discoverTab">
                 <div class="job-list" id="jobList">
-                    <!-- Dynamically Rendered Full Job Cards -->
+                    <!-- Dynamic Full Cards -->
                 </div>
             </div>
 
             <!-- TAB 2: SAVED JOBS -->
             <div class="tab-view" id="savedTab">
                 <div class="slim-card-list" id="savedJobList">
-                    <!-- Dynamically Rendered Saved Jobs -->
+                    <!-- Dynamic Saved Cards -->
                 </div>
             </div>
 
             <!-- TAB 3: APPLIED JOBS -->
             <div class="tab-view" id="appliedTab">
                 <div class="slim-card-list" id="appliedJobList">
-                    <!-- Dynamically Rendered Applied Jobs -->
+                    <!-- Dynamic Applied Cards -->
                 </div>
             </div>
 
-            <!-- TAB 4: PROFESSIONAL PROFILE -->
+            <!-- TAB 4: PROFILE -->
             <div class="tab-view" id="profileTab">
                 <div class="glass-panel">
                     <div class="profile-header">
                         <div class="avatar-box">RM</div>
                         <div>
-                            <div style="font-size: 20px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                            <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
                                 Robin Muchiri
-                                <!-- Scalloped Badge Large -->
                                 <span class="scalloped-badge lg" title="Verified Professional">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
@@ -739,10 +723,10 @@
                                     </svg>
                                 </span>
                             </div>
-                            <div style="font-size: 13.5px; color: var(--accent-orange); font-weight: 700; margin-top: 3px;">
+                            <div style="font-size: 12.5px; color: var(--accent-orange); font-weight: 700; margin-top: 2px;">
                                 Digital Innovation & Data Specialist
                             </div>
-                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
                                 Nairobi, Kenya
                             </div>
                         </div>
@@ -766,23 +750,22 @@
 
                 <div class="glass-panel">
                     <div class="section-label-modal">
-                        <i data-lucide="cpu" style="width: 14px; height: 14px;"></i> Verified Core Skills
+                        <i data-lucide="cpu" style="width: 13px; height: 13px;"></i> Verified Core Skills
                     </div>
                     <div class="skills-row" style="margin-bottom: 0;">
-                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> Data Analytics</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> Python</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> SQL</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> Social Commerce</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> Tableau</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:11px; height:11px; color: #10b981;"></i> Data Analytics</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:11px; height:11px; color: #10b981;"></i> Python</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:11px; height:11px; color: #10b981;"></i> SQL</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:11px; height:11px; color: #10b981;"></i> Social Commerce</div>
                     </div>
                 </div>
 
                 <div class="glass-panel">
                     <div class="section-label-modal">
-                        <i data-lucide="file-check" style="width: 14px; height: 14px;"></i> Smart Resume & Verification
+                        <i data-lucide="shield-check" style="width: 13px; height: 13px;"></i> Kazini Verification Shield
                     </div>
                     <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
                             <span class="scalloped-badge lg">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
@@ -790,11 +773,11 @@
                                 </svg>
                             </span>
                             <div>
-                                <div style="font-size: 14px; font-weight: 700; color: var(--text-primary);">Kazini Identity Shield</div>
-                                <div style="font-size: 11.5px; color: var(--text-muted);">Verified Credentials Active</div>
+                                <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">Smartika Trust Network</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">Verified Credentials Active</div>
                             </div>
                         </div>
-                        <span style="font-size: 12px; font-weight: 800; color: var(--deep-vivid-blue);">VERIFIED</span>
+                        <span style="font-size: 11.5px; font-weight: 800; color: var(--deep-vivid-blue);">VERIFIED</span>
                     </div>
                 </div>
             </div>
@@ -803,7 +786,7 @@
 
         <!-- FIXED FLOATING ACTION BUTTON (FAB) -->
         <button class="fab-kazini" aria-label="Kazini Action">
-            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="26" height="26" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
                 <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
                 <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
@@ -814,19 +797,19 @@
         <div class="bottom-nav">
             <div class="nav-container">
                 <div class="nav-item active" onclick="switchTab(this, 'discoverTab')">
-                    <i data-lucide="compass"></i>
+                    <i data-lucide="compass" style="width:20px; height:20px;"></i>
                     <span>Discover</span>
                 </div>
                 <div class="nav-item" onclick="switchTab(this, 'savedTab')">
-                    <i data-lucide="bookmark"></i>
+                    <i data-lucide="bookmark" style="width:20px; height:20px;"></i>
                     <span>Saved</span>
                 </div>
                 <div class="nav-item" onclick="switchTab(this, 'appliedTab')">
-                    <i data-lucide="clipboard-list"></i>
+                    <i data-lucide="clipboard-list" style="width:20px; height:20px;"></i>
                     <span>Applied</span>
                 </div>
                 <div class="nav-item" onclick="switchTab(this, 'profileTab')">
-                    <i data-lucide="user"></i>
+                    <i data-lucide="user" style="width:20px; height:20px;"></i>
                     <span>Profile</span>
                 </div>
             </div>
@@ -835,12 +818,12 @@
         <!-- JOB DETAILS MODAL -->
         <div class="modal-overlay" id="jobModal" onclick="closeModal()">
             <div class="modal-card" onclick="event.stopPropagation()">
-                <div style="width: 40px; height: 4px; background: var(--border-subtle); border-radius: 2px; margin: 0 auto 18px auto;"></div>
+                <div style="width: 36px; height: 4px; background: var(--border-subtle); border-radius: 2px; margin: 0 auto 14px auto;"></div>
                 
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                     <div>
-                        <h2 id="modalTitle" style="font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 6px;"></h2>
-                        <div id="modalCompany" style="color: var(--text-secondary); font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px;"></div>
+                        <h2 id="modalTitle" style="font-size: 18px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 4px;"></h2>
+                        <div id="modalCompany" style="color: var(--text-secondary); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 5px;"></div>
                     </div>
                     <span class="scalloped-badge lg" title="Verified Employer">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -850,45 +833,45 @@
                     </span>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
                     <div class="detail-block" style="margin-bottom:0;">
-                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Estimated Salary</div>
-                        <div id="modalSalary" style="font-size: 13.5px; font-weight: 700; color: #10b981; margin-top: 4px;"></div>
+                        <div style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Est. Salary</div>
+                        <div id="modalSalary" style="font-size: 13px; font-weight: 700; color: #10b981; margin-top: 3px;"></div>
                     </div>
                     <div class="detail-block" style="margin-bottom:0;">
-                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
-                        <div id="modalMatch" style="font-size: 14px; font-weight: 800; color: var(--deep-vivid-blue); margin-top: 4px;"></div>
+                        <div style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
+                        <div id="modalMatch" style="font-size: 13px; font-weight: 800; color: var(--deep-vivid-blue); margin-top: 3px;"></div>
                     </div>
                 </div>
 
                 <div class="section-label-modal">
-                    <i data-lucide="layers" style="width: 14px; height: 14px;"></i> Required Tech Stack
+                    <i data-lucide="layers" style="width: 13px; height: 13px;"></i> Required Tech Stack
                 </div>
-                <div id="modalSkills" class="skills-row" style="margin-bottom: 18px;"></div>
+                <div id="modalSkills" class="skills-row" style="margin-bottom: 14px;"></div>
 
                 <div class="section-label-modal">
-                    <i data-lucide="align-left" style="width: 14px; height: 14px;"></i> Role Overview
+                    <i data-lucide="align-left" style="width: 13px; height: 13px;"></i> Role Overview
                 </div>
                 <div class="detail-block">
-                    <p style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.6;" id="modalDesc"></p>
+                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5;" id="modalDesc"></p>
                 </div>
 
                 <div class="section-label-modal">
-                    <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i> Key Responsibilities
+                    <i data-lucide="check-circle-2" style="width: 13px; height: 13px;"></i> Key Responsibilities
                 </div>
-                <div class="detail-block" style="margin-bottom: 18px;">
-                    <ul style="font-size: 13px; color: var(--text-secondary); padding-left: 18px; line-height: 1.6;" id="modalResp"></ul>
+                <div class="detail-block" style="margin-bottom: 14px;">
+                    <ul style="font-size: 12px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalResp"></ul>
                 </div>
 
                 <button class="apply-btn-full" id="applyActionBtn" onclick="applyJob()">
-                    <i data-lucide="send" style="width: 16px; height: 16px;"></i> Quick Apply with Kazini ID
+                    <i data-lucide="send" style="width: 15px; height: 15px;"></i> Quick Apply with Kazini ID
                 </button>
             </div>
         </div>
     </div>
 
     <script>
-        // Master Job Database
+        // Job Database
         const jobData = [
             {
                 id: 1,
@@ -979,14 +962,14 @@
                             </div>
                         </div>
                         <button class="bookmark-btn" onclick="toggleBookmark(${job.id})">
-                            <i data-lucide="heart" style="width: 20px; height: 20px; ${job.bookmarked ? 'fill: var(--accent-orange); color: var(--accent-orange);' : 'color: var(--text-muted);'}"></i>
+                            <i data-lucide="heart" style="width: 18px; height: 18px; ${job.bookmarked ? 'fill: var(--accent-orange); color: var(--accent-orange);' : 'color: var(--text-muted);'}"></i>
                         </button>
                     </div>
 
                     <div class="skills-row">
                         ${job.skills.map(s => `
                             <div class="skill-badge">
-                                <i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i>
+                                <i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i>
                                 ${s}
                             </div>
                         `).join('')}
@@ -998,7 +981,7 @@
                     <div class="card-footer">
                         <span class="match-score">Match Score: ${job.matchScore}</span>
                         <button class="view-btn" onclick="openModal(${job.id})">
-                            View Job <i data-lucide="chevron-right" style="width:14px; height:14px;"></i>
+                            View Job <i data-lucide="chevron-right" style="width:13px; height:13px;"></i>
                         </button>
                     </div>
                 </div>
@@ -1013,10 +996,10 @@
             
             if (savedJobs.length === 0) {
                 container.innerHTML = `
-                    <div class="glass-panel" style="text-align: center; padding: 40px 20px;">
-                        <i data-lucide="bookmark" style="width: 36px; height: 36px; color: var(--text-muted); margin-bottom: 12px;"></i>
-                        <div style="font-weight: 700; color: var(--text-primary); font-size: 16px;">No Saved Roles Yet</div>
-                        <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Tap the heart icon on any job card to save it here.</div>
+                    <div class="glass-panel" style="text-align: center; padding: 36px 16px;">
+                        <i data-lucide="bookmark" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 15px;">No Saved Roles Yet</div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Tap the heart icon on any job card to save it here.</div>
                     </div>`;
             } else {
                 container.innerHTML = savedJobs.map(job => `
@@ -1030,7 +1013,7 @@
                             <div class="slim-meta-text">${job.location} • ${job.salary}</div>
                         </div>
                         <button class="bookmark-btn" onclick="event.stopPropagation(); toggleBookmark(${job.id})">
-                            <i data-lucide="heart" style="width: 22px; height: 22px; fill: var(--accent-orange); color: var(--accent-orange);"></i>
+                            <i data-lucide="heart" style="width: 18px; height: 18px; fill: var(--accent-orange); color: var(--accent-orange);"></i>
                         </button>
                     </div>
                 `).join('');
@@ -1045,10 +1028,10 @@
 
             if (appliedJobs.length === 0) {
                 container.innerHTML = `
-                    <div class="glass-panel" style="text-align: center; padding: 40px 20px;">
-                        <i data-lucide="clipboard-list" style="width: 36px; height: 36px; color: var(--text-muted); margin-bottom: 12px;"></i>
-                        <div style="font-weight: 700; color: var(--text-primary); font-size: 16px;">No Active Applications</div>
-                        <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Submitted applications will appear here.</div>
+                    <div class="glass-panel" style="text-align: center; padding: 36px 16px;">
+                        <i data-lucide="clipboard-list" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 15px;">No Active Applications</div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Submitted applications will appear here.</div>
                     </div>`;
             } else {
                 container.innerHTML = appliedJobs.map(job => `
@@ -1062,7 +1045,7 @@
                             <div class="slim-meta-text">${job.appliedDate}</div>
                         </div>
                         <span class="status-applied-pill">
-                            <i data-lucide="check-circle" style="width:12px; height:12px;"></i> Applied
+                            <i data-lucide="check-circle" style="width:11px; height:11px;"></i> Applied
                         </span>
                     </div>
                 `).join('');
@@ -1080,11 +1063,67 @@
                 
                 const activeTab = document.querySelector('.tab-view.active').id;
                 if(activeTab === 'savedTab') {
-                    const savedCount = jobData.filter(j => j.bookmarked).length;
-                    document.getElementById('dynamicBadge').innerText = `${savedCount} SAVED`;
-                    document.getElementById('statSavedCount').innerText = savedCount;
+                    updateHeaderContext('savedTab');
                 }
             }
+        }
+
+        // Filter Chip Selection Toggle
+        function selectChip(el) {
+            document.querySelectorAll('.chip-bar .filter-chip').forEach(chip => chip.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // Update Top Context Bar based on active tab
+        function updateHeaderContext(tabId) {
+            const container = document.getElementById('headerContextContainer');
+            const savedCount = jobData.filter(j => j.bookmarked).length;
+            const appliedCount = jobData.filter(j => j.applied).length;
+
+            if (tabId === 'discoverTab') {
+                container.classList.remove('hidden');
+                container.innerHTML = `
+                    <div class="chip-bar">
+                        <div class="filter-chip active" onclick="selectChip(this)">
+                            <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
+                            All Matches
+                        </div>
+                        <div class="filter-chip" onclick="selectChip(this)">
+                            <i data-lucide="wifi" style="width: 12px; height: 12px;"></i>
+                            Remote
+                        </div>
+                        <div class="filter-chip" onclick="selectChip(this)">
+                            <i data-lucide="briefcase" style="width: 12px; height: 12px;"></i>
+                            Full-Time
+                        </div>
+                    </div>
+                `;
+            } else if (tabId === 'savedTab') {
+                container.classList.remove('hidden');
+                container.innerHTML = `
+                    <div class="summary-banner">
+                        <div class="summary-title">
+                            <i data-lucide="bookmark" style="width:15px; height:15px; color: var(--accent-orange);"></i>
+                            Saved Positions
+                        </div>
+                        <span class="summary-count">${savedCount} BOOKMARKED</span>
+                    </div>
+                `;
+            } else if (tabId === 'appliedTab') {
+                container.classList.remove('hidden');
+                container.innerHTML = `
+                    <div class="summary-banner">
+                        <div class="summary-title">
+                            <i data-lucide="clipboard-check" style="width:15px; height:15px; color: #10b981;"></i>
+                            Application History
+                        </div>
+                        <span class="summary-count" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">${appliedCount} SUBMITTED</span>
+                    </div>
+                `;
+            } else if (tabId === 'profileTab') {
+                container.classList.add('hidden');
+            }
+            lucide.createIcons();
         }
 
         // Switch Navigation Tabs
@@ -1095,40 +1134,14 @@
             document.querySelectorAll('.tab-view').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
 
-            const greetingContainer = document.getElementById('greetingContainer');
-            const sectionHeaderContainer = document.getElementById('sectionHeaderContainer');
-            const dynamicTitle = document.getElementById('dynamicTitle');
-            const dynamicBadge = document.getElementById('dynamicBadge');
-            const tabHeaderTitle = document.getElementById('tabHeaderTitle');
-
-            const savedCount = jobData.filter(j => j.bookmarked).length;
-            const appliedCount = jobData.filter(j => j.applied).length;
-
-            document.getElementById('statSavedCount').innerText = savedCount;
-            document.getElementById('statAppliedCount').innerText = appliedCount;
+            updateHeaderContext(tabId);
 
             if (tabId === 'discoverTab') {
-                greetingContainer.classList.remove('hidden');
-                sectionHeaderContainer.classList.remove('hidden');
-                dynamicTitle.innerHTML = `Hi Robin <span style="font-size: 18px;">😊</span>`;
-                dynamicBadge.innerText = `8 MATCHES`;
-                tabHeaderTitle.innerText = `FOR YOU`;
                 renderJobs();
             } else if (tabId === 'savedTab') {
-                greetingContainer.classList.remove('hidden');
-                sectionHeaderContainer.classList.add('hidden');
-                dynamicTitle.innerText = `Saved Jobs`;
-                dynamicBadge.innerText = `${savedCount} SAVED`;
                 renderSavedJobs();
             } else if (tabId === 'appliedTab') {
-                greetingContainer.classList.remove('hidden');
-                sectionHeaderContainer.classList.add('hidden');
-                dynamicTitle.innerText = `Applied Jobs`;
-                dynamicBadge.innerText = `${appliedCount} APPLIED`;
                 renderAppliedJobs();
-            } else if (tabId === 'profileTab') {
-                greetingContainer.classList.add('hidden');
-                sectionHeaderContainer.classList.add('hidden');
             }
         }
 
@@ -1158,17 +1171,17 @@
             document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
 
             document.getElementById('modalSkills').innerHTML = job.skills.map(s => `
-                <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> ${s}</div>
+                <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> ${s}</div>
             `).join('');
 
             const applyBtn = document.getElementById('applyActionBtn');
             if (job.applied) {
                 applyBtn.style.background = '#10b981';
-                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:16px; height:16px;"></i> Application Submitted`;
+                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:15px; height:15px;"></i> Application Submitted`;
                 applyBtn.disabled = true;
             } else {
                 applyBtn.style.background = 'var(--accent-orange)';
-                applyBtn.innerHTML = `<i data-lucide="send" style="width:16px; height:16px;"></i> Quick Apply with Kazini ID`;
+                applyBtn.innerHTML = `<i data-lucide="send" style="width:15px; height:15px;"></i> Quick Apply with Kazini ID`;
                 applyBtn.disabled = false;
             }
 
@@ -1189,7 +1202,7 @@
                 
                 const applyBtn = document.getElementById('applyActionBtn');
                 applyBtn.style.background = '#10b981';
-                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:16px; height:16px;"></i> Application Submitted`;
+                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:15px; height:15px;"></i> Application Submitted`;
                 applyBtn.disabled = true;
 
                 setTimeout(() => {
@@ -1198,15 +1211,13 @@
                     renderAppliedJobs();
                     
                     const activeTab = document.querySelector('.tab-view.active').id;
-                    if(activeTab === 'appliedTab') {
-                        const appliedCount = jobData.filter(j => j.applied).length;
-                        document.getElementById('dynamicBadge').innerText = `${appliedCount} APPLIED`;
-                    }
+                    updateHeaderContext(activeTab);
                 }, 800);
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            updateHeaderContext('discoverTab');
             renderJobs();
             lucide.createIcons();
         });
