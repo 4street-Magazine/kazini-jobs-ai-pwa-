@@ -74,7 +74,6 @@
         }
 
         html, body {
-            /* Removed overflow restrictions to ensure native sticky header works properly */
             margin: 0;
             padding: 0;
         }
@@ -98,7 +97,7 @@
 
         /* NATIVE STICKY TOP CONTAINER */
         .sticky-top-section {
-            position: -webkit-sticky; /* For iOS Safari */
+            position: -webkit-sticky;
             position: sticky;
             top: 0;
             background: var(--bg-sticky);
@@ -109,7 +108,6 @@
             padding-top: env(safe-area-inset-top);
             width: 100%;
             
-            /* Native Hardware Acceleration to prevent jitter on scroll up */
             -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
             transform: translate3d(0, 0, 0);
@@ -193,9 +191,9 @@
         .filter-chip {
             background: var(--bg-surface);
             color: var(--text-secondary);
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: 600;
-            padding: 6px 14px;
+            padding: 5px 12px;
             border-radius: 20px;
             border: 1px solid var(--border-subtle);
             white-space: nowrap;
@@ -217,7 +215,7 @@
         .summary-banner {
             background: var(--bg-surface);
             border-radius: 12px;
-            padding: 10px 14px;
+            padding: 9px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -225,7 +223,7 @@
         }
 
         .summary-title {
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 700;
             color: var(--text-primary);
             display: flex;
@@ -236,7 +234,7 @@
         .summary-count {
             background: var(--accent-orange-light);
             color: var(--accent-orange);
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
             padding: 3px 8px;
             border-radius: 10px;
@@ -280,8 +278,8 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             flex-shrink: 0;
             filter: drop-shadow(0px 1px 3px var(--deep-vivid-blue-glow));
         }
@@ -306,17 +304,17 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Job Cards Styling */
+        /* Job Cards Styling - Refined Professional Typography Sizes */
         .job-list {
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
         }
 
         .job-card {
             background: var(--bg-card);
-            border-radius: 16px;
-            padding: 16px;
+            border-radius: 14px;
+            padding: 14px 16px;
             box-shadow: var(--card-shadow);
             border: 1px solid var(--border-color);
             position: relative;
@@ -327,14 +325,14 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .job-title {
-            font-size: 16px;
+            font-size: 14.5px;
             font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             line-height: 1.3;
         }
 
@@ -342,15 +340,15 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            font-size: 13px;
+            font-size: 12px;
             color: var(--text-secondary);
             font-weight: 600;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .location-dot {
             color: var(--text-muted);
-            font-size: 10px;
+            font-size: 9px;
         }
 
         .bookmark-btn {
@@ -368,7 +366,7 @@
 
         .skills-row {
             display: flex;
-            gap: 6px;
+            gap: 5px;
             flex-wrap: wrap;
             margin-bottom: 10px;
         }
@@ -376,10 +374,10 @@
         .skill-badge {
             background: var(--bg-surface);
             color: var(--text-secondary);
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 8px;
+            padding: 3px 8px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             gap: 4px;
@@ -392,22 +390,22 @@
         }
 
         .salary-text {
-            font-size: 12.5px;
+            font-size: 11.5px;
             font-weight: 600;
             color: var(--text-muted);
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         .card-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-top: 12px;
+            padding-top: 10px;
             border-top: 1px dashed var(--border-color);
         }
 
         .match-score {
-            font-size: 12.5px;
+            font-size: 11.5px;
             font-weight: 700;
             color: var(--deep-vivid-blue);
         }
@@ -416,15 +414,15 @@
             background: var(--accent-orange);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 16px;
-            font-size: 12.5px;
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 11.5px;
             font-weight: 700;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 4px;
-            box-shadow: 0 3px 10px var(--accent-orange-glow);
+            box-shadow: 0 2px 8px var(--accent-orange-glow);
             transition: all 0.2s;
         }
 
@@ -432,7 +430,7 @@
             transform: scale(0.95);
         }
 
-        /* Slim Cards */
+        /* Slim Cards - Matching Refined Pro Scale */
         .slim-card-list {
             display: flex;
             flex-direction: column;
@@ -442,7 +440,7 @@
         .slim-card {
             background: var(--bg-card);
             border-radius: 14px;
-            padding: 14px 16px;
+            padding: 12px 14px;
             box-shadow: var(--card-shadow);
             border: 1px solid var(--border-color);
             display: flex;
@@ -453,24 +451,24 @@
         }
 
         .slim-job-title {
-            font-size: 14.5px;
+            font-size: 14px;
             font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .slim-company-name {
-            font-size: 12.5px;
+            font-size: 11.5px;
             color: var(--text-secondary);
             font-weight: 600;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             display: flex;
             align-items: center;
             gap: 5px;
         }
 
         .slim-meta-text {
-            font-size: 11.5px;
+            font-size: 11px;
             color: var(--text-muted);
             font-weight: 500;
         }
@@ -478,10 +476,10 @@
         .status-applied-pill {
             background: var(--status-applied-bg);
             color: var(--status-applied-text);
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 700;
-            padding: 5px 10px;
-            border-radius: 16px;
+            padding: 4px 9px;
+            border-radius: 12px;
             display: inline-flex;
             align-items: center;
             gap: 4px;
@@ -545,7 +543,7 @@
         }
 
         .section-label-modal {
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 800;
             color: var(--accent-orange);
             letter-spacing: 0.6px;
@@ -648,9 +646,9 @@
             background: var(--accent-orange);
             color: white;
             border: none;
-            padding: 14px;
-            border-radius: 14px;
-            font-size: 14px;
+            padding: 13px;
+            border-radius: 12px;
+            font-size: 13.5px;
             font-weight: 800;
             margin-top: 14px;
             cursor: pointer;
@@ -724,7 +722,7 @@
                     <div class="profile-header">
                         <div class="avatar-box">RM</div>
                         <div>
-                            <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                            <div style="font-size: 17px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
                                 Robin Muchiri
                                 <span class="scalloped-badge lg" title="Verified Professional">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -733,10 +731,10 @@
                                     </svg>
                                 </span>
                             </div>
-                            <div style="font-size: 12.5px; color: var(--accent-orange); font-weight: 700; margin-top: 2px;">
+                            <div style="font-size: 12px; color: var(--accent-orange); font-weight: 700; margin-top: 2px;">
                                 Digital Innovation & Data Specialist
                             </div>
-                            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                                 Nairobi, Kenya
                             </div>
                         </div>
@@ -760,19 +758,19 @@
 
                 <div class="glass-panel">
                     <div class="section-label-modal">
-                        <i data-lucide="cpu" style="width: 13px; height: 13px;"></i> Verified Core Skills
+                        <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> Verified Core Skills
                     </div>
                     <div class="skills-row" style="margin-bottom: 0;">
-                        <div class="skill-badge"><i data-lucide="check" style="width:11px; height:11px; color: #10b981;"></i> Data Analytics</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:11px; height:11px; color: #10b981;"></i> Python</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:11px; height:11px; color: #10b981;"></i> SQL</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:11px; height:11px; color: #10b981;"></i> Social Commerce</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Data Analytics</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Python</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> SQL</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Social Commerce</div>
                     </div>
                 </div>
 
                 <div class="glass-panel">
                     <div class="section-label-modal">
-                        <i data-lucide="shield-check" style="width: 13px; height: 13px;"></i> Kazini Verification Shield
+                        <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Kazini Verification Shield
                     </div>
                     <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -783,18 +781,18 @@
                                 </svg>
                             </span>
                             <div>
-                                <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">Smartika Trust Network</div>
-                                <div style="font-size: 11px; color: var(--text-muted);">Verified Credentials Active</div>
+                                <div style="font-size: 12.5px; font-weight: 700; color: var(--text-primary);">Smartika Trust Network</div>
+                                <div style="font-size: 10.5px; color: var(--text-muted);">Verified Credentials Active</div>
                             </div>
                         </div>
-                        <span style="font-size: 11.5px; font-weight: 800; color: var(--deep-vivid-blue);">VERIFIED</span>
+                        <span style="font-size: 11px; font-weight: 800; color: var(--deep-vivid-blue);">VERIFIED</span>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- FIXED FLOATING ACTION BUTTON (FAB) - LOGO SIZE INCREASED -->
+        <!-- FIXED FLOATING ACTION BUTTON (FAB) -->
         <button class="fab-kazini" aria-label="Kazini Action">
             <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
@@ -803,7 +801,7 @@
             </svg>
         </button>
 
-        <!-- Bottom Navigation Bar - UPDATED BOOKMARK TO HEART -->
+        <!-- Bottom Navigation Bar -->
         <div class="bottom-nav">
             <div class="nav-container">
                 <div class="nav-item active" onclick="switchTab(this, 'discoverTab')">
@@ -832,8 +830,8 @@
                 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                     <div>
-                        <h2 id="modalTitle" style="font-size: 18px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 4px;"></h2>
-                        <div id="modalCompany" style="color: var(--text-secondary); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 5px;"></div>
+                        <h2 id="modalTitle" style="font-size: 17px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 4px;"></h2>
+                        <div id="modalCompany" style="color: var(--text-secondary); font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 5px;"></div>
                     </div>
                     <span class="scalloped-badge lg" title="Verified Employer">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -845,44 +843,43 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
                     <div class="detail-block" style="margin-bottom:0;">
-                        <div style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Est. Salary</div>
-                        <div id="modalSalary" style="font-size: 13px; font-weight: 700; color: #10b981; margin-top: 3px;"></div>
+                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Est. Salary</div>
+                        <div id="modalSalary" style="font-size: 12.5px; font-weight: 700; color: #10b981; margin-top: 3px;"></div>
                     </div>
                     <div class="detail-block" style="margin-bottom:0;">
-                        <div style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
-                        <div id="modalMatch" style="font-size: 13px; font-weight: 800; color: var(--deep-vivid-blue); margin-top: 3px;"></div>
+                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
+                        <div id="modalMatch" style="font-size: 12.5px; font-weight: 800; color: var(--deep-vivid-blue); margin-top: 3px;"></div>
                     </div>
                 </div>
 
-                <!-- NEW: Why It Matches You Section -->
+                <!-- Why It Matches You Section -->
                 <div class="section-label-modal">
-                    <i data-lucide="sparkles" style="width: 13px; height: 13px;"></i> Why it matches you
+                    <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why it matches you
                 </div>
                 <div class="detail-block" style="margin-bottom: 14px;">
-                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">Your verified profile skills align strongly with this role:</p>
+                    <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 10px;">Your verified profile skills align strongly with this role:</p>
                     <div id="modalMatchingSkills" class="skills-row" style="margin-bottom: 0;"></div>
                 </div>
 
                 <div class="section-label-modal">
-                    <i data-lucide="layers" style="width: 13px; height: 13px;"></i> Required Tech Stack
+                    <i data-lucide="layers" style="width: 12px; height: 12px;"></i> Required Tech Stack
                 </div>
                 <div id="modalSkills" class="skills-row" style="margin-bottom: 14px;"></div>
 
                 <div class="section-label-modal">
-                    <i data-lucide="align-left" style="width: 13px; height: 13px;"></i> Role Overview
+                    <i data-lucide="align-left" style="width: 12px; height: 12px;"></i> Role Overview
                 </div>
                 <div class="detail-block">
-                    <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5;" id="modalDesc"></p>
+                    <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;" id="modalDesc"></p>
                 </div>
 
                 <div class="section-label-modal">
-                    <i data-lucide="check-circle-2" style="width: 13px; height: 13px;"></i> Key Responsibilities
+                    <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Key Responsibilities
                 </div>
                 <div class="detail-block" style="margin-bottom: 14px;">
-                    <ul style="font-size: 12px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalResp"></ul>
+                    <ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalResp"></ul>
                 </div>
 
-                <!-- UPDATED BUTTON LABEL -->
                 <button class="apply-btn-full" id="applyActionBtn" onclick="applyJob()">
                     <i data-lucide="send" style="width: 15px; height: 15px;"></i> Apply Job
                 </button>
@@ -982,14 +979,14 @@
                             </div>
                         </div>
                         <button class="bookmark-btn" onclick="toggleBookmark(${job.id})">
-                            <i data-lucide="heart" style="width: 18px; height: 18px; ${job.bookmarked ? 'fill: var(--accent-orange); color: var(--accent-orange);' : 'color: var(--text-muted);'}"></i>
+                            <i data-lucide="heart" style="width: 17px; height: 17px; ${job.bookmarked ? 'fill: var(--accent-orange); color: var(--accent-orange);' : 'color: var(--text-muted);'}"></i>
                         </button>
                     </div>
 
                     <div class="skills-row">
                         ${job.skills.slice(0, 2).map(s => `
                             <div class="skill-badge">
-                                <i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i>
+                                <i data-lucide="check" style="width:9.5px; height:9.5px; color: #10b981;"></i>
                                 ${s}
                             </div>
                         `).join('')}
@@ -1001,7 +998,7 @@
                     <div class="card-footer">
                         <span class="match-score">Match Score: ${job.matchScore}</span>
                         <button class="view-btn" onclick="openModal(${job.id})">
-                            View Job <i data-lucide="chevron-right" style="width:13px; height:13px;"></i>
+                            View Job <i data-lucide="chevron-right" style="width:12px; height:12px;"></i>
                         </button>
                     </div>
                 </div>
@@ -1018,8 +1015,8 @@
                 container.innerHTML = `
                     <div class="glass-panel" style="text-align: center; padding: 36px 16px;">
                         <i data-lucide="heart" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
-                        <div style="font-weight: 700; color: var(--text-primary); font-size: 15px;">No Saved Roles Yet</div>
-                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Tap the heart icon on any job card to save it here.</div>
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 14.5px;">No Saved Roles Yet</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">Tap the heart icon on any job card to save it here.</div>
                     </div>`;
             } else {
                 container.innerHTML = savedJobs.map(job => `
@@ -1033,7 +1030,7 @@
                             <div class="slim-meta-text">${job.location} • ${job.salary}</div>
                         </div>
                         <button class="bookmark-btn" onclick="event.stopPropagation(); toggleBookmark(${job.id})">
-                            <i data-lucide="heart" style="width: 18px; height: 18px; fill: var(--accent-orange); color: var(--accent-orange);"></i>
+                            <i data-lucide="heart" style="width: 17px; height: 17px; fill: var(--accent-orange); color: var(--accent-orange);"></i>
                         </button>
                     </div>
                 `).join('');
@@ -1050,8 +1047,8 @@
                 container.innerHTML = `
                     <div class="glass-panel" style="text-align: center; padding: 36px 16px;">
                         <i data-lucide="clipboard-list" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
-                        <div style="font-weight: 700; color: var(--text-primary); font-size: 15px;">No Active Applications</div>
-                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Submitted applications will appear here.</div>
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 14.5px;">No Active Applications</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">Submitted applications will appear here.</div>
                     </div>`;
             } else {
                 container.innerHTML = appliedJobs.map(job => `
@@ -1065,7 +1062,7 @@
                             <div class="slim-meta-text">${job.appliedDate}</div>
                         </div>
                         <span class="status-applied-pill">
-                            <i data-lucide="check-circle" style="width:11px; height:11px;"></i> Applied
+                            <i data-lucide="check-circle" style="width:10.5px; height:10.5px;"></i> Applied
                         </span>
                     </div>
                 `).join('');
@@ -1105,15 +1102,15 @@
                 container.innerHTML = `
                     <div class="chip-bar">
                         <div class="filter-chip active" onclick="selectChip(this)">
-                            <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
+                            <i data-lucide="sparkles" style="width: 11.5px; height: 11.5px;"></i>
                             All Matches
                         </div>
                         <div class="filter-chip" onclick="selectChip(this)">
-                            <i data-lucide="wifi" style="width: 12px; height: 12px;"></i>
+                            <i data-lucide="wifi" style="width: 11.5px; height: 11.5px;"></i>
                             Remote
                         </div>
                         <div class="filter-chip" onclick="selectChip(this)">
-                            <i data-lucide="briefcase" style="width: 12px; height: 12px;"></i>
+                            <i data-lucide="briefcase" style="width: 11.5px; height: 11.5px;"></i>
                             Full-Time
                         </div>
                     </div>
@@ -1123,7 +1120,7 @@
                 container.innerHTML = `
                     <div class="summary-banner">
                         <div class="summary-title">
-                            <i data-lucide="heart" style="width:15px; height:15px; color: var(--accent-orange); fill: var(--accent-orange-light);"></i>
+                            <i data-lucide="heart" style="width:14px; height:14px; color: var(--accent-orange); fill: var(--accent-orange-light);"></i>
                             Saved Positions
                         </div>
                         <span class="summary-count">${savedCount} BOOKMARKED</span>
@@ -1134,7 +1131,7 @@
                 container.innerHTML = `
                     <div class="summary-banner">
                         <div class="summary-title">
-                            <i data-lucide="clipboard-check" style="width:15px; height:15px; color: #10b981;"></i>
+                            <i data-lucide="clipboard-check" style="width:14px; height:14px; color: #10b981;"></i>
                             Application History
                         </div>
                         <span class="summary-count" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">${appliedCount} SUBMITTED</span>
@@ -1193,23 +1190,23 @@
             // Populate Matching Profile Skills (Why it matches you)
             document.getElementById('modalMatchingSkills').innerHTML = job.skills.map(s => `
                 <div class="skill-badge" style="background: var(--status-applied-bg); color: var(--status-applied-text); border: 1px solid rgba(16, 185, 129, 0.2);">
-                    <i data-lucide="check-circle" style="width:11px; height:11px;"></i> ${s}
+                    <i data-lucide="check-circle" style="width:10px; height:10px;"></i> ${s}
                 </div>
             `).join('');
 
             // Populate Required Tech Stack
             document.getElementById('modalSkills').innerHTML = job.skills.map(s => `
-                <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> ${s}</div>
+                <div class="skill-badge"><i data-lucide="check" style="width:9.5px; height:9.5px; color: #10b981;"></i> ${s}</div>
             `).join('');
 
             const applyBtn = document.getElementById('applyActionBtn');
             if (job.applied) {
                 applyBtn.style.background = '#10b981';
-                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:15px; height:15px;"></i> Application Submitted`;
+                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:14px; height:14px;"></i> Application Submitted`;
                 applyBtn.disabled = true;
             } else {
                 applyBtn.style.background = 'var(--accent-orange)';
-                applyBtn.innerHTML = `<i data-lucide="send" style="width:15px; height:15px;"></i> Apply Job`;
+                applyBtn.innerHTML = `<i data-lucide="send" style="width:14px; height:14px;"></i> Apply Job`;
                 applyBtn.disabled = false;
             }
 
@@ -1230,7 +1227,7 @@
                 
                 const applyBtn = document.getElementById('applyActionBtn');
                 applyBtn.style.background = '#10b981';
-                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:15px; height:15px;"></i> Application Submitted`;
+                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:14px; height:14px;"></i> Application Submitted`;
                 applyBtn.disabled = true;
 
                 setTimeout(() => {
