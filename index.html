@@ -73,14 +73,17 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        html, body {
+            /* Removed overflow restrictions to ensure native sticky header works properly */
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             background-color: var(--bg-app);
             color: var(--text-primary);
             width: 100vw;
             min-height: 100vh;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
             transition: background-color 0.3s ease;
         }
 
@@ -93,8 +96,9 @@
             transition: background 0.3s ease;
         }
 
-        /* STICKY TOP CONTAINER */
+        /* NATIVE STICKY TOP CONTAINER */
         .sticky-top-section {
+            position: -webkit-sticky; /* For iOS Safari */
             position: sticky;
             top: 0;
             background: var(--bg-sticky);
@@ -104,6 +108,12 @@
             flex-shrink: 0;
             padding-top: env(safe-area-inset-top);
             width: 100%;
+            
+            /* Native Hardware Acceleration to prevent jitter on scroll up */
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            transform: translate3d(0, 0, 0);
+            will-change: transform;
         }
 
         /* App Header */
@@ -173,7 +183,7 @@
             display: none;
         }
 
-        /* Filter Chips Bar (Only 3 Chips: All Matches, Remote, Full-Time) */
+        /* Filter Chips Bar */
         .chip-bar {
             display: flex;
             gap: 8px;
@@ -203,7 +213,7 @@
             font-weight: 700;
         }
 
-        /* Summary Counter Panel (for Saved / Applied) */
+        /* Summary Counter Panel */
         .summary-banner {
             background: var(--bg-surface);
             border-radius: 12px;
@@ -678,7 +688,7 @@
                 </button>
             </div>
 
-            <!-- Header Filter Bar with Exactly 3 Filter Chips -->
+            <!-- Header Filter Bar -->
             <div class="header-context-bar" id="headerContextContainer">
                 <!-- Dynamic Content injected via JS based on Tab -->
             </div>
@@ -784,16 +794,16 @@
 
         </div>
 
-        <!-- FIXED FLOATING ACTION BUTTON (FAB) -->
+        <!-- FIXED FLOATING ACTION BUTTON (FAB) - LOGO SIZE INCREASED -->
         <button class="fab-kazini" aria-label="Kazini Action">
-            <svg width="26" height="26" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
                 <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
                 <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
             </svg>
         </button>
 
-        <!-- Bottom Navigation Bar -->
+        <!-- Bottom Navigation Bar - UPDATED BOOKMARK TO HEART -->
         <div class="bottom-nav">
             <div class="nav-container">
                 <div class="nav-item active" onclick="switchTab(this, 'discoverTab')">
@@ -801,7 +811,7 @@
                     <span>Discover</span>
                 </div>
                 <div class="nav-item" onclick="switchTab(this, 'savedTab')">
-                    <i data-lucide="bookmark" style="width:20px; height:20px;"></i>
+                    <i data-lucide="heart" style="width:20px; height:20px;"></i>
                     <span>Saved</span>
                 </div>
                 <div class="nav-item" onclick="switchTab(this, 'appliedTab')">
@@ -844,6 +854,15 @@
                     </div>
                 </div>
 
+                <!-- NEW: Why It Matches You Section -->
+                <div class="section-label-modal">
+                    <i data-lucide="sparkles" style="width: 13px; height: 13px;"></i> Why it matches you
+                </div>
+                <div class="detail-block" style="margin-bottom: 14px;">
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">Your verified profile skills align strongly with this role:</p>
+                    <div id="modalMatchingSkills" class="skills-row" style="margin-bottom: 0;"></div>
+                </div>
+
                 <div class="section-label-modal">
                     <i data-lucide="layers" style="width: 13px; height: 13px;"></i> Required Tech Stack
                 </div>
@@ -863,8 +882,9 @@
                     <ul style="font-size: 12px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalResp"></ul>
                 </div>
 
+                <!-- UPDATED BUTTON LABEL -->
                 <button class="apply-btn-full" id="applyActionBtn" onclick="applyJob()">
-                    <i data-lucide="send" style="width: 15px; height: 15px;"></i> Quick Apply with Kazini ID
+                    <i data-lucide="send" style="width: 15px; height: 15px;"></i> Apply Job
                 </button>
             </div>
         </div>
@@ -879,7 +899,7 @@
                 company: "Nexus Labs Africa",
                 verified: true,
                 location: "Nairobi",
-                skills: ["Python", "SQL"],
+                skills: ["Python", "SQL", "Tableau"],
                 moreSkills: 1,
                 salary: "KSH 75,000 - 95,000",
                 matchScore: "94%",
@@ -899,7 +919,7 @@
                 company: "SafariTech Ventures",
                 verified: true,
                 location: "Mombasa",
-                skills: ["Excel", "Tableau"],
+                skills: ["Excel", "Tableau", "PowerBI"],
                 moreSkills: 1,
                 salary: "KSH 120,000 - 150,000",
                 matchScore: "88%",
@@ -919,7 +939,7 @@
                 company: "Kilimo Data Solutions",
                 verified: true,
                 location: "Nairobi",
-                skills: ["PowerBI", "R"],
+                skills: ["PowerBI", "R", "SQL"],
                 moreSkills: 1,
                 salary: "KSH 45,000 - 60,000",
                 matchScore: "75%",
@@ -967,13 +987,13 @@
                     </div>
 
                     <div class="skills-row">
-                        ${job.skills.map(s => `
+                        ${job.skills.slice(0, 2).map(s => `
                             <div class="skill-badge">
                                 <i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i>
                                 ${s}
                             </div>
                         `).join('')}
-                        ${job.moreSkills ? `<div class="skill-badge more">+${job.moreSkills}</div>` : ''}
+                        ${job.skills.length > 2 ? `<div class="skill-badge more">+${job.skills.length - 2}</div>` : ''}
                     </div>
 
                     <div class="salary-text">${job.salary}</div>
@@ -997,7 +1017,7 @@
             if (savedJobs.length === 0) {
                 container.innerHTML = `
                     <div class="glass-panel" style="text-align: center; padding: 36px 16px;">
-                        <i data-lucide="bookmark" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
+                        <i data-lucide="heart" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
                         <div style="font-weight: 700; color: var(--text-primary); font-size: 15px;">No Saved Roles Yet</div>
                         <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Tap the heart icon on any job card to save it here.</div>
                     </div>`;
@@ -1103,7 +1123,7 @@
                 container.innerHTML = `
                     <div class="summary-banner">
                         <div class="summary-title">
-                            <i data-lucide="bookmark" style="width:15px; height:15px; color: var(--accent-orange);"></i>
+                            <i data-lucide="heart" style="width:15px; height:15px; color: var(--accent-orange); fill: var(--accent-orange-light);"></i>
                             Saved Positions
                         </div>
                         <span class="summary-count">${savedCount} BOOKMARKED</span>
@@ -1170,6 +1190,14 @@
             document.getElementById('modalDesc').innerText = job.desc;
             document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
 
+            // Populate Matching Profile Skills (Why it matches you)
+            document.getElementById('modalMatchingSkills').innerHTML = job.skills.map(s => `
+                <div class="skill-badge" style="background: var(--status-applied-bg); color: var(--status-applied-text); border: 1px solid rgba(16, 185, 129, 0.2);">
+                    <i data-lucide="check-circle" style="width:11px; height:11px;"></i> ${s}
+                </div>
+            `).join('');
+
+            // Populate Required Tech Stack
             document.getElementById('modalSkills').innerHTML = job.skills.map(s => `
                 <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> ${s}</div>
             `).join('');
@@ -1181,7 +1209,7 @@
                 applyBtn.disabled = true;
             } else {
                 applyBtn.style.background = 'var(--accent-orange)';
-                applyBtn.innerHTML = `<i data-lucide="send" style="width:15px; height:15px;"></i> Quick Apply with Kazini ID`;
+                applyBtn.innerHTML = `<i data-lucide="send" style="width:15px; height:15px;"></i> Apply Job`;
                 applyBtn.disabled = false;
             }
 
