@@ -43,8 +43,8 @@
 
             /* Floating Action Button Theme Defaults (Light Mode) */
             --fab-bg: #FFFFFF;
-            --fab-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
-            --fab-border: 1px solid rgba(0, 0, 0, 0.08);
+            --fab-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+            --fab-border: 1px solid rgba(0, 0, 0, 0.1);
         }
 
         /* True Black Dark Mode */
@@ -61,9 +61,9 @@
             --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
 
             /* Dynamic FAB Overrides for Dark Mode */
-            --fab-bg: #000000;
-            --fab-shadow: 0 6px 24px rgba(0, 0, 0, 0.8), 0 0 14px rgba(255, 85, 0, 0.25);
-            --fab-border: 1px solid rgba(255, 255, 255, 0.12);
+            --fab-bg: #0d0d0d;
+            --fab-shadow: 0 8px 28px rgba(0, 0, 0, 0.9), 0 0 16px rgba(255, 85, 0, 0.3);
+            --fab-border: 1px solid rgba(255, 255, 255, 0.18);
         }
 
         * {
@@ -74,26 +74,24 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        /* True Full-Width Web Canvas */
         body {
             background-color: var(--bg-app);
             color: var(--text-primary);
+            width: 100vw;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: stretch;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
             transition: background-color 0.3s ease;
         }
 
-        /* Responsive Full App Container */
         .phone-frame {
-            width: 100%;
-            max-width: 600px;
-            height: 100vh;
-            background: var(--bg-card);
-            position: relative;
+            width: 100vw;
+            min-height: 100vh;
+            background: var(--bg-app);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
             transition: background 0.3s ease;
         }
 
@@ -102,37 +100,42 @@
             position: sticky;
             top: 0;
             background: var(--bg-sticky);
-            z-index: 20;
+            z-index: 50;
             border-bottom: 1px solid var(--border-color);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
             flex-shrink: 0;
             padding-top: env(safe-area-inset-top);
+            width: 100%;
         }
 
         /* App Header */
         .app-header {
-            padding: 16px 20px;
+            padding: 16px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         .brand-logo {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
 
+        /* Enlarged Logo Symbol Container */
         .svg-logo-icon {
-            width: 46px;
-            height: 46px;
+            width: 56px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .brand-text {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 800;
             letter-spacing: -0.5px;
             color: var(--text-primary);
@@ -143,8 +146,8 @@
         }
 
         .theme-toggle {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background: var(--bg-surface);
             border: 1px solid var(--border-subtle);
@@ -160,25 +163,29 @@
             transform: scale(0.92);
         }
 
-        /* Custom Greeting / Header Row per Tab */
+        /* Greeting & Headers Inner Constraint */
         .greeting-card {
             background: var(--bg-sticky);
-            padding: 8px 20px 14px 20px;
+            padding: 8px 24px 14px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         .greeting-card.hidden {
             display: none;
         }
 
+        /* Non-bold user greeting style */
         .user-greeting {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 18px;
-            font-weight: 800;
+            font-size: 19px;
+            font-weight: 500;
             color: var(--text-primary);
         }
 
@@ -194,10 +201,12 @@
             cursor: pointer;
         }
 
-        /* Section Title Header */
         .section-header {
-            padding: 4px 20px 12px 20px;
+            padding: 4px 24px 12px 24px;
             background: var(--bg-sticky);
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         .section-header.hidden {
@@ -215,24 +224,20 @@
         /* App Scrollable Container */
         .app-body {
             flex: 1;
-            overflow-y: auto;
-            padding: 16px;
+            padding: 20px 24px 100px 24px;
             background: var(--bg-app);
-            scroll-behavior: smooth;
-            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
         }
 
-        .app-body::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* Floating Action Button (FAB) */
+        /* Floating Action Button (FAB) - Fixed Viewport Overlay */
         .fab-kazini {
             position: fixed;
-            bottom: 80px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
+            bottom: 84px;
+            right: 24px;
+            width: 62px;
+            height: 62px;
             border-radius: 50%;
             background: var(--fab-bg);
             border: var(--fab-border);
@@ -241,12 +246,28 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            z-index: 30;
-            transition: all 0.3s ease;
+            z-index: 999;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .fab-kazini:active {
             transform: scale(0.90);
+        }
+
+        /* Scalloped Badge Styling */
+        .scalloped-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            filter: drop-shadow(0px 2px 4px var(--deep-vivid-blue-glow));
+        }
+
+        .scalloped-badge.lg {
+            width: 26px;
+            height: 26px;
         }
 
         /* Tab Views */
@@ -274,7 +295,7 @@
         .job-card {
             background: var(--bg-card);
             border-radius: 20px;
-            padding: 18px;
+            padding: 20px;
             box-shadow: var(--card-shadow);
             border: 1px solid var(--border-color);
             position: relative;
@@ -294,7 +315,7 @@
         }
 
         .job-title {
-            font-size: 17px;
+            font-size: 18px;
             font-weight: 700;
             color: var(--text-primary);
             margin-bottom: 6px;
@@ -305,23 +326,10 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 13.5px;
+            font-size: 14px;
             color: var(--text-secondary);
             font-weight: 600;
             margin-bottom: 14px;
-        }
-
-        /* Deep Vivid Premium Blue Verification Badge */
-        .verified-check {
-            width: 17px;
-            height: 17px;
-            background: var(--deep-vivid-blue);
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            box-shadow: 0 2px 8px var(--deep-vivid-blue-glow);
         }
 
         .location-dot {
@@ -346,7 +354,7 @@
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .skill-badge {
@@ -367,19 +375,20 @@
             font-weight: 800;
         }
 
+        /* Reduced salary size and weight so it doesn't compete with job titles */
         .salary-text {
-            font-size: 15px;
-            font-weight: 800;
-            color: var(--text-primary);
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
             margin-bottom: 16px;
-            letter-spacing: -0.2px;
+            letter-spacing: -0.1px;
         }
 
         .card-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-top: 12px;
+            padding-top: 14px;
             border-top: 1px dashed var(--border-color);
         }
 
@@ -413,7 +422,7 @@
             transform: scale(0.95);
         }
 
-        /* SLIM MINIMALIST CARDS (FOR SAVED & APPLIED TABS) */
+        /* SLIM MINIMALIST CARDS */
         .slim-card-list {
             display: flex;
             flex-direction: column;
@@ -423,7 +432,7 @@
         .slim-card {
             background: var(--bg-card);
             border-radius: 16px;
-            padding: 16px;
+            padding: 16px 18px;
             box-shadow: var(--card-shadow);
             border: 1px solid var(--border-color);
             display: flex;
@@ -439,7 +448,7 @@
         }
 
         .slim-job-title {
-            font-size: 15px;
+            font-size: 15.5px;
             font-weight: 700;
             color: var(--text-primary);
             margin-bottom: 4px;
@@ -452,7 +461,7 @@
             margin-bottom: 6px;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
 
         .slim-meta-text {
@@ -461,7 +470,6 @@
             font-weight: 500;
         }
 
-        /* Applied Status Label Green Pill */
         .status-applied-pill {
             background: var(--status-applied-bg);
             color: var(--status-applied-text);
@@ -475,11 +483,11 @@
             gap: 4px;
         }
 
-        /* Profile & Glass Panel Components */
+        /* Profile & Glass Panels */
         .glass-panel {
             background: var(--bg-card);
             border-radius: 20px;
-            padding: 20px;
+            padding: 22px;
             border: 1px solid var(--border-color);
             margin-bottom: 16px;
             box-shadow: var(--card-shadow);
@@ -510,12 +518,11 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 12px;
-            margin-bottom: 20px;
         }
 
         .stat-card {
             background: var(--bg-surface);
-            padding: 12px;
+            padding: 14px;
             border-radius: 14px;
             text-align: center;
         }
@@ -539,7 +546,7 @@
             color: var(--accent-orange);
             letter-spacing: 0.8px;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -555,14 +562,25 @@
 
         /* Bottom Navigation Bar */
         .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background: var(--bg-sticky);
             border-top: 1px solid var(--border-color);
-            padding: 12px 16px max(16px, env(safe-area-inset-bottom)) 16px;
+            padding: 10px 16px max(14px, env(safe-area-inset-bottom)) 16px;
             display: flex;
             justify-content: space-around;
             align-items: center;
-            flex-shrink: 0;
-            z-index: 25;
+            z-index: 100;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
         }
 
         .nav-item {
@@ -575,7 +593,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: color 0.2s;
-            padding: 4px 12px;
+            padding: 4px 16px;
         }
 
         .nav-item.active {
@@ -589,19 +607,22 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.75);
             backdrop-filter: blur(4px);
-            z-index: 100;
+            z-index: 1000;
             display: none;
             justify-content: flex-end;
             flex-direction: column;
+            align-items: center;
         }
 
         .modal-card {
             background: var(--bg-card);
             border-radius: 28px 28px 0 0;
             padding: 24px;
-            max-height: 85vh;
+            max-height: 88vh;
+            width: 100%;
+            max-width: 800px;
             overflow-y: auto;
             border-top: 1px solid var(--border-subtle);
             box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
@@ -645,37 +666,34 @@
 <body class="dark-theme">
 
     <div class="phone-frame">
-        <!-- STICKY TOP SECTION: Dynamic Per-Tab Header -->
+        <!-- STICKY TOP SECTION -->
         <div class="sticky-top-section">
-            <!-- App Logo & Theme Toggle Header -->
             <div class="app-header">
                 <div class="brand-logo">
-                    <!-- Prominent Kazini SVG Logo Symbol -->
+                    <!-- ENLARGED Kazini SVG Logo Symbol (56x56) -->
                     <div class="svg-logo-icon">
-                        <svg width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="20" y="35" width="60" height="45" rx="10" stroke="#FF5500" stroke-width="8" fill="none"/>
-                            <path d="M40 35 V25 C40 22 43 20 46 20 H54 C57 20 60 22 60 25 V35" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
-                            <path d="M80 12 Q80 22 90 22 Q80 22 80 32 Q80 22 70 22 Q80 22 80 12 Z" fill="#FF5500"/>
+                        <svg width="56" height="56" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
+                            <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
+                            <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
                         </svg>
                     </div>
                     <div class="brand-text">Kazini <span>AI</span></div>
                 </div>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
-                    <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
+                    <i data-lucide="sun" id="themeIcon" style="width:20px; height:20px;"></i>
                 </button>
             </div>
 
-            <!-- Context-Aware Greeting / Title Section -->
             <div class="greeting-card" id="greetingContainer">
                 <div class="user-greeting" id="dynamicTitle">
-                    Hi Robin <span style="font-size: 20px;">😊</span>
+                    Hi Robin <span style="font-size: 18px;">😊</span>
                 </div>
                 <div class="matches-badge" id="dynamicBadge">
                     8 MATCHES
                 </div>
             </div>
 
-            <!-- Section Subtitle Label -->
             <div class="section-header" id="sectionHeaderContainer">
                 <span class="section-title" id="tabHeaderTitle">FOR YOU</span>
             </div>
@@ -684,15 +702,6 @@
         <!-- Scrollable Body Content -->
         <div class="app-body">
             
-            <!-- Floating Action Button (FAB) -->
-            <button class="fab-kazini" aria-label="Kazini Action">
-                <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="20" y="35" width="60" height="45" rx="10" stroke="#FF5500" stroke-width="8" fill="none"/>
-                    <path d="M40 35 V25 C40 22 43 20 46 20 H54 C57 20 60 22 60 25 V35" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
-                    <path d="M80 12 Q80 22 90 22 Q80 22 80 32 Q80 22 70 22 Q80 22 80 12 Z" fill="#FF5500"/>
-                </svg>
-            </button>
-
             <!-- TAB 1: DISCOVER (FOR YOU) -->
             <div class="tab-view active" id="discoverTab">
                 <div class="job-list" id="jobList">
@@ -700,14 +709,14 @@
                 </div>
             </div>
 
-            <!-- TAB 2: SAVED JOBS (Slim Cards) -->
+            <!-- TAB 2: SAVED JOBS -->
             <div class="tab-view" id="savedTab">
                 <div class="slim-card-list" id="savedJobList">
                     <!-- Dynamically Rendered Saved Jobs -->
                 </div>
             </div>
 
-            <!-- TAB 3: APPLIED JOBS (Slim Cards) -->
+            <!-- TAB 3: APPLIED JOBS -->
             <div class="tab-view" id="appliedTab">
                 <div class="slim-card-list" id="appliedJobList">
                     <!-- Dynamically Rendered Applied Jobs -->
@@ -720,13 +729,17 @@
                     <div class="profile-header">
                         <div class="avatar-box">RM</div>
                         <div>
-                            <div style="font-size: 20px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                            <div style="font-size: 20px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
                                 Robin Muchiri
-                                <span class="verified-check" title="Verified Professional Account">
-                                    <i data-lucide="check" style="width:10px; height:10px; stroke-width:3;"></i>
+                                <!-- Scalloped Badge Large -->
+                                <span class="scalloped-badge lg" title="Verified Professional">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                                        <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
                                 </span>
                             </div>
-                            <div style="font-size: 13px; color: var(--accent-orange); font-weight: 700; margin-top: 2px;">
+                            <div style="font-size: 13.5px; color: var(--accent-orange); font-weight: 700; margin-top: 3px;">
                                 Digital Innovation & Data Specialist
                             </div>
                             <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
@@ -770,9 +783,14 @@
                     </div>
                     <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <i data-lucide="shield-check" style="width: 22px; height: 22px; color: var(--deep-vivid-blue);"></i>
+                            <span class="scalloped-badge lg">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                                    <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
                             <div>
-                                <div style="font-size: 13.5px; font-weight: 700; color: var(--text-primary);">Kazini Digital Identity</div>
+                                <div style="font-size: 14px; font-weight: 700; color: var(--text-primary);">Kazini Identity Shield</div>
                                 <div style="font-size: 11.5px; color: var(--text-muted);">Verified Credentials Active</div>
                             </div>
                         </div>
@@ -783,23 +801,34 @@
 
         </div>
 
+        <!-- FIXED FLOATING ACTION BUTTON (FAB) -->
+        <button class="fab-kazini" aria-label="Kazini Action">
+            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
+                <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
+                <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
+            </svg>
+        </button>
+
         <!-- Bottom Navigation Bar -->
         <div class="bottom-nav">
-            <div class="nav-item active" onclick="switchTab(this, 'discoverTab')">
-                <i data-lucide="compass"></i>
-                <span>Discover</span>
-            </div>
-            <div class="nav-item" onclick="switchTab(this, 'savedTab')">
-                <i data-lucide="bookmark"></i>
-                <span>Saved</span>
-            </div>
-            <div class="nav-item" onclick="switchTab(this, 'appliedTab')">
-                <i data-lucide="clipboard-list"></i>
-                <span>Applied</span>
-            </div>
-            <div class="nav-item" onclick="switchTab(this, 'profileTab')">
-                <i data-lucide="user"></i>
-                <span>Profile</span>
+            <div class="nav-container">
+                <div class="nav-item active" onclick="switchTab(this, 'discoverTab')">
+                    <i data-lucide="compass"></i>
+                    <span>Discover</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(this, 'savedTab')">
+                    <i data-lucide="bookmark"></i>
+                    <span>Saved</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(this, 'appliedTab')">
+                    <i data-lucide="clipboard-list"></i>
+                    <span>Applied</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(this, 'profileTab')">
+                    <i data-lucide="user"></i>
+                    <span>Profile</span>
+                </div>
             </div>
         </div>
 
@@ -813,15 +842,18 @@
                         <h2 id="modalTitle" style="font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 6px;"></h2>
                         <div id="modalCompany" style="color: var(--text-secondary); font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px;"></div>
                     </div>
-                    <span class="verified-check" style="width: 24px; height: 24px;" title="Verified Employer">
-                        <i data-lucide="check" style="width:14px; height:14px; stroke-width:3;"></i>
+                    <span class="scalloped-badge lg" title="Verified Employer">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                            <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     </span>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;">
                     <div class="detail-block" style="margin-bottom:0;">
                         <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Estimated Salary</div>
-                        <div id="modalSalary" style="font-size: 14px; font-weight: 800; color: #10b981; margin-top: 4px;"></div>
+                        <div id="modalSalary" style="font-size: 13.5px; font-weight: 700; color: #10b981; margin-top: 4px;"></div>
                     </div>
                     <div class="detail-block" style="margin-bottom:0;">
                         <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
@@ -920,6 +952,15 @@
             }
         ];
 
+        // Scalloped Verification Badge Template
+        const scallopedBadgeSVG = `
+            <span class="scalloped-badge" title="Verified Employer">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                    <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </span>`;
+
         let activeJobId = null;
 
         // Render Cards for Discover Tab
@@ -932,7 +973,7 @@
                             <div class="job-title">${job.title}</div>
                             <div class="company-info">
                                 <span>${job.company}</span>
-                                ${job.verified ? `<span class="verified-check" title="Verified Employer"><i data-lucide="check" style="width:100%; height:100%; stroke-width:3;"></i></span>` : ''}
+                                ${job.verified ? scallopedBadgeSVG : ''}
                                 <span class="location-dot">•</span>
                                 <span>${job.location}</span>
                             </div>
@@ -965,7 +1006,7 @@
             lucide.createIcons();
         }
 
-        // Render Saved Tab Jobs (Slim Card Format)
+        // Render Saved Tab Jobs
         function renderSavedJobs() {
             const container = document.getElementById('savedJobList');
             const savedJobs = jobData.filter(j => j.bookmarked);
@@ -984,7 +1025,7 @@
                             <div class="slim-job-title">${job.title}</div>
                             <div class="slim-company-name">
                                 ${job.company}
-                                ${job.verified ? `<span class="verified-check" style="width:14px; height:14px;" title="Verified Employer"><i data-lucide="check" style="width:8px; height:8px; stroke-width:3;"></i></span>` : ''}
+                                ${job.verified ? scallopedBadgeSVG : ''}
                             </div>
                             <div class="slim-meta-text">${job.location} • ${job.salary}</div>
                         </div>
@@ -997,7 +1038,7 @@
             lucide.createIcons();
         }
 
-        // Render Applied Tab Jobs (Slim Card Format)
+        // Render Applied Tab Jobs
         function renderAppliedJobs() {
             const container = document.getElementById('appliedJobList');
             const appliedJobs = jobData.filter(j => j.applied);
@@ -1016,7 +1057,7 @@
                             <div class="slim-job-title">${job.title}</div>
                             <div class="slim-company-name">
                                 ${job.company}
-                                ${job.verified ? `<span class="verified-check" style="width:14px; height:14px;" title="Verified Employer"><i data-lucide="check" style="width:8px; height:8px; stroke-width:3;"></i></span>` : ''}
+                                ${job.verified ? scallopedBadgeSVG : ''}
                             </div>
                             <div class="slim-meta-text">${job.appliedDate}</div>
                         </div>
@@ -1046,7 +1087,7 @@
             }
         }
 
-        // Switch Main Navigation Tabs
+        // Switch Navigation Tabs
         function switchTab(element, tabId) {
             document.querySelectorAll('.bottom-nav .nav-item').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
@@ -1069,7 +1110,7 @@
             if (tabId === 'discoverTab') {
                 greetingContainer.classList.remove('hidden');
                 sectionHeaderContainer.classList.remove('hidden');
-                dynamicTitle.innerHTML = `Hi Robin <span style="font-size: 20px;">😊</span>`;
+                dynamicTitle.innerHTML = `Hi Robin <span style="font-size: 18px;">😊</span>`;
                 dynamicBadge.innerText = `8 MATCHES`;
                 tabHeaderTitle.innerText = `FOR YOU`;
                 renderJobs();
@@ -1103,7 +1144,7 @@
             lucide.createIcons();
         }
 
-        // Open Sectioned Job Details Modal
+        // Open Job Details Modal
         function openModal(id) {
             activeJobId = id;
             const job = jobData.find(j => j.id === id);
@@ -1169,17 +1210,6 @@
             renderJobs();
             lucide.createIcons();
         });
-    </script>
-
-    <!-- Service Worker Registration -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker Registered'))
-            .catch(err => console.error('Service Worker Registration Failed', err));
-        });
-      }
     </script>
 </body>
 </html>
