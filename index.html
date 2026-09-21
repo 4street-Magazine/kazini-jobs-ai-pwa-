@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAZINI AI - Smart Job Matching</title>
+
+    <!-- PWA Metadata Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF5500">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/FF5500/FFF.png?text=KAZINI">
+
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            /* Vivid Orange Premium Accent Color */
+            --accent-orange: #FF5500;
+            --accent-orange-hover: #E04B00;
+            --accent-orange-light: rgba(255, 85, 0, 0.12);
+            --accent-orange-glow: rgba(255, 85, 0, 0.28);
+            
+            /* Deep Vivid Premium Blue Color for Verification Badges */
+            --deep-vivid-blue: #0052FF;
+            --deep-vivid-blue-light: rgba(0, 82, 255, 0.12);
+            --deep-vivid-blue-glow: rgba(0, 82, 255, 0.25);
+            
+            /* Status Colors */
+            --status-applied-bg: rgba(16, 185, 129, 0.12);
+            --status-applied-text: #10b981;
+            
+            /* Theme Base Colors (Default Light) */
+            --bg-app: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-sticky: #ffffff;
+            --bg-surface: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border-color: #f1f5f9;
+            --border-subtle: #e2e8f0;
+            --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+        }
+
+        /* True Black Dark Mode */
+        body.dark-theme {
+            --bg-app: #000000;
+            --bg-card: #0a0a0a;
+            --bg-sticky: #000000;
+            --bg-surface: #121212;
+            --text-primary: #ffffff;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: #1a1a1a;
+            --border-subtle: #262626;
+            --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #020617;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 12px;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Mobile Device Frame Mockup */
+        .phone-frame {
+            width: 100%;
+            max-width: 412px;
+            height: 870px;
+            background: var(--bg-card);
+            border-radius: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 12px #1e293b;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background 0.3s ease;
+        }
+
+        /* System Status Bar */
+        .status-bar {
+            height: 40px;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            background: var(--bg-sticky);
+            z-index: 25;
+            flex-shrink: 0;
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        /* STICKY TOP CONTAINER */
+        .sticky-top-section {
+            position: sticky;
+            top: 0;
+            background: var(--bg-sticky);
+            z-index: 20;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            flex-shrink: 0;
+        }
+
+        /* App Header */
+        .app-header {
+            padding: 12px 20px 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .briefcase-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-orange) 0%, #FF7733 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 4px 14px var(--accent-orange-glow);
+        }
+
+        .brand-text {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        .brand-text span {
+            color: var(--accent-orange);
+        }
+
+        .theme-toggle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.92);
+        }
+
+        /* Custom Greeting / Header Row per Tab */
+        .greeting-card {
+            background: var(--bg-sticky);
+            padding: 8px 20px 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .greeting-card.hidden {
+            display: none;
+        }
+
+        .user-greeting {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .matches-badge {
+            background: var(--accent-orange);
+            color: white;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 8px 14px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px var(--accent-orange-glow);
+            cursor: pointer;
+        }
+
+        /* Section Title Header */
+        .section-header {
+            padding: 4px 20px 12px 20px;
+            background: var(--bg-sticky);
+        }
+
+        .section-header.hidden {
+            display: none;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* App Scrollable Container */
+        .app-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: var(--bg-app);
+            scroll-behavior: smooth;
+        }
+
+        .app-body::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Tab Views */
+        .tab-view {
+            display: none;
+            animation: fadeIn 0.25s ease-in-out;
+        }
+
+        .tab-view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Full Job Card (Discover Tab) */
+        .job-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .job-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .job-card:hover {
+            border-color: var(--border-subtle);
+            transform: translateY(-2px);
+        }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .job-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+
+        .company-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+
+        /* Deep Vivid Premium Blue Verification Badge */
+        .verified-check {
+            width: 17px;
+            height: 17px;
+            background: var(--deep-vivid-blue);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 2px 8px var(--deep-vivid-blue-glow);
+        }
+
+        .location-dot {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .bookmark-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .bookmark-btn:active {
+            transform: scale(0.85);
+        }
+
+        .skills-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .skill-badge {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .skill-badge.more {
+            background: var(--accent-orange-light);
+            color: var(--accent-orange);
+            font-weight: 800;
+        }
+
+        .salary-text {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            letter-spacing: -0.2px;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .match-score {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--deep-vivid-blue);
+        }
+
+        .view-btn {
+            background: var(--accent-orange);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 4px 12px var(--accent-orange-glow);
+            transition: all 0.2s;
+        }
+
+        .view-btn:hover {
+            background: var(--accent-orange-hover);
+        }
+
+        .view-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* SLIM MINIMALIST CARDS (FOR SAVED & APPLIED TABS) */
+        .slim-card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .slim-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .slim-card:hover {
+            border-color: var(--border-subtle);
+            transform: translateY(-1px);
+        }
+
+        .slim-job-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .slim-company-name {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .slim-meta-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Applied Status Label Green Pill */
+        .status-applied-pill {
+            background: var(--status-applied-bg);
+            color: var(--status-applied-text);
+            font-size: 12px;
+            font-weight: 800;
+            padding: 6px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Profile & Glass Panel Components */
+        .glass-panel {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 16px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .avatar-box {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--accent-orange) 0%, #FF8800 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 800;
+            box-shadow: 0 6px 18px var(--accent-orange-glow);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-surface);
+            padding: 12px;
+            border-radius: 14px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .section-label-modal {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--accent-orange);
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detail-block {
+            background: var(--bg-surface);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* Bottom Navigation Bar */
+        .bottom-nav {
+            background: var(--bg-sticky);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 16px 16px 16px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-shrink: 0;
+            z-index: 25;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s;
+            padding: 4px 12px;
+        }
+
+        .nav-item.active {
+            color: var(--accent-orange);
+        }
+
+        /* Job Details Drawer Modal */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            justify-content: flex-end;
+            flex-direction: column;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border-radius: 28px 28px 0 0;
+            padding: 24px;
+            max-height: 85%;
+            overflow-y: auto;
+            border-top: 1px solid var(--border-subtle);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-card::-webkit-scrollbar {
+            display: none;
+        }
+
+        .apply-btn-full {
+            width: 100%;
+            background: var(--accent-orange);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 18px;
+            font-size: 15px;
+            font-weight: 800;
+            margin-top: 16px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px var(--accent-orange-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .apply-btn-full:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body class="dark-theme">
+
+    <div class="phone-frame">
+        <!-- System Status Bar -->
+        <div class="status-bar">
+            <span>13:36</span>
+            <div class="status-icons">
+                <i data-lucide="wifi" style="width:14px; height:14px;"></i>
+                <i data-lucide="signal" style="width:14px; height:14px;"></i>
+                <span>26%</span>
+            </div>
+        </div>
+
+        <!-- STICKY TOP SECTION: Dynamic Per-Tab Header -->
+        <div class="sticky-top-section">
+            <!-- App Logo & Theme Toggle Header -->
+            <div class="app-header">
+                <div class="brand-logo">
+                    <div class="briefcase-icon">
+                        <i data-lucide="briefcase" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div class="brand-text">Kazini <span>AI</span></div>
+                </div>
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
+                </button>
+            </div>
+
+            <!-- Context-Aware Greeting / Title Section -->
+            <div class="greeting-card" id="greetingContainer">
+                <div class="user-greeting" id="dynamicTitle">
+                    Hi Robin <span style="font-size: 20px;">😊</span>
+                </div>
+                <div class="matches-badge" id="dynamicBadge">
+                    8 MATCHES
+                </div>
+            </div>
+
+            <!-- Section Subtitle Label -->
+            <div class="section-header" id="sectionHeaderContainer">
+                <span class="section-title" id="tabHeaderTitle">FOR YOU</span>
+            </div>
+        </div>
+
+        <!-- Scrollable Body Content -->
+        <div class="app-body">
+            
+            <!-- TAB 1: DISCOVER (FOR YOU) -->
+            <div class="tab-view active" id="discoverTab">
+                <div class="job-list" id="jobList">
+                    <!-- Dynamically Rendered Full Job Cards -->
+                </div>
+            </div>
+
+            <!-- TAB 2: SAVED JOBS (Slim Cards) -->
+            <div class="tab-view" id="savedTab">
+                <div class="slim-card-list" id="savedJobList">
+                    <!-- Dynamically Rendered Saved Jobs -->
+                </div>
+            </div>
+
+            <!-- TAB 3: APPLIED JOBS (Slim Cards) -->
+            <div class="tab-view" id="appliedTab">
+                <div class="slim-card-list" id="appliedJobList">
+                    <!-- Dynamically Rendered Applied Jobs -->
+                </div>
+            </div>
+
+            <!-- TAB 4: PROFESSIONAL PROFILE -->
+            <div class="tab-view" id="profileTab">
+                <div class="glass-panel">
+                    <div class="profile-header">
+                        <div class="avatar-box">RM</div>
+                        <div>
+                            <div style="font-size: 20px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                Robin Muchiri
+                                <span class="verified-check" title="Verified Professional Account">
+                                    <i data-lucide="check" style="width:10px; height:10px; stroke-width:3;"></i>
+                                </span>
+                            </div>
+                            <div style="font-size: 13px; color: var(--accent-orange); font-weight: 700; margin-top: 2px;">
+                                Digital Innovation & Data Specialist
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                Nairobi, Kenya
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">96%</div>
+                            <div class="stat-label">AI Match Score</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statAppliedCount">1</div>
+                            <div class="stat-label">Applications</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statSavedCount">2</div>
+                            <div class="stat-label">Saved Roles</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="section-label-modal">
+                        <i data-lucide="cpu" style="width: 14px; height: 14px;"></i> Verified Core Skills
+                    </div>
+                    <div class="skills-row" style="margin-bottom: 0;">
+                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> Data Analytics</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> Python</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> SQL</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> Social Commerce</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> Tableau</div>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="section-label-modal">
+                        <i data-lucide="file-check" style="width: 14px; height: 14px;"></i> Smart Resume & Verification
+                    </div>
+                    <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i data-lucide="shield-check" style="width: 22px; height: 22px; color: var(--deep-vivid-blue);"></i>
+                            <div>
+                                <div style="font-size: 13.5px; font-weight: 700; color: var(--text-primary);">Kazini Digital Identity</div>
+                                <div style="font-size: 11.5px; color: var(--text-muted);">Verified Credentials Active</div>
+                            </div>
+                        </div>
+                        <span style="font-size: 12px; font-weight: 800; color: var(--deep-vivid-blue);">VERIFIED</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Navigation Bar -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab(this, 'discoverTab')">
+                <i data-lucide="compass"></i>
+                <span>Discover</span>
+            </div>
+            <div class="nav-item" onclick="switchTab(this, 'savedTab')">
+                <i data-lucide="bookmark"></i>
+                <span>Saved</span>
+            </div>
+            <div class="nav-item" onclick="switchTab(this, 'appliedTab')">
+                <i data-lucide="clipboard-list"></i>
+                <span>Applied</span>
+            </div>
+            <div class="nav-item" onclick="switchTab(this, 'profileTab')">
+                <i data-lucide="user"></i>
+                <span>Profile</span>
+            </div>
+        </div>
+
+        <!-- JOB DETAILS MODAL -->
+        <div class="modal-overlay" id="jobModal" onclick="closeModal()">
+            <div class="modal-card" onclick="event.stopPropagation()">
+                <div style="width: 40px; height: 4px; background: var(--border-subtle); border-radius: 2px; margin: 0 auto 18px auto;"></div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div>
+                        <h2 id="modalTitle" style="font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 6px;"></h2>
+                        <div id="modalCompany" style="color: var(--text-secondary); font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px;"></div>
+                    </div>
+                    <span class="verified-check" style="width: 24px; height: 24px;" title="Verified Employer">
+                        <i data-lucide="check" style="width:14px; height:14px; stroke-width:3;"></i>
+                    </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;">
+                    <div class="detail-block" style="margin-bottom:0;">
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Estimated Salary</div>
+                        <div id="modalSalary" style="font-size: 14px; font-weight: 800; color: #10b981; margin-top: 4px;"></div>
+                    </div>
+                    <div class="detail-block" style="margin-bottom:0;">
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
+                        <div id="modalMatch" style="font-size: 14px; font-weight: 800; color: var(--deep-vivid-blue); margin-top: 4px;"></div>
+                    </div>
+                </div>
+
+                <div class="section-label-modal">
+                    <i data-lucide="layers" style="width: 14px; height: 14px;"></i> Required Tech Stack
+                </div>
+                <div id="modalSkills" class="skills-row" style="margin-bottom: 18px;"></div>
+
+                <div class="section-label-modal">
+                    <i data-lucide="align-left" style="width: 14px; height: 14px;"></i> Role Overview
+                </div>
+                <div class="detail-block">
+                    <p style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.6;" id="modalDesc"></p>
+                </div>
+
+                <div class="section-label-modal">
+                    <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i> Key Responsibilities
+                </div>
+                <div class="detail-block" style="margin-bottom: 18px;">
+                    <ul style="font-size: 13px; color: var(--text-secondary); padding-left: 18px; line-height: 1.6;" id="modalResp"></ul>
+                </div>
+
+                <button class="apply-btn-full" id="applyActionBtn" onclick="applyJob()">
+                    <i data-lucide="send" style="width: 16px; height: 16px;"></i> Quick Apply with Kazini ID
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Master Job Database
+        const jobData = [
+            {
+                id: 1,
+                title: "Junior Data Analyst",
+                company: "Nexus Labs Africa",
+                verified: true,
+                location: "Nairobi",
+                skills: ["Python", "SQL"],
+                moreSkills: 1,
+                salary: "KSH 75,000 - 95,000",
+                matchScore: "94%",
+                bookmarked: true,
+                applied: true,
+                appliedDate: "Applied 2 days ago",
+                desc: "Analyze complex datasets, build custom automated reporting scripts in Python, and collaborate with teams across Nairobi to drive digital transformation.",
+                resp: [
+                    "Clean, process, and analyze multi-source operational data.",
+                    "Build automated Python ETL scripts and SQL queries.",
+                    "Generate weekly business intelligence summaries for executive stakeholders."
+                ]
+            },
+            {
+                id: 2,
+                title: "Data Visualization Specialist",
+                company: "SafariTech Ventures",
+                verified: true,
+                location: "Mombasa",
+                skills: ["Excel", "Tableau"],
+                moreSkills: 1,
+                salary: "KSH 120,000 - 150,000",
+                matchScore: "88%",
+                bookmarked: true,
+                applied: false,
+                appliedDate: "",
+                desc: "Design high-impact Tableau dashboards and optimize financial reporting sheets for tech ecosystem partners in East Africa.",
+                resp: [
+                    "Create intuitive, decision-ready data visualizations in Tableau.",
+                    "Partner with financial teams to streamline reporting frameworks.",
+                    "Conduct training workshops on data literacy and tool usage."
+                ]
+            },
+            {
+                id: 3,
+                title: "Junior Research Analyst",
+                company: "Kilimo Data Solutions",
+                verified: true,
+                location: "Nairobi",
+                skills: ["PowerBI", "R"],
+                moreSkills: 1,
+                salary: "KSH 45,000 - 60,000",
+                matchScore: "75%",
+                bookmarked: false,
+                applied: false,
+                appliedDate: "",
+                desc: "Support agricultural intelligence projects by collecting field data, creating R analytics pipelines, and visualizing market trends in PowerBI.",
+                resp: [
+                    "Gather agricultural ecosystem datasets across regional hubs.",
+                    "Perform statistical analysis using R and Excel.",
+                    "Build interactive dashboards for field program managers."
+                ]
+            }
+        ];
+
+        let activeJobId = null;
+
+        // Render Cards for Discover Tab
+        function renderJobs() {
+            const container = document.getElementById('jobList');
+            container.innerHTML = jobData.map(job => `
+                <div class="job-card">
+                    <div class="card-header-row">
+                        <div>
+                            <div class="job-title">${job.title}</div>
+                            <div class="company-info">
+                                <span>${job.company}</span>
+                                ${job.verified ? `<span class="verified-check" title="Verified Employer"><i data-lucide="check" style="width:10px; height:10px; stroke-width:3;"></i></span>` : ''}
+                                <span class="location-dot">•</span>
+                                <span>${job.location}</span>
+                            </div>
+                        </div>
+                        <button class="bookmark-btn" onclick="toggleBookmark(${job.id})">
+                            <i data-lucide="heart" style="width: 20px; height: 20px; ${job.bookmarked ? 'fill: var(--accent-orange); color: var(--accent-orange);' : 'color: var(--text-muted);'}"></i>
+                        </button>
+                    </div>
+
+                    <div class="skills-row">
+                        ${job.skills.map(s => `
+                            <div class="skill-badge">
+                                <i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i>
+                                ${s}
+                            </div>
+                        `).join('')}
+                        ${job.moreSkills ? `<div class="skill-badge more">+${job.moreSkills}</div>` : ''}
+                    </div>
+
+                    <div class="salary-text">${job.salary}</div>
+
+                    <div class="card-footer">
+                        <span class="match-score">Match Score: ${job.matchScore}</span>
+                        <button class="view-btn" onclick="openModal(${job.id})">
+                            View Job <i data-lucide="chevron-right" style="width:14px; height:14px;"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // Render Saved Tab Jobs (Slim Card Format: Job Title + Employer + Solid Orange Heart)
+        function renderSavedJobs() {
+            const container = document.getElementById('savedJobList');
+            const savedJobs = jobData.filter(j => j.bookmarked);
+            
+            if (savedJobs.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-panel" style="text-align: center; padding: 40px 20px;">
+                        <i data-lucide="bookmark" style="width: 36px; height: 36px; color: var(--text-muted); margin-bottom: 12px;"></i>
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 16px;">No Saved Roles Yet</div>
+                        <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Tap the heart icon on any job card to save it here.</div>
+                    </div>`;
+            } else {
+                container.innerHTML = savedJobs.map(job => `
+                    <div class="slim-card" onclick="openModal(${job.id})">
+                        <div>
+                            <div class="slim-job-title">${job.title}</div>
+                            <div class="slim-company-name">
+                                ${job.company}
+                                ${job.verified ? `<span class="verified-check" style="width:14px; height:14px;" title="Verified Employer"><i data-lucide="check" style="width:8px; height:8px; stroke-width:3;"></i></span>` : ''}
+                            </div>
+                            <div class="slim-meta-text">${job.location} • ${job.salary}</div>
+                        </div>
+                        <button class="bookmark-btn" onclick="event.stopPropagation(); toggleBookmark(${job.id})">
+                            <i data-lucide="heart" style="width: 22px; height: 22px; fill: var(--accent-orange); color: var(--accent-orange);"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        }
+
+        // Render Applied Tab Jobs (Slim Card Format: Job Title + Employer + Application Date + Applied Status Label)
+        function renderAppliedJobs() {
+            const container = document.getElementById('appliedJobList');
+            const appliedJobs = jobData.filter(j => j.applied);
+
+            if (appliedJobs.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-panel" style="text-align: center; padding: 40px 20px;">
+                        <i data-lucide="clipboard-list" style="width: 36px; height: 36px; color: var(--text-muted); margin-bottom: 12px;"></i>
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 16px;">No Active Applications</div>
+                        <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Submitted applications will appear here.</div>
+                    </div>`;
+            } else {
+                container.innerHTML = appliedJobs.map(job => `
+                    <div class="slim-card" onclick="openModal(${job.id})">
+                        <div>
+                            <div class="slim-job-title">${job.title}</div>
+                            <div class="slim-company-name">
+                                ${job.company}
+                                ${job.verified ? `<span class="verified-check" style="width:14px; height:14px;" title="Verified Employer"><i data-lucide="check" style="width:8px; height:8px; stroke-width:3;"></i></span>` : ''}
+                            </div>
+                            <div class="slim-meta-text">${job.appliedDate}</div>
+                        </div>
+                        <span class="status-applied-pill">
+                            <i data-lucide="check-circle" style="width:12px; height:12px;"></i> Applied
+                        </span>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        }
+
+        // Toggle Bookmark
+        function toggleBookmark(id) {
+            const job = jobData.find(j => j.id === id);
+            if(job) {
+                job.bookmarked = !job.bookmarked;
+                renderJobs();
+                renderSavedJobs();
+                
+                // Update badge if on saved tab
+                const activeTab = document.querySelector('.tab-view.active').id;
+                if(activeTab === 'savedTab') {
+                    const savedCount = jobData.filter(j => j.bookmarked).length;
+                    document.getElementById('dynamicBadge').innerText = `${savedCount} SAVED`;
+                    document.getElementById('statSavedCount').innerText = savedCount;
+                }
+            }
+        }
+
+        // Switch Main Navigation Tabs & Dynamically Update Sticky Headers
+        function switchTab(element, tabId) {
+            document.querySelectorAll('.bottom-nav .nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            document.querySelectorAll('.tab-view').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            const greetingContainer = document.getElementById('greetingContainer');
+            const sectionHeaderContainer = document.getElementById('sectionHeaderContainer');
+            const dynamicTitle = document.getElementById('dynamicTitle');
+            const dynamicBadge = document.getElementById('dynamicBadge');
+            const tabHeaderTitle = document.getElementById('tabHeaderTitle');
+
+            // Recalculate counts
+            const savedCount = jobData.filter(j => j.bookmarked).length;
+            const appliedCount = jobData.filter(j => j.applied).length;
+
+            document.getElementById('statSavedCount').innerText = savedCount;
+            document.getElementById('statAppliedCount').innerText = appliedCount;
+
+            if (tabId === 'discoverTab') {
+                greetingContainer.classList.remove('hidden');
+                sectionHeaderContainer.classList.remove('hidden');
+                dynamicTitle.innerHTML = `Hi Robin <span style="font-size: 20px;">😊</span>`;
+                dynamicBadge.innerText = `8 MATCHES`;
+                tabHeaderTitle.innerText = `FOR YOU`;
+                renderJobs();
+            } else if (tabId === 'savedTab') {
+                greetingContainer.classList.remove('hidden');
+                sectionHeaderContainer.classList.add('hidden');
+                dynamicTitle.innerText = `Saved Jobs`;
+                dynamicBadge.innerText = `${savedCount} SAVED`;
+                renderSavedJobs();
+            } else if (tabId === 'appliedTab') {
+                greetingContainer.classList.remove('hidden');
+                sectionHeaderContainer.classList.add('hidden');
+                dynamicTitle.innerText = `Applied Jobs`;
+                dynamicBadge.innerText = `${appliedCount} APPLIED`;
+                renderAppliedJobs();
+            } else if (tabId === 'profileTab') {
+                greetingContainer.classList.add('hidden');
+                sectionHeaderContainer.classList.add('hidden');
+            }
+        }
+
+        // Toggle Dark / Light Theme
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            const icon = document.getElementById('themeIcon');
+            if(document.body.classList.contains('dark-theme')) {
+                icon.setAttribute('data-lucide', 'sun');
+            } else {
+                icon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+        }
+
+        // Open Sectioned Job Details Modal
+        function openModal(id) {
+            activeJobId = id;
+            const job = jobData.find(j => j.id === id);
+            if(!job) return;
+
+            document.getElementById('modalTitle').innerText = job.title;
+            document.getElementById('modalCompany').innerHTML = `${job.company} <span class="location-dot">•</span> ${job.location}`;
+            document.getElementById('modalSalary').innerText = job.salary;
+            document.getElementById('modalMatch').innerText = job.matchScore;
+            document.getElementById('modalDesc').innerText = job.desc;
+            document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
+
+            document.getElementById('modalSkills').innerHTML = job.skills.map(s => `
+                <div class="skill-badge"><i data-lucide="check" style="width:12px; height:12px; color: #10b981;"></i> ${s}</div>
+            `).join('');
+
+            const applyBtn = document.getElementById('applyActionBtn');
+            if (job.applied) {
+                applyBtn.style.background = '#10b981';
+                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:16px; height:16px;"></i> Application Submitted`;
+                applyBtn.disabled = true;
+            } else {
+                applyBtn.style.background = 'var(--accent-orange)';
+                applyBtn.innerHTML = `<i data-lucide="send" style="width:16px; height:16px;"></i> Quick Apply with Kazini ID`;
+                applyBtn.disabled = false;
+            }
+
+            document.getElementById('jobModal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('jobModal').style.display = 'none';
+        }
+
+        function applyJob() {
+            if (!activeJobId) return;
+            const job = jobData.find(j => j.id === activeJobId);
+            if (job) {
+                job.applied = true;
+                job.appliedDate = "Applied just now";
+                
+                const applyBtn = document.getElementById('applyActionBtn');
+                applyBtn.style.background = '#10b981';
+                applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:16px; height:16px;"></i> Application Submitted`;
+                applyBtn.disabled = true;
+
+                setTimeout(() => {
+                    closeModal();
+                    renderJobs();
+                    renderAppliedJobs();
+                    
+                    // If on applied tab, update badge count
+                    const activeTab = document.querySelector('.tab-view.active').id;
+                    if(activeTab === 'appliedTab') {
+                        const appliedCount = jobData.filter(j => j.applied).length;
+                        document.getElementById('dynamicBadge').innerText = `${appliedCount} APPLIED`;
+                    }
+                }, 800);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderJobs();
+            lucide.createIcons();
+        });
+    </script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker Registered'))
+            .catch(err => console.error('Service Worker Registration Failed', err));
+        });
+      }
+    </script>
+</body>
+</html>
