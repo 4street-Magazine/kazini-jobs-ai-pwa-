@@ -887,6 +887,9 @@
 </head>
 <body class="dark-theme">
 
+    <!-- Audio element for kazini-ai-message.mp3 -->
+    <audio id="kaziniMessageAudio" src="kazini-ai-message.mp3" preload="auto"></audio>
+
     <div class="phone-frame">
         <!-- STICKY TOP SECTION -->
         <div class="sticky-top-section">
@@ -1101,14 +1104,15 @@
         <div class="modal-overlay" id="chatModal" onclick="closeChatModal()">
             <div class="chat-modal-card" onclick="event.stopPropagation()">
                 <div class="chat-header">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <div style="position: relative; width: 38px; height: 38px; flex-shrink: 0;">
-                            <img src="kazini-ai-avatar.png" alt="Kazini AI" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent-orange);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <!-- Enlarged Profile Picture Container with Active Green Dot -->
+                        <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
+                            <img src="kazini-ai-avatar.png" alt="Kazini AI" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-orange); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
                             <!-- Live Active Green Dot Indicator -->
-                            <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: var(--emerald-green); border: 2px solid var(--bg-sticky); border-radius: 50%;"></span>
+                            <span style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--emerald-green); border: 2.5px solid var(--bg-sticky); border-radius: 50%;"></span>
                         </div>
                         <div>
-                            <div style="font-size: 13.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
+                            <div style="font-size: 14.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
                                 Kazini AI
                                 <span class="scalloped-badge" title="Verified Assistant">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1117,7 +1121,7 @@
                                     </svg>
                                 </span>
                             </div>
-                            <div style="font-size: 10.5px; color: var(--emerald-green); font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                            <div style="font-size: 11px; color: var(--emerald-green); font-weight: 700; margin-top: 2px;">
                                 Job Hunting Agent
                             </div>
                         </div>
@@ -1153,52 +1157,14 @@
     </div>
 
     <script>
-        // Web Audio API Sound Synthesizer for Typing and Reply Sounds
-        let audioCtx = null;
-        function getAudioContext() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            return audioCtx;
-        }
-
-        function playTypingSound() {
+        // Play kazini-ai-message.mp3 immediately upon reply delivery
+        function playKaziniMessageSound() {
             try {
-                const ctx = getAudioContext();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(600 + Math.random() * 200, ctx.currentTime);
-                gain.gain.setValueAtTime(0.015, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.05);
-            } catch (e) {}
-        }
-
-        function playReplySound() {
-            try {
-                const ctx = getAudioContext();
-                const now = ctx.currentTime;
-                
-                // Pleasant two-tone chime for every Kazini AI reply
-                [523.25, 659.25].forEach((freq, i) => {
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
-                    gain.gain.setValueAtTime(0.04, now + i * 0.08);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.25);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start(now + i * 0.08);
-                    osc.stop(now + i * 0.08 + 0.25);
-                });
+                const audio = document.getElementById('kaziniMessageAudio');
+                if (audio) {
+                    audio.currentTime = 0;
+                    audio.play().catch(e => console.log("Audio play prevented or file not loaded yet", e));
+                }
             } catch (e) {}
         }
 
@@ -1650,22 +1616,16 @@
                 </div>`;
             container.scrollTop = container.scrollHeight;
 
-            // Play continuous typing click sounds
-            let typingTicks = 0;
-            const typingInterval = setInterval(() => {
-                playTypingSound();
-                typingTicks++;
-                if (typingTicks > 4) clearInterval(typingInterval);
-            }, 180);
-
             setTimeout(() => {
-                clearInterval(typingInterval);
                 const typingEl = document.getElementById(typingId);
                 if (typingEl) typingEl.remove();
 
                 container.innerHTML += `<div class="chat-bubble assistant">${responseHtml}</div>`;
                 container.scrollTop = container.scrollHeight;
-                playReplySound();
+                
+                // Play kazini-ai-message.mp3 immediately as the message lands
+                playKaziniMessageSound();
+                
                 lucide.createIcons();
             }, 900);
         }
