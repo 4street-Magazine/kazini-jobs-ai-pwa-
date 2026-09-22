@@ -148,7 +148,7 @@
             font-size: 20px;
             font-weight: 800;
             letter-spacing: -0.4px;
-            color: #ffffff; /* Kazini in pure white */
+            color: var(--text-primary); /* Adapts correctly to black in light mode and white in dark mode */
         }
 
         .brand-text span {
@@ -686,7 +686,7 @@
         }
 
         .chat-header {
-            padding: 16px 20px;
+            padding: 14px 20px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
@@ -730,24 +730,33 @@
             box-shadow: 0 2px 8px var(--accent-orange-glow);
         }
 
-        /* Quick Reply Pills Container inside Chat */
-        .quick-replies-row {
+        /* Horizontal Quick Reply Pills at Bottom of Chat UI (Facebook Messenger style) */
+        .quick-replies-footer {
+            padding: 10px 16px;
+            background: var(--bg-sticky);
+            border-top: 1px solid var(--border-color);
             display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-top: 4px;
+            gap: 8px;
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+
+        .quick-replies-footer::-webkit-scrollbar {
+            display: none;
         }
 
         .quick-reply-chip {
             background: var(--bg-surface);
             color: var(--text-secondary);
             border: 1px solid var(--border-subtle);
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 11px;
-            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: 18px;
+            font-size: 11.5px;
+            font-weight: 700;
+            white-space: nowrap;
             cursor: pointer;
             transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
         }
 
         .quick-reply-chip:active {
@@ -777,6 +786,35 @@
         .chat-action-btn-outlined:active {
             background: var(--accent-orange-light);
             transform: scale(0.96);
+        }
+
+        /* Typing Indicator Animation */
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 10px 14px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            border-top-left-radius: 4px;
+            align-self: flex-start;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
         }
 
         .chat-input-area {
@@ -967,7 +1005,7 @@
         </div>
 
         <!-- FIXED FLOATING ACTION BUTTON (FAB) - OPENS CHAT UI -->
-        <button class="fab-kazini" onclick="openChatModal()" aria-label="Open Kazini Recruiter Assistant">
+        <button class="fab-kazini" onclick="openChatModal()" aria-label="Open Kazini Assistant">
             <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
                 <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
@@ -1064,12 +1102,10 @@
             <div class="chat-modal-card" onclick="event.stopPropagation()">
                 <div class="chat-header">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--accent-orange-light); display: flex; align-items: center; justify-content: center; color: var(--accent-orange);">
-                            <i data-lucide="bot" style="width: 18px; height: 18px;"></i>
-                        </div>
+                        <img src="file_0000000085fc8211a5e0c89d3bfa09e8.png" alt="Kazini AI" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent-orange);">
                         <div>
                             <div style="font-size: 13.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
-                                Kazini Recruiter AI
+                                Kazini AI
                                 <span class="scalloped-badge" title="Verified Assistant">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
@@ -1078,7 +1114,7 @@
                                 </span>
                             </div>
                             <div style="font-size: 10.5px; color: var(--emerald-green); font-weight: 700; display: flex; align-items: center; gap: 4px;">
-                                <span style="width: 6px; height: 6px; background: var(--emerald-green); border-radius: 50%;"></span> Online • Career Profiler
+                                <span style="width: 6px; height: 6px; background: var(--emerald-green); border-radius: 50%;"></span> Job Hunting Agent
                             </div>
                         </div>
                     </div>
@@ -1089,13 +1125,15 @@
 
                 <div class="chat-messages-container" id="chatMessages">
                     <div class="chat-bubble assistant">
-                        Habari! 👋 Welcome to Kazini AI. Tap a greeting below to get started or type your message:
-                        <div class="quick-replies-row">
-                            <div class="quick-reply-chip" onclick="sendQuickReply('Hi Kazini 👋')">Hi Kazini 👋</div>
-                            <div class="quick-reply-chip" onclick="sendQuickReply('Hello Kazini')">Hello Kazini</div>
-                            <div class="quick-reply-chip" onclick="sendQuickReply('Sasa Kazini 👋')">Sasa Kazini 👋</div>
-                        </div>
+                        Habari! 👋 Welcome to Kazini AI. Choose a quick greeting below or type your message to begin:
                     </div>
+                </div>
+
+                <!-- Horizontal Quick Reply Pills Footer (Facebook Messenger Style) -->
+                <div class="quick-replies-footer" id="quickRepliesFooter">
+                    <div class="quick-reply-chip" onclick="handleQuickReply('Hi Kazini 👋')">Hi Kazini 👋</div>
+                    <div class="quick-reply-chip" onclick="handleQuickReply('Hello Kazini')">Hello Kazini</div>
+                    <div class="quick-reply-chip" onclick="handleQuickReply('Sasa Kazini 👋')">Sasa Kazini 👋</div>
                 </div>
 
                 <div class="chat-input-area">
@@ -1114,6 +1152,55 @@
     </div>
 
     <script>
+        // Web Audio API Sound Synthesizer for Typing and Reply Sounds
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playTypingSound() {
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600 + Math.random() * 200, ctx.currentTime);
+                gain.gain.setValueAtTime(0.015, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.05);
+            } catch (e) {}
+        }
+
+        function playReplySound() {
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                
+                // Pleasant two-tone chime
+                [523.25, 659.25].forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                    gain.gain.setValueAtTime(0.04, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.25);
+                });
+            } catch (e) {}
+        }
+
         // Job Database
         const jobData = [
             {
@@ -1483,22 +1570,21 @@
             }
         }
 
-        function sendQuickReply(text) {
+        function handleQuickReply(text) {
+            // Remove quick replies footer once user starts conversation
+            const footer = document.getElementById('quickRepliesFooter');
+            if (footer) footer.style.display = 'none';
+
             const container = document.getElementById('chatMessages');
             container.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
             container.scrollTop = container.scrollHeight;
 
-            setTimeout(() => {
-                const botReply = `Hi Robin 😊, how can I help you today?
-                    <div>
-                        <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
-                            <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
-                        </button>
-                    </div>`;
-                container.innerHTML += `<div class="chat-bubble assistant">${botReply}</div>`;
-                container.scrollTop = container.scrollHeight;
-                lucide.createIcons();
-            }, 600);
+            showTypingAndReply(`Hi Robin 😊, how can I help you today?
+                <div>
+                    <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
+                        <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
+                    </button>
+                </div>`);
         }
 
         function sendChatMessage() {
@@ -1506,49 +1592,81 @@
             const text = input.value.trim();
             if (!text) return;
 
+            // Remove quick replies footer if still visible
+            const footer = document.getElementById('quickRepliesFooter');
+            if (footer) footer.style.display = 'none';
+
             const container = document.getElementById('chatMessages');
             container.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
             input.value = '';
             container.scrollTop = container.scrollHeight;
 
-            setTimeout(() => {
-                let botReply = "";
-                if (chatStep === 0) {
-                    botReply = `Noted your focus in <strong>${escapeHtml(text)}</strong>. What are your core technical tools or software skills? (e.g., Python, SQL, Tableau, Excel)`;
-                    chatStep++;
-                } else if (chatStep === 1) {
-                    botReply = `Fantastic toolset! 🛠️ Lastly, what is your preferred location or work mode? (e.g., Nairobi, Mombasa, Remote)`;
-                    chatStep++;
-                } else {
-                    botReply = `Profile successfully verified! 🎉 Your career profile is now active in our Smartika Trust Network. I have updated your AI match rankings in the Discover feed.`;
-                    chatStep = 0;
-                }
+            let botReply = "";
+            if (chatStep === 0) {
+                botReply = `Noted your focus in <strong>${escapeHtml(text)}</strong>. What are your core technical tools or software skills? (e.g., Python, SQL, Tableau, Excel)`;
+                chatStep++;
+            } else if (chatStep === 1) {
+                botReply = `Fantastic toolset! 🛠️ Lastly, what is your preferred location or work mode? (e.g., Nairobi, Mombasa, Remote)`;
+                chatStep++;
+            } else {
+                botReply = `Profile successfully verified! 🎉 Your career profile is now active in our Smartika Trust Network. I have updated your AI match rankings in the Discover feed.`;
+                chatStep = 0;
+            }
 
-                container.innerHTML += `<div class="chat-bubble assistant">${botReply}</div>`;
-                container.scrollTop = container.scrollHeight;
-                lucide.createIcons();
-            }, 600);
+            showTypingAndReply(botReply);
         }
 
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
+            const footer = document.getElementById('quickRepliesFooter');
+            if (footer) footer.style.display = 'none';
+
             const container = document.getElementById('chatMessages');
             container.innerHTML += `<div class="chat-bubble user"><i data-lucide="file-text" style="width:14px; height:14px; vertical-align:middle;"></i> Uploaded: ${escapeHtml(file.name)}</div>`;
             container.scrollTop = container.scrollHeight;
 
+            const botReply = `Document received and verified! 📄 I've extracted your professional credentials from <strong>${escapeHtml(file.name)}</strong>. Your profile is fully updated.
+                <div>
+                    <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
+                        <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
+                    </button>
+                </div>`;
+
+            showTypingAndReply(botReply);
+        }
+
+        function showTypingAndReply(responseHtml) {
+            const container = document.getElementById('chatMessages');
+            const typingId = 'typing-' + Date.now();
+            
+            container.innerHTML += `
+                <div class="typing-indicator" id="${typingId}">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+
+            // Play continuous typing click sounds
+            let typingTicks = 0;
+            const typingInterval = setInterval(() => {
+                playTypingSound();
+                typingTicks++;
+                if (typingTicks > 4) clearInterval(typingInterval);
+            }, 180);
+
             setTimeout(() => {
-                const botReply = `Document received and verified! 📄 I've extracted your professional credentials from <strong>${escapeHtml(file.name)}</strong>. Your profile is fully updated.
-                    <div>
-                        <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
-                            <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
-                        </button>
-                    </div>`;
-                container.innerHTML += `<div class="chat-bubble assistant">${botReply}</div>`;
+                clearInterval(typingInterval);
+                const typingEl = document.getElementById(typingId);
+                if (typingEl) typingEl.remove();
+
+                container.innerHTML += `<div class="chat-bubble assistant">${responseHtml}</div>`;
                 container.scrollTop = container.scrollHeight;
+                playReplySound();
                 lucide.createIcons();
-            }, 700);
+            }, 900);
         }
 
         function triggerFindJob() {
