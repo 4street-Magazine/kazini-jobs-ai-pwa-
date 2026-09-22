@@ -1157,17 +1157,6 @@
     </div>
 
     <script>
-        // Play kazini-ai-message.mp3 immediately upon reply delivery
-        function playKaziniMessageSound() {
-            try {
-                const audio = document.getElementById('kaziniMessageAudio');
-                if (audio) {
-                    audio.currentTime = 0;
-                    audio.play().catch(e => console.log("Audio play prevented or file not loaded yet", e));
-                }
-            } catch (e) {}
-        }
-
         // Job Database
         const jobData = [
             {
@@ -1620,12 +1609,18 @@
                 const typingEl = document.getElementById(typingId);
                 if (typingEl) typingEl.remove();
 
-                // Append the response message bubble first
+                // Append assistant message bubble to DOM
                 container.innerHTML += `<div class="chat-bubble assistant">${responseHtml}</div>`;
                 container.scrollTop = container.scrollHeight;
                 
-                // Play sound strictly AFTER the message has landed and rendered
-                playKaziniMessageSound();
+                // Play sound strictly synchronized on the next browser paint frame
+                requestAnimationFrame(() => {
+                    const audio = document.getElementById('kaziniMessageAudio');
+                    if (audio) {
+                        audio.currentTime = 0;
+                        audio.play().catch(e => console.log("Audio play prevented", e));
+                    }
+                });
                 
                 lucide.createIcons();
             }, 900);
