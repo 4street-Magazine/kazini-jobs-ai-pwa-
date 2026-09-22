@@ -148,11 +148,11 @@
             font-size: 20px;
             font-weight: 800;
             letter-spacing: -0.4px;
-            color: var(--text-primary);
+            color: #ffffff; /* Kazini in pure white */
         }
 
         .brand-text span {
-            color: var(--accent-orange);
+            color: var(--accent-orange); /* AI in vivid orange */
         }
 
         .theme-toggle {
@@ -309,7 +309,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Job Cards Styling - Refined Professional Typography Sizes */
+        /* Job Cards Styling */
         .job-list {
             display: flex;
             flex-direction: column;
@@ -435,7 +435,7 @@
             transform: scale(0.95);
         }
 
-        /* Slim Cards - Matching Refined Pro Scale */
+        /* Slim Cards */
         .slim-card-list {
             display: flex;
             flex-direction: column;
@@ -607,7 +607,7 @@
             color: var(--accent-orange);
         }
 
-        /* Job Details Drawer Modal */
+        /* Modals Overlay (Shared Drawer Style) */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -668,6 +668,183 @@
         .apply-btn-full:active {
             transform: scale(0.97);
         }
+
+        /* CHAT UI SPECIFIC STYLES */
+        .chat-modal-card {
+            background: var(--bg-card);
+            border-radius: 24px 24px 0 0;
+            height: 88vh;
+            max-height: 88vh;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-top: 1px solid var(--border-subtle);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-sticky);
+            flex-shrink: 0;
+        }
+
+        .chat-messages-container {
+            flex: 1;
+            padding: 16px 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: var(--bg-app);
+        }
+
+        .chat-bubble {
+            max-width: 85%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            font-size: 12.5px;
+            line-height: 1.4;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .chat-bubble.assistant {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            align-self: flex-start;
+            border: 1px solid var(--border-subtle);
+            border-top-left-radius: 4px;
+        }
+
+        .chat-bubble.user {
+            background: var(--accent-orange);
+            color: white;
+            align-self: flex-end;
+            border-top-right-radius: 4px;
+            box-shadow: 0 2px 8px var(--accent-orange-glow);
+        }
+
+        /* Quick Reply Pills Container inside Chat */
+        .quick-replies-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .quick-reply-chip {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-reply-chip:active {
+            background: var(--accent-orange-light);
+            color: var(--accent-orange);
+            border-color: var(--accent-orange);
+            transform: scale(0.95);
+        }
+
+        /* Outlined Action Button in Chat Bubble */
+        .chat-action-btn-outlined {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            color: var(--accent-orange);
+            border: 1.5px solid var(--accent-orange);
+            padding: 7px 14px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-action-btn-outlined:active {
+            background: var(--accent-orange-light);
+            transform: scale(0.96);
+        }
+
+        .chat-input-area {
+            padding: 12px 16px max(16px, env(safe-area-inset-bottom)) 16px;
+            background: var(--bg-sticky);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .chat-attach-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .chat-attach-btn:active {
+            transform: scale(0.92);
+            color: var(--accent-orange);
+            border-color: var(--accent-orange);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            padding: 11px 14px;
+            border-radius: 20px;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent-orange);
+        }
+
+        .chat-send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--accent-orange);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px var(--accent-orange-glow);
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+
+        .chat-send-btn:active {
+            transform: scale(0.92);
+        }
     </style>
 </head>
 <body class="dark-theme">
@@ -692,9 +869,7 @@
             </div>
 
             <!-- Header Filter Bar -->
-            <div class="header-context-bar" id="headerContextContainer">
-                <!-- Dynamic Content injected via JS based on Tab -->
-            </div>
+            <div class="header-context-bar" id="headerContextContainer"></div>
         </div>
 
         <!-- Scrollable Body Content -->
@@ -702,23 +877,17 @@
             
             <!-- TAB 1: DISCOVER -->
             <div class="tab-view active" id="discoverTab">
-                <div class="job-list" id="jobList">
-                    <!-- Dynamic Full Cards -->
-                </div>
+                <div class="job-list" id="jobList"></div>
             </div>
 
             <!-- TAB 2: SAVED JOBS -->
             <div class="tab-view" id="savedTab">
-                <div class="slim-card-list" id="savedJobList">
-                    <!-- Dynamic Saved Cards -->
-                </div>
+                <div class="slim-card-list" id="savedJobList"></div>
             </div>
 
             <!-- TAB 3: APPLIED JOBS -->
             <div class="tab-view" id="appliedTab">
-                <div class="slim-card-list" id="appliedJobList">
-                    <!-- Dynamic Applied Cards -->
-                </div>
+                <div class="slim-card-list" id="appliedJobList"></div>
             </div>
 
             <!-- TAB 4: PROFILE -->
@@ -751,11 +920,11 @@
                             <div class="stat-label">AI Match Score</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value" id="statAppliedCount">1</div>
+                            <div class="stat-value">1</div>
                             <div class="stat-label">Applications</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value" id="statSavedCount">2</div>
+                            <div class="stat-value">2</div>
                             <div class="stat-label">Saved Roles</div>
                         </div>
                     </div>
@@ -797,8 +966,8 @@
 
         </div>
 
-        <!-- FIXED FLOATING ACTION BUTTON (FAB) -->
-        <button class="fab-kazini" aria-label="Kazini Action">
+        <!-- FIXED FLOATING ACTION BUTTON (FAB) - OPENS CHAT UI -->
+        <button class="fab-kazini" onclick="openChatModal()" aria-label="Open Kazini Recruiter Assistant">
             <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
                 <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
@@ -857,7 +1026,6 @@
                     </div>
                 </div>
 
-                <!-- Why It Matches You Section -->
                 <div class="section-label-modal">
                     <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why it matches you
                 </div>
@@ -890,6 +1058,59 @@
                 </button>
             </div>
         </div>
+
+        <!-- CHAT UI MODAL -->
+        <div class="modal-overlay" id="chatModal" onclick="closeChatModal()">
+            <div class="chat-modal-card" onclick="event.stopPropagation()">
+                <div class="chat-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--accent-orange-light); display: flex; align-items: center; justify-content: center; color: var(--accent-orange);">
+                            <i data-lucide="bot" style="width: 18px; height: 18px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 13.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
+                                Kazini Recruiter AI
+                                <span class="scalloped-badge" title="Verified Assistant">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                                        <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div style="font-size: 10.5px; color: var(--emerald-green); font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                                <span style="width: 6px; height: 6px; background: var(--emerald-green); border-radius: 50%;"></span> Online • Career Profiler
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="closeChatModal()" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
+                        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                    </button>
+                </div>
+
+                <div class="chat-messages-container" id="chatMessages">
+                    <div class="chat-bubble assistant">
+                        Habari! 👋 Welcome to Kazini AI. Tap a greeting below to get started or type your message:
+                        <div class="quick-replies-row">
+                            <div class="quick-reply-chip" onclick="sendQuickReply('Hi Kazini 👋')">Hi Kazini 👋</div>
+                            <div class="quick-reply-chip" onclick="sendQuickReply('Hello Kazini')">Hello Kazini</div>
+                            <div class="quick-reply-chip" onclick="sendQuickReply('Sasa Kazini 👋')">Sasa Kazini 👋</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <input type="file" id="fileInput" style="display: none;" onchange="handleFileUpload(event)">
+                    <button class="chat-attach-btn" onclick="document.getElementById('fileInput').click()" title="Attach Resume or Document">
+                        <i data-lucide="paperclip" style="width: 17px; height: 17px;"></i>
+                    </button>
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Type your response or upload resume..." onkeypress="handleChatKeypress(event)">
+                    <button class="chat-send-btn" onclick="sendChatMessage()">
+                        <i data-lucide="send" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -957,7 +1178,7 @@
             }
         ];
 
-        // Scalloped Verification Badge Template (Kept Blue)
+        // Scalloped Verification Badge Template (Blue)
         const scallopedBadgeSVG = `
             <span class="scalloped-badge" title="Verified Employer">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -967,6 +1188,7 @@
             </span>`;
 
         let activeJobId = null;
+        let chatStep = 0; // Tracks onboarding profiling steps in chat
 
         // Render Cards for Discover Tab
         function renderJobs() {
@@ -1192,14 +1414,12 @@
             document.getElementById('modalDesc').innerText = job.desc;
             document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
 
-            // Populate Matching Profile Skills (Why it matches you)
             document.getElementById('modalMatchingSkills').innerHTML = job.skills.map(s => `
                 <div class="skill-badge" style="background: var(--status-applied-bg); color: var(--status-applied-text); border: 1px solid rgba(16, 185, 129, 0.2);">
                     <i data-lucide="check-circle" style="width:10px; height:10px;"></i> ${s}
                 </div>
             `).join('');
 
-            // Populate Required Tech Stack
             document.getElementById('modalSkills').innerHTML = job.skills.map(s => `
                 <div class="skill-badge"><i data-lucide="check" style="width:9.5px; height:9.5px; color: #10b981;"></i> ${s}</div>
             `).join('');
@@ -1244,6 +1464,100 @@
                     updateHeaderContext(activeTab);
                 }, 800);
             }
+        }
+
+        // CHAT UI MODAL CONTROLS
+        function openChatModal() {
+            document.getElementById('chatModal').style.display = 'flex';
+            const container = document.getElementById('chatMessages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function closeChatModal() {
+            document.getElementById('chatModal').style.display = 'none';
+        }
+
+        function handleChatKeypress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function sendQuickReply(text) {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
+            container.scrollTop = container.scrollHeight;
+
+            setTimeout(() => {
+                const botReply = `Hi Robin 😊, how can I help you today?
+                    <div>
+                        <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
+                            <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
+                        </button>
+                    </div>`;
+                container.innerHTML += `<div class="chat-bubble assistant">${botReply}</div>`;
+                container.scrollTop = container.scrollHeight;
+                lucide.createIcons();
+            }, 600);
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+
+            setTimeout(() => {
+                let botReply = "";
+                if (chatStep === 0) {
+                    botReply = `Noted your focus in <strong>${escapeHtml(text)}</strong>. What are your core technical tools or software skills? (e.g., Python, SQL, Tableau, Excel)`;
+                    chatStep++;
+                } else if (chatStep === 1) {
+                    botReply = `Fantastic toolset! 🛠️ Lastly, what is your preferred location or work mode? (e.g., Nairobi, Mombasa, Remote)`;
+                    chatStep++;
+                } else {
+                    botReply = `Profile successfully verified! 🎉 Your career profile is now active in our Smartika Trust Network. I have updated your AI match rankings in the Discover feed.`;
+                    chatStep = 0;
+                }
+
+                container.innerHTML += `<div class="chat-bubble assistant">${botReply}</div>`;
+                container.scrollTop = container.scrollHeight;
+                lucide.createIcons();
+            }, 600);
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<div class="chat-bubble user"><i data-lucide="file-text" style="width:14px; height:14px; vertical-align:middle;"></i> Uploaded: ${escapeHtml(file.name)}</div>`;
+            container.scrollTop = container.scrollHeight;
+
+            setTimeout(() => {
+                const botReply = `Document received and verified! 📄 I've extracted your professional credentials from <strong>${escapeHtml(file.name)}</strong>. Your profile is fully updated.
+                    <div>
+                        <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
+                            <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
+                        </button>
+                    </div>`;
+                container.innerHTML += `<div class="chat-bubble assistant">${botReply}</div>`;
+                container.scrollTop = container.scrollHeight;
+                lucide.createIcons();
+            }, 700);
+        }
+
+        function triggerFindJob() {
+            closeChatModal();
+            switchTab(document.querySelector('.nav-item'), 'discoverTab');
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
 
         document.addEventListener('DOMContentLoaded', () => {
