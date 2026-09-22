@@ -1620,10 +1620,11 @@
                 const typingEl = document.getElementById(typingId);
                 if (typingEl) typingEl.remove();
 
+                // Append the response message bubble first
                 container.innerHTML += `<div class="chat-bubble assistant">${responseHtml}</div>`;
                 container.scrollTop = container.scrollHeight;
                 
-                // Play kazini-ai-message.mp3 immediately as the message lands
+                // Play sound strictly AFTER the message has landed and rendered
                 playKaziniMessageSound();
                 
                 lucide.createIcons();
