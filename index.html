@@ -24,6 +24,11 @@
             --deep-vivid-blue: #0052FF;
             --deep-vivid-blue-light: rgba(0, 82, 255, 0.10);
             --deep-vivid-blue-glow: rgba(0, 82, 255, 0.22);
+
+            /* Emerald Green for Match Scores & Metrics */
+            --emerald-green: #008C51;
+            --emerald-green-light: rgba(0, 140, 81, 0.12);
+            --emerald-green-glow: rgba(0, 140, 81, 0.22);
             
             /* Status Colors */
             --status-applied-bg: rgba(16, 185, 129, 0.12);
@@ -407,7 +412,7 @@
         .match-score {
             font-size: 11.5px;
             font-weight: 700;
-            color: var(--deep-vivid-blue);
+            color: var(--emerald-green);
         }
 
         .view-btn {
@@ -532,7 +537,7 @@
         .stat-value {
             font-size: 16px;
             font-weight: 800;
-            color: var(--text-primary);
+            color: var(--emerald-green);
         }
 
         .stat-label {
@@ -785,7 +790,7 @@
                                 <div style="font-size: 10.5px; color: var(--text-muted);">Verified Credentials Active</div>
                             </div>
                         </div>
-                        <span style="font-size: 11px; font-weight: 800; color: var(--deep-vivid-blue);">VERIFIED</span>
+                        <span style="font-size: 11px; font-weight: 800; color: var(--emerald-green);">VERIFIED</span>
                     </div>
                 </div>
             </div>
@@ -848,7 +853,7 @@
                     </div>
                     <div class="detail-block" style="margin-bottom:0;">
                         <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
-                        <div id="modalMatch" style="font-size: 12.5px; font-weight: 800; color: var(--deep-vivid-blue); margin-top: 3px;"></div>
+                        <div id="modalMatch" style="font-size: 12.5px; font-weight: 800; color: var(--emerald-green); margin-top: 3px;"></div>
                     </div>
                 </div>
 
@@ -952,7 +957,7 @@
             }
         ];
 
-        // Scalloped Verification Badge Template
+        // Scalloped Verification Badge Template (Kept Blue)
         const scallopedBadgeSVG = `
             <span class="scalloped-badge" title="Verified Employer">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
