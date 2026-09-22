@@ -148,11 +148,11 @@
             font-size: 20px;
             font-weight: 800;
             letter-spacing: -0.4px;
-            color: var(--text-primary); /* Adapts correctly to black in light mode and white in dark mode */
+            color: var(--text-primary);
         }
 
         .brand-text span {
-            color: var(--accent-orange); /* AI in vivid orange */
+            color: var(--accent-orange);
         }
 
         .theme-toggle {
@@ -1102,7 +1102,11 @@
             <div class="chat-modal-card" onclick="event.stopPropagation()">
                 <div class="chat-header">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <img src="file_0000000085fc8211a5e0c89d3bfa09e8.png" alt="Kazini AI" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent-orange);">
+                        <div style="position: relative; width: 38px; height: 38px; flex-shrink: 0;">
+                            <img src="kazini-ai-avatar.png" alt="Kazini AI" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent-orange);">
+                            <!-- Live Active Green Dot Indicator -->
+                            <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: var(--emerald-green); border: 2px solid var(--bg-sticky); border-radius: 50%;"></span>
+                        </div>
                         <div>
                             <div style="font-size: 13.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
                                 Kazini AI
@@ -1114,7 +1118,7 @@
                                 </span>
                             </div>
                             <div style="font-size: 10.5px; color: var(--emerald-green); font-weight: 700; display: flex; align-items: center; gap: 4px;">
-                                <span style="width: 6px; height: 6px; background: var(--emerald-green); border-radius: 50%;"></span> Job Hunting Agent
+                                Job Hunting Agent
                             </div>
                         </div>
                     </div>
@@ -1123,11 +1127,8 @@
                     </button>
                 </div>
 
-                <div class="chat-messages-container" id="chatMessages">
-                    <div class="chat-bubble assistant">
-                        Habari! 👋 Welcome to Kazini AI. Choose a quick greeting below or type your message to begin:
-                    </div>
-                </div>
+                <!-- Chat messages container starts clean with no welcome text -->
+                <div class="chat-messages-container" id="chatMessages"></div>
 
                 <!-- Horizontal Quick Reply Pills Footer (Facebook Messenger Style) -->
                 <div class="quick-replies-footer" id="quickRepliesFooter">
@@ -1185,7 +1186,7 @@
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
                 
-                // Pleasant two-tone chime
+                // Pleasant two-tone chime for every Kazini AI reply
                 [523.25, 659.25].forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
