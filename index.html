@@ -1103,10 +1103,9 @@
             <div class="chat-modal-card" onclick="event.stopPropagation()">
                 <div class="chat-header">
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <!-- Enlarged Profile Picture Container with Active Green Dot -->
+                        <!-- Profile Picture Container with Active Green Dot -->
                         <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
                             <img src="kazini-ai-avatar.png" alt="Kazini AI" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-orange); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-                            <!-- Live Active Green Dot Indicator -->
                             <span style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--emerald-green); border: 2.5px solid var(--bg-sticky); border-radius: 50%;"></span>
                         </div>
                         <div>
@@ -1129,10 +1128,10 @@
                     </button>
                 </div>
 
-                <!-- Chat messages container starts clean with no welcome text -->
+                <!-- Chat messages container starts clean -->
                 <div class="chat-messages-container" id="chatMessages"></div>
 
-                <!-- Horizontal Quick Reply Pills Footer (Facebook Messenger Style) -->
+                <!-- Horizontal Quick Reply Pills Footer -->
                 <div class="quick-replies-footer" id="quickRepliesFooter">
                     <div class="quick-reply-chip" onclick="handleQuickReply('Hi Kazini 👋')">Hi Kazini 👋</div>
                     <div class="quick-reply-chip" onclick="handleQuickReply('Hello Kazini')">Hello Kazini</div>
@@ -1155,7 +1154,6 @@
     </div>
 
     <script>
-        // Preload audio object for instant, perfectly synced playback
         const kaziniAudio = new Audio('kazini-ai-message.mp3');
         kaziniAudio.preload = 'auto';
 
@@ -1166,7 +1164,6 @@
             } catch (e) {}
         }
 
-        // Job Database
         const jobData = [
             {
                 id: 1,
@@ -1230,7 +1227,6 @@
             }
         ];
 
-        // Scalloped Verification Badge Template (Blue)
         const scallopedBadgeSVG = `
             <span class="scalloped-badge" title="Verified Employer">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1240,9 +1236,8 @@
             </span>`;
 
         let activeJobId = null;
-        let chatStep = 0; // Tracks onboarding profiling steps in chat
+        let chatStep = 0;
 
-        // Render Cards for Discover Tab
         function renderJobs() {
             const container = document.getElementById('jobList');
             container.innerHTML = jobData.map(job => `
@@ -1285,7 +1280,6 @@
             lucide.createIcons();
         }
 
-        // Render Saved Tab Jobs
         function renderSavedJobs() {
             const container = document.getElementById('savedJobList');
             const savedJobs = jobData.filter(j => j.bookmarked);
@@ -1317,7 +1311,6 @@
             lucide.createIcons();
         }
 
-        // Render Applied Tab Jobs
         function renderAppliedJobs() {
             const container = document.getElementById('appliedJobList');
             const appliedJobs = jobData.filter(j => j.applied);
@@ -1349,7 +1342,6 @@
             lucide.createIcons();
         }
 
-        // Toggle Bookmark
         function toggleBookmark(id) {
             const job = jobData.find(j => j.id === id);
             if(job) {
@@ -1364,13 +1356,11 @@
             }
         }
 
-        // Filter Chip Selection Toggle
         function selectChip(el) {
             document.querySelectorAll('.chip-bar .filter-chip').forEach(chip => chip.classList.remove('active'));
             el.classList.add('active');
         }
 
-        // Update Top Context Bar based on active tab
         function updateHeaderContext(tabId) {
             const container = document.getElementById('headerContextContainer');
             const savedCount = jobData.filter(j => j.bookmarked).length;
@@ -1422,7 +1412,6 @@
             lucide.createIcons();
         }
 
-        // Switch Navigation Tabs
         function switchTab(element, tabId) {
             document.querySelectorAll('.bottom-nav .nav-item').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
@@ -1441,7 +1430,6 @@
             }
         }
 
-        // Toggle Dark / Light Theme
         function toggleTheme() {
             document.body.classList.toggle('dark-theme');
             const icon = document.getElementById('themeIcon');
@@ -1453,7 +1441,6 @@
             lucide.createIcons();
         }
 
-        // Open Job Details Modal
         function openModal(id) {
             activeJobId = id;
             const job = jobData.find(j => j.id === id);
@@ -1518,7 +1505,6 @@
             }
         }
 
-        // CHAT UI MODAL CONTROLS
         function openChatModal() {
             document.getElementById('chatModal').style.display = 'flex';
             const container = document.getElementById('chatMessages');
@@ -1536,7 +1522,6 @@
         }
 
         function handleQuickReply(text) {
-            // Remove quick replies footer once user starts conversation
             const footer = document.getElementById('quickRepliesFooter');
             if (footer) footer.style.display = 'none';
 
@@ -1557,7 +1542,6 @@
             const text = input.value.trim();
             if (!text) return;
 
-            // Remove quick replies footer if still visible
             const footer = document.getElementById('quickRepliesFooter');
             if (footer) footer.style.display = 'none';
 
@@ -1618,7 +1602,6 @@
                 const typingEl = document.getElementById(typingId);
                 if (typingEl) typingEl.remove();
 
-                // Append the response bubble to DOM first
                 const bubble = document.createElement('div');
                 bubble.className = 'chat-bubble assistant';
                 bubble.innerHTML = responseHtml;
@@ -1626,7 +1609,6 @@
                 container.scrollTop = container.scrollHeight;
                 lucide.createIcons();
 
-                // Wait for the exact browser repaint frame after DOM node attachment before firing audio
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         playKaziniMessageSound();
