@@ -887,9 +887,6 @@
 </head>
 <body class="dark-theme">
 
-    <!-- Audio element for kazini-ai-message.mp3 -->
-    <audio id="kaziniMessageAudio" src="kazini-ai-message.mp3" preload="auto"></audio>
-
     <div class="phone-frame">
         <!-- STICKY TOP SECTION -->
         <div class="sticky-top-section">
@@ -1157,6 +1154,17 @@
     </div>
 
     <script>
+        // Preload audio object for instant, perfectly synced playback
+        const kaziniAudio = new Audio('kazini-ai-message.mp3');
+        kaziniAudio.preload = 'auto';
+
+        function playKaziniMessageSound() {
+            try {
+                kaziniAudio.currentTime = 0;
+                kaziniAudio.play().catch(e => console.log("Audio play blocked until user gesture", e));
+            } catch (e) {}
+        }
+
         // Job Database
         const jobData = [
             {
@@ -1609,19 +1617,20 @@
                 const typingEl = document.getElementById(typingId);
                 if (typingEl) typingEl.remove();
 
-                // Append assistant message bubble to DOM
-                container.innerHTML += `<div class="chat-bubble assistant">${responseHtml}</div>`;
+                // Create the message element explicitly so we can verify rendering before playing audio
+                const bubble = document.createElement('div');
+                bubble.className = 'chat-bubble assistant';
+                bubble.innerHTML = responseHtml;
+                container.appendChild(bubble);
                 container.scrollTop = container.scrollHeight;
-                
-                // Play sound strictly synchronized on the next browser paint frame
+
+                // Play audio ONLY when the browser has successfully completed the DOM insertion render frame
                 requestAnimationFrame(() => {
-                    const audio = document.getElementById('kaziniMessageAudio');
-                    if (audio) {
-                        audio.currentTime = 0;
-                        audio.play().catch(e => console.log("Audio play prevented", e));
-                    }
+                    requestAnimationFrame(() => {
+                        playKaziniMessageSound();
+                    });
                 });
-                
+
                 lucide.createIcons();
             }, 900);
         }
