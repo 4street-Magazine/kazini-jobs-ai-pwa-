@@ -2,600 +2,1976 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kazini AI - Application Studio</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>KAZINI AI - Smart Job Matching</title>
+
+    <!-- PWA Metadata Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF5500">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
-            --bg-color: #000000;
-            --surface-color: #121212;
-            --surface-card: #1a1a1a;
-            --border-color: #2a2a2a;
-            --text-main: #ffffff;
-            --text-muted: #a0a0a0;
-            --emerald: #008C51;
-            --emerald-hover: #007040;
-            --accent-gold: #D4AF37;
-            --font-family: 'Montserrat', sans-serif;
+            /* Vivid Orange Premium Accent Color */
+            --accent-orange: #FF5500;
+            --accent-orange-hover: #E04B00;
+            --accent-orange-light: rgba(255, 85, 0, 0.10);
+            --accent-orange-glow: rgba(255, 85, 0, 0.22);
+            
+            /* Deep Vivid Premium Blue Color for Verification Badges */
+            --deep-vivid-blue: #0052FF;
+            --deep-vivid-blue-light: rgba(0, 82, 255, 0.10);
+            --deep-vivid-blue-glow: rgba(0, 82, 255, 0.22);
+
+            /* Emerald Green for Match Scores & Metrics */
+            --emerald-green: #008C51;
+            --emerald-green-light: rgba(0, 140, 81, 0.12);
+            --emerald-green-glow: rgba(0, 140, 81, 0.22);
+            
+            /* Status Colors */
+            --status-applied-bg: rgba(16, 185, 129, 0.12);
+            --status-applied-text: #10b981;
+            
+            /* Theme Base Colors (Default Light) */
+            --bg-app: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-sticky: #ffffff;
+            --bg-surface: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border-color: #f1f5f9;
+            --border-subtle: #e2e8f0;
+            --card-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+
+            /* Floating Action Button Theme Defaults */
+            --fab-bg: #FFFFFF;
+            --fab-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+            --fab-border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        /* True Black Dark Mode */
+        body.dark-theme {
+            --bg-app: #000000;
+            --bg-card: #0a0a0a;
+            --bg-sticky: #000000;
+            --bg-surface: #121212;
+            --text-primary: #ffffff;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: #161616;
+            --border-subtle: #242424;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+
+            --fab-bg: #0d0d0d;
+            --fab-shadow: 0 8px 24px rgba(0, 0, 0, 0.9), 0 0 12px rgba(255, 85, 0, 0.25);
+            --fab-border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: var(--font-family);
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            width: 100vw;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 16px;
+            transition: background-color 0.3s ease;
         }
 
-        .studio-container {
-            width: 100%;
-            max-width: 480px;
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+        .phone-frame {
+            width: 100vw;
+            min-height: 100vh;
+            background: var(--bg-app);
             display: flex;
             flex-direction: column;
-            height: 850px;
-            position: relative;
+            transition: background 0.3s ease;
         }
 
-        /* Header styling matching job feed */
-        .studio-header {
-            padding: 20px;
-            background-color: var(--surface-color);
+        /* NATIVE STICKY TOP CONTAINER */
+        .sticky-top-section {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            background: var(--bg-sticky);
+            z-index: 50;
             border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            flex-shrink: 0;
+            padding-top: env(safe-area-inset-top);
+            width: 100%;
+            
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            transform: translate3d(0, 0, 0);
+            will-change: transform;
         }
 
-        .brand-wrapper {
+        /* App Header */
+        .app-header {
+            padding: 12px 20px 8px 20px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 12px;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         .brand-logo {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--emerald), #000000);
-            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .svg-logo-icon {
+            width: 34px;
+            height: 34px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 12px rgba(0, 140, 81, 0.3);
-            border: 1px solid rgba(0, 140, 81, 0.5);
         }
 
-        .brand-logo svg {
-            width: 20px;
-            height: 20px;
-            fill: #ffffff;
+        .brand-text {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            color: var(--text-primary);
         }
 
-        .brand-info h1 {
-            font-size: 16px;
+        .brand-text span {
+            color: var(--accent-orange);
+        }
+
+        .theme-toggle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.92);
+        }
+
+        /* Top-Bar Control Area */
+        .header-context-bar {
+            background: var(--bg-sticky);
+            padding: 6px 20px 12px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .header-context-bar.hidden {
+            display: none;
+        }
+
+        /* Filter Chips Bar */
+        .chip-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filter-chip {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            font-size: 11.5px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-subtle);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-chip.active {
+            background: var(--accent-orange);
+            color: white;
+            border-color: var(--accent-orange);
             font-weight: 700;
-            letter-spacing: -0.3px;
+        }
+
+        /* Summary Counter Panel */
+        .summary-banner {
+            background: var(--bg-surface);
+            border-radius: 12px;
+            padding: 9px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .summary-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .summary-count {
+            background: var(--accent-orange-light);
+            color: var(--accent-orange);
+            font-size: 10.5px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+
+        /* App Body Scroll Container */
+        .app-body {
+            flex: 1;
+            padding: 16px 20px 90px 20px;
+            background: var(--bg-app);
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Floating Action Button (FAB) */
+        .fab-kazini {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: var(--fab-bg);
+            border: var(--fab-border);
+            box-shadow: var(--fab-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 999;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .fab-kazini:active {
+            transform: scale(0.90);
+        }
+
+        /* Scalloped Badge */
+        .scalloped-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+            filter: drop-shadow(0px 1px 3px var(--deep-vivid-blue-glow));
+        }
+
+        .scalloped-badge.lg {
+            width: 22px;
+            height: 22px;
+        }
+
+        /* Tab Views */
+        .tab-view {
+            display: none;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .tab-view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(3px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Job Cards Styling */
+        .job-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .job-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px 18px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+
+        .job-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1.35;
+        }
+
+        .company-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .location-dot {
+            color: var(--text-muted);
+            font-size: 8px;
+        }
+
+        .bookmark-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .bookmark-btn:active {
+            transform: scale(0.85);
+        }
+
+        .skills-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .skill-badge {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 9px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             gap: 4px;
         }
 
-        /* Exact styling reflecting job feed brand text */
-        .brand-text-kazini {
-            color: #ffffff;
+        .skill-badge.more {
+            background: var(--accent-orange-light);
+            color: var(--accent-orange);
             font-weight: 700;
         }
 
-        .brand-text-ai {
-            color: var(--emerald);
-            font-weight: 700;
-        }
-
-        .brand-info p {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 400;
-            margin-top: 2px;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 20px;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .close-btn:hover {
-            color: var(--text-main);
-        }
-
-        /* Navigation Tabs */
-        .studio-tabs {
-            display: flex;
-            background-color: var(--surface-card);
-            border-bottom: 1px solid var(--border-color);
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-
-        .studio-tabs::-webkit-scrollbar {
-            display: none;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 14px 12px;
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 12px;
+        .salary-text {
+            font-size: 11.5px;
             font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            text-align: center;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s ease;
-        }
-
-        .tab-btn.active {
-            color: var(--text-main);
-            border-bottom-color: var(--emerald);
-            background-color: rgba(0, 140, 81, 0.05);
-        }
-
-        /* Workspace Content Area */
-        .studio-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            background-color: var(--bg-color);
-        }
-
-        .tab-content {
-            display: none;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .tab-content.active {
-            display: flex;
-        }
-
-        /* Document View Screen (Scrollable with fixed frame appearance) */
-        .doc-view-screen {
-            background-color: var(--surface-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-            height: 440px;
-            overflow-y: auto;
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--text-main);
-            outline: none;
-            box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
-            transition: border-color 0.2s;
-        }
-
-        .doc-view-screen:focus {
-            border-color: var(--emerald);
-        }
-
-        /* Realistic Document Styling */
-        .doc-header-block {
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 16px;
-            margin-bottom: 16px;
-        }
-
-        .doc-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        .doc-contact-line {
-            font-size: 11px;
             color: var(--text-muted);
-            margin-top: 4px;
+            margin-bottom: 12px;
         }
 
-        .doc-section-title {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--emerald);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-top: 16px;
-            margin-bottom: 8px;
-        }
-
-        .doc-body-text {
-            color: #d0d0d0;
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-
-        .doc-list {
-            padding-left: 16px;
-            color: #d0d0d0;
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-
-        .doc-list li {
-            margin-bottom: 6px;
-        }
-
-        /* Version / Tone Buttons Group (Positioned Below View Screen) */
-        .version-controls {
+        .card-footer {
             display: flex;
-            gap: 8px;
-            margin-top: 16px;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border-color);
         }
 
-        .version-btn {
-            flex: 1;
-            padding: 10px 8px;
-            background-color: var(--surface-card);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-muted);
-            font-size: 11px;
-            font-weight: 600;
+        .match-score {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--emerald-green);
+        }
+
+        .view-btn {
+            background: var(--accent-orange);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 11.5px;
+            font-weight: 700;
             cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
+            gap: 4px;
+            box-shadow: 0 2px 8px var(--accent-orange-glow);
             transition: all 0.2s;
         }
 
-        .version-btn.selected {
-            background-color: rgba(0, 140, 81, 0.15);
-            border-color: var(--emerald);
-            color: var(--text-main);
+        .view-btn:active {
+            transform: scale(0.95);
         }
 
-        .version-btn .green-check {
-            width: 14px;
-            height: 14px;
-            background-color: var(--emerald);
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 9px;
-            color: #fff;
-        }
-
-        .version-btn.selected .green-check {
+        /* Slim Cards */
+        .slim-card-list {
             display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        /* Attachments Tab Styles */
-        .upload-dropzone {
-            border: 2px dashed var(--border-color);
-            border-radius: 12px;
-            padding: 36px 20px;
-            text-align: center;
-            background-color: var(--surface-card);
+        .slim-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 14px 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             cursor: pointer;
-            transition: border-color 0.2s;
+            transition: all 0.2s ease;
+        }
+
+        .slim-job-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 3px;
+        }
+
+        .slim-company-name {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .slim-meta-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .status-applied-pill {
+            background: var(--status-applied-bg);
+            color: var(--status-applied-text);
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Profile Section */
+        .glass-panel {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 18px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 14px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
             margin-bottom: 16px;
         }
 
-        .upload-dropzone:hover {
-            border-color: var(--emerald);
-        }
-
-        .upload-icon {
-            width: 40px;
-            height: 40px;
-            margin: 0 auto 12px;
-            background: rgba(0, 140, 81, 0.1);
-            border-radius: 50%;
+        .avatar-box {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent-orange) 0%, #FF8800 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--emerald);
+            color: white;
+            font-size: 20px;
+            font-weight: 800;
+            box-shadow: 0 4px 14px var(--accent-orange-glow);
         }
 
-        .upload-dropzone p {
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-main);
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
         }
 
-        .upload-dropzone span {
-            font-size: 11px;
-            color: var(--text-muted);
-            display: block;
-            margin-top: 4px;
-        }
-
-        /* Email Preview Tab Styles */
-        .email-preview-box {
-            background-color: var(--surface-card);
-            border: 1px solid var(--border-color);
+        .stat-card {
+            background: var(--bg-surface);
+            padding: 12px;
             border-radius: 12px;
-            padding: 20px;
-            font-size: 12px;
-            line-height: 1.5;
-            color: #d0d0d0;
-            max-height: 420px;
-            overflow-y: auto;
-        }
-
-        .email-field {
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .email-field span {
-            color: var(--text-muted);
-        }
-
-        .email-body-content {
-            margin-top: 14px;
-            white-space: pre-line;
-        }
-
-        .email-attachments-list {
-            margin-top: 16px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .email-attachments-list h4 {
-            font-size: 11px;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            letter-spacing: 0.5px;
-        }
-
-        .attachment-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--emerald);
-            margin-bottom: 6px;
-        }
-
-        /* Footer Action Bar */
-        .studio-footer {
-            padding: 16px 20px;
-            background-color: var(--surface-color);
-            border-top: 1px solid var(--border-color);
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 14px;
-            background-color: var(--emerald);
-            border: none;
-            border-radius: 12px;
-            color: #ffffff;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-            box-shadow: 0 4px 16px rgba(0, 140, 81, 0.4);
             text-align: center;
         }
 
-        .submit-btn:hover {
-            background-color: var(--emerald-hover);
+        .stat-value {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--emerald-green);
         }
 
-        .submit-btn:active {
-            transform: scale(0.98);
+        .stat-label {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .section-label-modal {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--accent-orange);
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .detail-block {
+            background: var(--bg-surface);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* Bottom Navigation Bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-sticky);
+            border-top: 1px solid var(--border-color);
+            padding: 8px 16px max(12px, env(safe-area-inset-bottom)) 16px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            color: var(--text-muted);
+            font-size: 10.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s;
+            padding: 2px 12px;
+        }
+
+        .nav-item.active {
+            color: var(--accent-orange);
+        }
+
+        /* Modals Overlay (Shared Drawer Style) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            justify-content: flex-end;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border-radius: 24px 24px 0 0;
+            padding: 20px;
+            max-height: 85vh;
+            width: 100%;
+            max-width: 800px;
+            overflow-y: auto;
+            border-top: 1px solid var(--border-subtle);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-card::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* CHAT UI & APPLICATION STUDIO MODALS (88vh Height) */
+        .chat-modal-card, .studio-modal-card {
+            background: var(--bg-card);
+            border-radius: 24px 24px 0 0;
+            height: 88vh;
+            max-height: 88vh;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-top: 1px solid var(--border-subtle);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* JOB DETAILS MODAL (Custom Sticky Header Layout) */
+        .job-details-card {
+            background: var(--bg-card);
+            border-radius: 24px 24px 0 0;
+            height: 88vh;
+            max-height: 88vh;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-top: 1px solid var(--border-subtle);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .job-details-sticky-header {
+            padding: 20px 20px 14px 20px;
+            background: var(--bg-sticky);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .job-details-scroll-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            background: var(--bg-app);
+        }
+
+        .apply-btn-full {
+            width: 100%;
+            background: var(--accent-orange);
+            color: white;
+            border: none;
+            padding: 13px;
+            border-radius: 12px;
+            font-size: 13.5px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 16px var(--accent-orange-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .apply-btn-full:active {
+            transform: scale(0.97);
+        }
+
+        /* CHAT UI SPECIFIC STYLES */
+        .chat-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-sticky);
+            flex-shrink: 0;
+        }
+
+        .chat-messages-container {
+            flex: 1;
+            padding: 16px 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: var(--bg-app);
+        }
+
+        .chat-bubble {
+            max-width: 85%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            font-size: 12.5px;
+            line-height: 1.4;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .chat-bubble.assistant {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            align-self: flex-start;
+            border: 1px solid var(--border-subtle);
+            border-top-left-radius: 4px;
+        }
+
+        .chat-bubble.user {
+            background: var(--accent-orange);
+            color: white;
+            align-self: flex-end;
+            border-top-right-radius: 4px;
+            box-shadow: 0 2px 8px var(--accent-orange-glow);
+        }
+
+        .quick-replies-footer {
+            padding: 10px 16px;
+            background: var(--bg-sticky);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+
+        .quick-replies-footer::-webkit-scrollbar {
+            display: none;
+        }
+
+        .quick-reply-chip {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+            padding: 7px 14px;
+            border-radius: 18px;
+            font-size: 11.5px;
+            font-weight: 700;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+
+        .quick-reply-chip:active {
+            background: var(--accent-orange-light);
+            color: var(--accent-orange);
+            border-color: var(--accent-orange);
+            transform: scale(0.95);
+        }
+
+        .chat-action-btn-outlined {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            color: var(--accent-orange);
+            border: 1.5px solid var(--accent-orange);
+            padding: 7px 14px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-action-btn-outlined:active {
+            background: var(--accent-orange-light);
+            transform: scale(0.96);
+        }
+
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 12px 16px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            border-top-left-radius: 4px;
+            align-self: flex-start;
+        }
+
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--accent-orange);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+            box-shadow: 0 0 6px var(--accent-orange-glow);
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .chat-input-area {
+            padding: 12px 16px max(16px, env(safe-area-inset-bottom)) 16px;
+            background: var(--bg-sticky);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .chat-attach-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .chat-attach-btn:active {
+            transform: scale(0.92);
+            color: var(--accent-orange);
+            border-color: var(--accent-orange);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            padding: 11px 14px;
+            border-radius: 20px;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent-orange);
+        }
+
+        .chat-send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--accent-orange);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px var(--accent-orange-glow);
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+
+        .chat-send-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* Version Selector Pills for Studio */
+        .version-selector {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .version-pill {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .version-pill.active {
+            background: var(--accent-orange-light);
+            color: var(--accent-orange);
+            border-color: var(--accent-orange);
         }
     </style>
 </head>
-<body>
+<body class="dark-theme">
 
-    <div class="studio-container">
-        <!-- Header -->
-        <header class="studio-header">
-            <div class="brand-wrapper">
+    <div class="phone-frame">
+        <!-- STICKY TOP SECTION -->
+        <div class="sticky-top-section">
+            <div class="app-header">
                 <div class="brand-logo">
-                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    <div class="svg-logo-icon">
+                        <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
+                            <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
+                            <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
+                        </svg>
+                    </div>
+                    <div class="brand-text">Kazini <span>AI</span></div>
                 </div>
-                <div class="brand-info">
-                    <h1><span class="brand-text-kazini">Kazini</span> <span class="brand-text-ai">AI</span></h1>
-                    <p>Application Studio</p>
-                </div>
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
+                </button>
             </div>
-            <button class="close-btn">&times;</button>
-        </header>
 
-        <!-- Navigation Tabs -->
-        <nav class="studio-tabs">
-            <button class="tab-btn active" onclick="switchTab(event, 'tab-cv')">Curated CV</button>
-            <button class="tab-btn" onclick="switchTab(event, 'tab-cover')">Cover Letter</button>
-            <button class="tab-btn" onclick="switchTab(event, 'tab-attachments')">Attachments</button>
-            <button class="tab-btn" onclick="switchTab(event, 'tab-email')">Email Preview</button>
-        </nav>
+            <!-- Header Filter Bar -->
+            <div class="header-context-bar" id="headerContextContainer"></div>
+        </div>
 
-        <!-- Workspace Body -->
-        <main class="studio-body">
+        <!-- Scrollable Body Content -->
+        <div class="app-body">
             
-            <!-- Curated CV Tab -->
-            <div id="tab-cv" class="tab-content active">
-                <div class="doc-view-screen" contenteditable="true" id="cv-screen">
-                    <div class="doc-header-block">
-                        <div class="doc-name">Robin Muchiri</div>
-                        <div class="doc-contact-line">Digital Innovation & Data Specialist • Nairobi, Kenya • robin@smartika.org</div>
+            <!-- TAB 1: DISCOVER -->
+            <div class="tab-view active" id="discoverTab">
+                <div class="job-list" id="jobList"></div>
+            </div>
+
+            <!-- TAB 2: SAVED JOBS -->
+            <div class="tab-view" id="savedTab">
+                <div class="slim-card-list" id="savedJobList"></div>
+            </div>
+
+            <!-- TAB 3: APPLIED JOBS -->
+            <div class="tab-view" id="appliedTab">
+                <div class="slim-card-list" id="appliedJobList"></div>
+            </div>
+
+            <!-- TAB 4: PROFILE -->
+            <div class="tab-view" id="profileTab">
+                <div class="glass-panel">
+                    <div class="profile-header">
+                        <div class="avatar-box">RM</div>
+                        <div>
+                            <div style="font-size: 17px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                Robin Muchiri
+                                <span class="scalloped-badge lg" title="Verified Professional">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                                        <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--accent-orange); font-weight: 700; margin-top: 2px;">
+                                Digital Innovation & Data Specialist
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                                Nairobi, Kenya
+                            </div>
+                        </div>
                     </div>
-                    <div class="doc-section-title">Professional Summary</div>
-                    <p class="doc-body-text">Results-driven specialist with robust expertise in digital commerce ecosystems, python automated analysis, and verified trust frameworks.</p>
+
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">96%</div>
+                            <div class="stat-label">AI Match Score</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">1</div>
+                            <div class="stat-label">Applications</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">2</div>
+                            <div class="stat-label">Saved Roles</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="section-label-modal">
+                        <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> Verified Core Skills
+                    </div>
+                    <div class="skills-row" style="margin-bottom: 0;">
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Data Analytics</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Python</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> SQL</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Social Commerce</div>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="section-label-modal">
+                        <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Kazini Verification Shield
+                    </div>
+                    <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="scalloped-badge lg">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                                    <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <div>
+                                <div style="font-size: 12.5px; font-weight: 700; color: var(--text-primary);">Smartika Trust Network</div>
+                                <div style="font-size: 10.5px; color: var(--text-muted);">Verified Credentials Active</div>
+                            </div>
+                        </div>
+                        <span style="font-size: 11px; font-weight: 800; color: var(--emerald-green);">VERIFIED</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- FIXED FLOATING ACTION BUTTON (FAB) - OPENS CHAT UI -->
+        <button class="fab-kazini" onclick="openChatModal()" aria-label="Open Kazini Assistant">
+            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
+                <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
+                <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
+            </svg>
+        </button>
+
+        <!-- Bottom Navigation Bar -->
+        <div class="bottom-nav">
+            <div class="nav-container">
+                <div class="nav-item active" onclick="switchTab(this, 'discoverTab')">
+                    <i data-lucide="compass" style="width:20px; height:20px;"></i>
+                    <span>Discover</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(this, 'savedTab')">
+                    <i data-lucide="heart" style="width:20px; height:20px;"></i>
+                    <span>Saved</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(this, 'appliedTab')">
+                    <i data-lucide="clipboard-list" style="width:20px; height:20px;"></i>
+                    <span>Applied</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(this, 'profileTab')">
+                    <i data-lucide="user" style="width:20px; height:20px;"></i>
+                    <span>Profile</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- JOB DETAILS MODAL (Sticky Header Layout) -->
+        <div class="modal-overlay" id="jobModal" onclick="closeModal()">
+            <div class="job-details-card" onclick="event.stopPropagation()">
+                
+                <!-- STICKY TOP HEADER OF JOB DETAILS -->
+                <div class="job-details-sticky-header">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                        <div style="font-size: 10.5px; font-weight: 700; color: var(--text-muted);" id="modalTimePosted">2 hrs ago</div>
+                        <button onclick="closeModal()" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted); padding: 0;">
+                            <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                        </button>
+                    </div>
+
+                    <h2 id="modalTitle" style="font-size: 16px; font-weight: 800; color: var(--text-primary); line-height: 1.25; margin-bottom: 6px;"></h2>
                     
-                    <div class="doc-section-title">Key Professional Experience</div>
-                    <ul class="doc-list">
-                        <li><strong>Founder & Chief Steward, Smartika Initiative (2024–Present):</strong> Built secure digital commerce transaction layers and trust models.</li>
-                        <li><strong>Data Analytics Lead, Nairobi Tech Hub (2022–2024):</strong> Implemented multi-source data processing pipelines and visualization dashboards.</li>
-                    </ul>
-
-                    <div class="doc-section-title">Education & Credentials</div>
-                    <ul class="doc-list">
-                        <li>B.Sc. Information Technology & Data Systems – University of Nairobi</li>
-                        <li>Certified Python & Tableau Professional</li>
-                    </ul>
-                </div>
-                <div class="version-controls">
-                    <button class="version-btn selected" onclick="selectVersion('cv', this)">
-                        Professional <span class="green-check">✓</span>
-                    </button>
-                    <button class="version-btn" onclick="selectVersion('cv', this)">
-                        Friendly <span class="green-check">✓</span>
-                    </button>
-                    <button class="version-btn" onclick="selectVersion('cv', this)">
-                        Executive <span class="green-check">✓</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Cover Letter Tab -->
-            <div id="tab-cover" class="tab-content">
-                <div class="doc-view-screen" contenteditable="true" id="cover-screen">
-                    <div class="doc-header-block">
-                        <div class="doc-name">Robin Muchiri</div>
-                        <div class="doc-contact-line">Nairobi, Kenya • robin@smartika.org • +254 700 000000</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <div id="modalCompany" style="color: var(--text-secondary); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px;"></div>
                     </div>
-                    <p class="doc-body-text">Dear Hiring Team,</p>
-                    <p class="doc-body-text" id="cover-text-body">I am writing to express my strong interest in the Data Visualization Specialist position. With extensive hands-on experience building digital commerce ecosystems, managing data pipelines, and implementing verified trust frameworks at the Smartika Initiative, I bring a unique blend of technical precision and strategic vision.</p>
-                    <p class="doc-body-text">Throughout my career, I have focused on translating complex multi-source data into actionable insights and robust dashboards. I am eager to bring this background in advanced python analytics and interactive visualization to your team.</p>
-                    <p class="doc-body-text">Thank you for considering my application. I look forward to discussing how my background aligns with your goals.</p>
-                    <p class="doc-body-text" style="margin-top: 16px;">Best regards,<br>Robin Muchiri</p>
-                </div>
-                <div class="version-controls">
-                    <button class="version-btn selected" onclick="selectVersion('cover', this)">
-                        Professional <span class="green-check">✓</span>
-                    </button>
-                    <button class="version-btn" onclick="selectVersion('cover', this)">
-                        Friendly <span class="green-check">✓</span>
-                    </button>
-                    <button class="version-btn" onclick="selectVersion('cover', this)">
-                        Executive <span class="green-check">✓</span>
-                    </button>
-                </div>
-            </div>
 
-            <!-- Attachments Tab -->
-            <div id="tab-attachments" class="tab-content">
-                <div class="upload-dropzone" onclick="document.getElementById('file-input').click()">
-                    <div class="upload-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <button class="apply-btn-full" id="applyActionBtn" onclick="handleApplyButtonClick()">
+                        <span>Resume Application</span>
+                        <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
+                    </button>
+                </div>
+
+                <!-- SCROLLABLE BODY OF JOB DETAILS -->
+                <div class="job-details-scroll-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+                        <div class="detail-block" style="margin-bottom:0;">
+                            <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Est. Salary</div>
+                            <div id="modalSalary" style="font-size: 12px; font-weight: 700; color: #10b981; margin-top: 3px;"></div>
+                        </div>
+                        <div class="detail-block" style="margin-bottom:0;">
+                            <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
+                            <div id="modalMatch" style="font-size: 12px; font-weight: 800; color: var(--emerald-green); margin-top: 3px;"></div>
+                        </div>
                     </div>
-                    <p>Click here to upload academic scripts</p>
-                    <span>PDF, DOCX up to 10MB</span>
-                </div>
-                <input type="file" id="file-input" style="display: none;" multiple onchange="handleFiles(this)">
-            </div>
 
-            <!-- Email Preview Tab -->
-            <div id="tab-email" class="tab-content">
-                <div class="email-preview-box">
-                    <div class="email-field"><span>From:</span> robin@smartika.org</div>
-                    <div class="email-field"><span>To:</span> hiring@company.com</div>
-                    <div class="email-field"><span>Subject:</span> Application: Data Visualization Specialist – Robin Muchiri</div>
+                    <!-- Why It Matches You Section with Matched Skills in Bullets -->
+                    <div class="section-label-modal">
+                        <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why It Matches You
+                    </div>
+                    <div class="detail-block" style="margin-bottom: 14px;">
+                        <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 8px;" id="modalDesc"></p>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Matched Skills:</div>
+                        <ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalMatchedSkillsBullets"></ul>
+                    </div>
+
+                    <div class="section-label-modal">
+                        <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Key Responsibilities
+                    </div>
+                    <div class="detail-block" style="margin-bottom: 14px;">
+                        <ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.6;" id="modalResp"></ul>
+                    </div>
+
+                    <!-- Provided by Kazini AI Section -->
+                    <div class="detail-block" style="background: var(--bg-surface); border: 1px solid var(--accent-orange-glow); margin-bottom: 0;">
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                            <div style="width: 2px; height: 12px; background: var(--accent-orange); border-radius: 2px;"></div>
+                            <span style="font-size: 11px; font-weight: 800; color: var(--accent-orange); text-transform: uppercase;">Provided by Kazini AI</span>
+                        </div>
+                        <ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.6;">
+                            <li><strong>Ready CV ✅:</strong> Tailored for this job.</li>
+                            <li><strong>Ready Cover Letter ✅:</strong> Tailored for this job.</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- APPLICATION STUDIO MODAL (88vh Height) -->
+        <div class="modal-overlay" id="applicationStudioModal" onclick="closeApplicationStudioWithoutSubmitting()">
+            <div class="studio-modal-card" onclick="event.stopPropagation()">
+                
+                <!-- Studio Header with Kazini AI Logo Branding -->
+                <div style="padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-sticky); flex-shrink: 0;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, var(--accent-orange) 0%, #121212 100%); display: flex; align-items: center; justify-content: center; border: 1px solid var(--accent-orange-glow);">
+                            <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="18" y="34" width="64" height="48" rx="12" stroke="#ffffff" stroke-width="8" fill="none"/>
+                                <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round"/>
+                                <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#ffffff"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div style="font-size: 13.5px; font-weight: 800; color: var(--text-primary);">Kazini AI Studio</div>
+                            <div style="font-size: 10px; color: var(--text-muted);">Application Workspace & Verification Layer</div>
+                        </div>
+                    </div>
+                    <button onclick="closeApplicationStudioWithoutSubmitting()" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
+                        <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                    </button>
+                </div>
+
+                <!-- 4 Tabs Navigation -->
+                <div style="display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-sticky); padding: 0 20px; gap: 16px; flex-shrink: 0; overflow-x: auto;">
+                    <button onclick="switchStudioTab('cv')" id="tab-cv" style="background: none; border: none; padding: 10px 0; font-size: 11.5px; font-weight: 700; color: var(--accent-orange); border-bottom: 2px solid var(--accent-orange); cursor: pointer; white-space: nowrap;">Curated CV</button>
+                    <button onclick="switchStudioTab('cover')" id="tab-cover" style="background: none; border: none; padding: 10px 0; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;">Cover Letter</button>
+                    <button onclick="switchStudioTab('attachments')" id="tab-attachments" style="background: none; border: none; padding: 10px 0; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;">Attachments</button>
+                    <button onclick="switchStudioTab('email')" id="tab-email" style="background: none; border: none; padding: 10px 0; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;">Email Preview</button>
+                </div>
+
+                <!-- Tab Contents Container -->
+                <div style="padding: 16px 20px; overflow-y: auto; flex: 1; background: var(--bg-app);">
                     
-                    <div class="email-body-content" id="email-dynamic-body">
-Dear Hiring Team,
-
-Please find attached my curated CV, cover letter, and academic transcripts prepared via Kazini AI for this position.
-
-[Cover letter content dynamically synchronized here]
-
-Looking forward to contributing to your team.
-
-Best regards,
-Robin Muchiri
+                    <!-- TAB 1: Curated CV (Full View with Versions) -->
+                    <div id="content-cv" class="studio-tab-content">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div style="font-size: 12.5px; font-weight: 800; color: var(--text-primary);">Curated Professional CV</div>
+                            <span style="font-size: 10px; font-weight: 700; color: var(--emerald-green); background: var(--emerald-green-light); padding: 3px 8px; border-radius: 8px;">AI Optimized ✅</span>
+                        </div>
+                        <div class="version-selector">
+                            <div class="version-pill active" onclick="setCVVersion('professional', this)">Professional</div>
+                            <div class="version-pill" onclick="setCVVersion('friendly', this)">Friendly</div>
+                            <div class="version-pill" onclick="setCVVersion('executive', this)">Executive</div>
+                        </div>
+                        <div class="detail-block" style="margin-bottom: 0;">
+                            <p style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">Robin Muchiri</p>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Digital Innovation & Data Specialist • Nairobi, Kenya • robin@smartika.org</p>
+                            <div id="cvVersionContent" style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.6;">
+                                <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Summary:</p>
+                                <p style="margin-bottom: 8px;">Results-driven specialist with robust expertise in digital commerce ecosystems, python automated analysis, and verified trust frameworks.</p>
+                                <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Key Professional Experience:</p>
+                                <ul style="padding-left: 16px; margin-bottom: 8px;">
+                                    <li><strong>Founder & Chief Steward, Smartika Initiative (2024–Present):</strong> Built secure digital commerce transaction layers and trust models.</li>
+                                    <li><strong>Data Analytics Lead, Nairobi Tech Hub (2022–2024):</strong> Implemented multi-source data processing pipelines and visualization dashboards.</li>
+                                </ul>
+                                <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Education & Credentials:</p>
+                                <ul style="padding-left: 16px;">
+                                    <li>B.Sc. Information Technology & Data Systems – University of Nairobi</li>
+                                    <li>Certified Python & Tableau Professional</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="email-attachments-list">
-                        <h4>Attachments</h4>
-                        <div class="attachment-item">📄 Job CV.pdf</div>
-                        <div class="attachment-item">📄 Cover_Letter.pdf</div>
-                        <div class="attachment-item">📄 Verified_Academic_Transcript_2025.pdf</div>
+                    <!-- TAB 2: Cover Letter (Full View with Versions) -->
+                    <div id="content-cover" class="studio-tab-content" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div style="font-size: 12.5px; font-weight: 800; color: var(--text-primary);">Tailored Cover Letter</div>
+                            <span style="font-size: 10px; font-weight: 700; color: var(--emerald-green); background: var(--emerald-green-light); padding: 3px 8px; border-radius: 8px;">Customized ✅</span>
+                        </div>
+                        <div class="version-selector">
+                            <div class="version-pill active" onclick="setCoverVersion('professional', this)">Professional</div>
+                            <div class="version-pill" onclick="setCoverVersion('friendly', this)">Friendly</div>
+                            <div class="version-pill" onclick="setCoverVersion('bold', this)">Bold / Direct</div>
+                        </div>
+                        <div class="detail-block" style="margin-bottom: 0;">
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">Dear Hiring Committee,</p>
+                            <div id="coverVersionContent" style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 8px;">
+                                I am writing to express my strong enthusiasm for this position. With extensive hands-on experience in data analytics, digital commerce ecosystems, and Python-driven automation, I am well-positioned to deliver immediate value to your technical teams. My background aligns seamlessly with your key role requirements.
+                            </div>
+                            <p style="font-size: 11.5px; color: var(--text-secondary);">Sincerely,<br>Robin Muchiri</p>
+                        </div>
                     </div>
+
+                    <!-- TAB 3: Attachments (Multiple Upload Supported) -->
+                    <div id="content-attachments" class="studio-tab-content" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div style="font-size: 12.5px; font-weight: 800; color: var(--text-primary);">Academic Scripts & Documents</div>
+                            <span style="font-size: 10px; color: var(--text-muted);">Multiple files supported</span>
+                        </div>
+                        <input type="file" id="studioFileInput" multiple style="display: none;" onchange="handleStudioFiles(event)">
+                        <div onclick="document.getElementById('studioFileInput').click()" style="border: 2px dashed var(--border-subtle); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 12px; background: var(--bg-card); cursor: pointer;">
+                            <i data-lucide="upload-cloud" style="width: 26px; height: 26px; color: var(--accent-orange); margin-bottom: 6px;"></i>
+                            <div style="font-size: 11.5px; font-weight: 700; color: var(--text-primary);">Click to attach multiple files / transcripts</div>
+                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">PDF, DOCX up to 10MB</div>
+                        </div>
+                        <div id="attachmentListContainer">
+                            <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <i data-lucide="file-text" style="width: 13px; height: 13px; color: var(--accent-orange);"></i>
+                                    <span style="font-size: 11px; font-weight: 600; color: var(--text-primary);">Verified_Academic_Transcript_2025.pdf</span>
+                                </div>
+                                <span style="font-size: 10px; font-weight: 700; color: var(--emerald-green);">Attached ✅</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: Email Preview (Masked Employer, Normal User Email) -->
+                    <div id="content-email" class="studio-tab-content" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div style="font-size: 12.5px; font-weight: 800; color: var(--text-primary);">Email Preview & Dispatch</div>
+                            <span style="font-size: 10px; font-weight: 700; color: var(--accent-orange); background: var(--accent-orange-light); padding: 3px 8px; border-radius: 8px;">Ready to Submit</span>
+                        </div>
+                        <div class="detail-block" style="margin-bottom: 0; font-size: 11.5px; line-height: 1.6;">
+                            <div style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 5px; margin-bottom: 6px;">
+                                <strong style="color: var(--text-muted);">From:</strong> <span id="emailPreviewFrom" style="color: var(--text-primary);">robin@smartika.org</span>
+                            </div>
+                            <div style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 5px; margin-bottom: 6px;">
+                                <strong style="color: var(--text-muted);">To:</strong> <span style="color: var(--text-primary); font-family: monospace; font-weight: 700;">*************</span>
+                            </div>
+                            <div style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 5px; margin-bottom: 6px;">
+                                <strong style="color: var(--text-muted);">Subject:</strong> <span id="emailPreviewSubject" style="color: var(--text-primary); font-weight: 700;">Application: Role Title – Robin Muchiri</span>
+                            </div>
+                            <div style="color: var(--text-secondary);" id="emailPreviewBody">
+                                Dear Hiring Team,<br><br>
+                                Please find attached my curated CV, cover letter, and academic transcripts prepared via Kazini AI for this position.<br><br>
+                                Looking forward to contributing to your team.<br><br>
+                                Best regards,<br>
+                                Robin Muchiri
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Studio Footer / Submit Action Bar (Present on all tabs, active ONLY on email tab) -->
+                <div style="padding: 14px 20px; border-top: 1px solid var(--border-color); background: var(--bg-sticky); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                    <div id="studioFooterHint" style="font-size: 10.5px; color: var(--text-muted);">Switch to Email Preview tab to submit application.</div>
+                    <button id="studioSubmitBtn" onclick="submitApplicationFromStudio()" disabled style="background: var(--bg-surface); color: var(--text-muted); border: 1px solid var(--border-subtle); padding: 9px 18px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: not-allowed; transition: all 0.2s;">
+                        Submit Application
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- CHAT UI MODAL (88vh Height) -->
+        <div class="modal-overlay" id="chatModal" onclick="closeChatModal()">
+            <div class="chat-modal-card" onclick="event.stopPropagation()">
+                <div class="chat-header">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="position: relative; width: 44px; height: 44px; flex-shrink: 0;">
+                            <img src="kazini-ai-avatar.png" alt="Kazini AI" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-orange); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                            <span style="position: absolute; bottom: 0; right: 0; width: 11px; height: 11px; background: var(--emerald-green); border: 2px solid var(--bg-sticky); border-radius: 50%;"></span>
+                        </div>
+                        <div>
+                            <div style="font-size: 14px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
+                                Kazini AI
+                                <span class="scalloped-badge" title="Verified Assistant">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                                        <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div style="font-size: 10.5px; color: var(--emerald-green); font-weight: 700; margin-top: 2px;">
+                                Job Hunting Agent
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="closeChatModal()" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
+                        <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                    </button>
+                </div>
+
+                <div class="chat-messages-container" id="chatMessages"></div>
+
+                <div class="quick-replies-footer" id="quickRepliesFooter">
+                    <div class="quick-reply-chip" onclick="handleQuickReply('Hi Kazini 👋')">Hi Kazini 👋</div>
+                    <div class="quick-reply-chip" onclick="handleQuickReply('Hello Kazini')">Hello Kazini</div>
+                    <div class="quick-reply-chip" onclick="handleQuickReply('Sasa Kazini 👋')">Sasa Kazini 👋</div>
+                </div>
+
+                <div class="chat-input-area">
+                    <input type="file" id="fileInput" style="display: none;" onchange="handleFileUpload(event)">
+                    <button class="chat-attach-btn" onclick="document.getElementById('fileInput').click()" title="Attach Resume or Document">
+                        <i data-lucide="paperclip" style="width: 16px; height: 16px;"></i>
+                    </button>
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Type your response or upload resume..." onkeypress="handleChatKeypress(event)">
+                    <button class="chat-send-btn" onclick="sendChatMessage()">
+                        <i data-lucide="send" style="width: 15px; height: 15px;"></i>
+                    </button>
                 </div>
             </div>
+        </div>
 
-        </main>
-
-        <!-- Footer Action -->
-        <footer class="studio-footer">
-            <button class="submit-btn" onclick="submitApplication()">Submit Application</button>
-        </footer>
     </div>
 
     <script>
-        function switchTab(evt, tabId) {
-            const contents = document.querySelectorAll('.tab-content');
-            contents.forEach(c => c.classList.remove('active'));
+        const kaziniAudio = new Audio('kazini-ai-message.mp3');
+        kaziniAudio.preload = 'auto';
 
-            const buttons = document.querySelectorAll('.tab-btn');
-            buttons.forEach(b => b.classList.remove('active'));
+        function playKaziniMessageSound() {
+            try {
+                kaziniAudio.currentTime = 0;
+                kaziniAudio.play().catch(e => console.log("Audio play blocked until user gesture", e));
+            } catch (e) {}
+        }
 
+        const jobData = [
+            {
+                id: 1,
+                title: "Junior Data Analyst",
+                company: "Nexus Labs Africa",
+                verified: true,
+                location: "Nairobi",
+                timePosted: "2 hrs ago",
+                skills: ["Python", "SQL", "Tableau"],
+                matchedSkillsList: ["Python (Verified Match)", "SQL (Core Skill)", "Tableau Dashboarding"],
+                moreSkills: 1,
+                salary: "KSH 75,000 - 95,000",
+                matchScore: "94%",
+                bookmarked: true,
+                applied: false,
+                appliedDate: "",
+                desc: "Your profile demonstrates exceptional alignment with this role due to your mastery of automated Python processing and SQL pipeline management.",
+                resp: [
+                    "Clean, process, and analyze multi-source operational data.",
+                    "Build automated Python ETL scripts and SQL queries.",
+                    "Generate weekly business intelligence summaries for executive stakeholders."
+                ]
+            },
+            {
+                id: 2,
+                title: "Data Visualization Specialist",
+                company: "SafariTech Ventures",
+                verified: true,
+                location: "Mombasa",
+                timePosted: "4 hrs ago",
+                skills: ["Excel", "Tableau", "PowerBI"],
+                matchedSkillsList: ["PowerBI Reporting", "Tableau (Advanced)", "Excel Financial Modeling"],
+                moreSkills: 1,
+                salary: "KSH 120,000 - 150,000",
+                matchScore: "88%",
+                bookmarked: true,
+                applied: false,
+                appliedDate: "",
+                desc: "Strong match based on your dashboarding expertise and digital commerce reporting background in East Africa.",
+                resp: [
+                    "Create intuitive, decision-ready data visualizations in Tableau.",
+                    "Partner with financial teams to streamline reporting frameworks.",
+                    "Conduct training workshops on data literacy and tool usage."
+                ]
+            },
+            {
+                id: 3,
+                title: "Junior Research Analyst",
+                company: "Kilimo Data Solutions",
+                verified: true,
+                location: "Nairobi",
+                timePosted: "1 day ago",
+                skills: ["PowerBI", "R", "SQL"],
+                matchedSkillsList: ["SQL Database Management", "PowerBI Dashboards"],
+                moreSkills: 1,
+                salary: "KSH 45,000 - 60,000",
+                matchScore: "75%",
+                bookmarked: false,
+                applied: false,
+                appliedDate: "",
+                desc: "Matches your analytical background and data collection skillsets across regional hubs.",
+                resp: [
+                    "Gather agricultural ecosystem datasets across regional hubs.",
+                    "Perform statistical analysis using R and Excel.",
+                    "Build interactive dashboards for field program managers."
+                ]
+            }
+        ];
+
+        const scallopedBadgeSVG = `
+            <span class="scalloped-badge" title="Verified Employer">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                    <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </span>`;
+
+        let activeJobId = null;
+        let chatStep = 0;
+
+        function renderJobs() {
+            const container = document.getElementById('jobList');
+            container.innerHTML = jobData.map(job => `
+                <div class="job-card">
+                    <div class="card-header-row">
+                        <div>
+                            <div class="job-title">${job.title}</div>
+                            <div class="company-info">
+                                <span>${job.company}</span>
+                                ${job.verified ? scallopedBadgeSVG : ''}
+                                <span class="location-dot">•</span>
+                                <span>${job.location}</span>
+                            </div>
+                        </div>
+                        <button class="bookmark-btn" onclick="toggleBookmark(${job.id})">
+                            <i data-lucide="heart" style="width: 18px; height: 18px; ${job.bookmarked ? 'fill: var(--accent-orange); color: var(--accent-orange);' : 'color: var(--text-muted);'}"></i>
+                        </button>
+                    </div>
+
+                    <div class="skills-row">
+                        ${job.skills.slice(0, 2).map(s => `
+                            <div class="skill-badge">
+                                <i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i>
+                                ${s}
+                            </div>
+                        `).join('')}
+                        ${job.skills.length > 2 ? `<div class="skill-badge more">+${job.skills.length - 2}</div>` : ''}
+                    </div>
+
+                    <div class="salary-text">${job.salary}</div>
+
+                    <div class="card-footer">
+                        <span class="match-score">Match Score: ${job.matchScore}</span>
+                        <button class="view-btn" onclick="openModal(${job.id})">
+                            View Job <i data-lucide="chevron-right" style="width:12px; height:12px;"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderSavedJobs() {
+            const container = document.getElementById('savedJobList');
+            const savedJobs = jobData.filter(j => j.bookmarked);
+            
+            if (savedJobs.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-panel" style="text-align: center; padding: 36px 16px;">
+                        <i data-lucide="heart" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 14px;">No Saved Roles Yet</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Tap the heart icon on any job card to save it here.</div>
+                    </div>`;
+            } else {
+                container.innerHTML = savedJobs.map(job => `
+                    <div class="slim-card" onclick="openModal(${job.id})">
+                        <div>
+                            <div class="slim-job-title">${job.title}</div>
+                            <div class="slim-company-name">
+                                ${job.company}
+                                ${job.verified ? scallopedBadgeSVG : ''}
+                            </div>
+                            <div class="slim-meta-text">${job.location} • ${job.salary}</div>
+                        </div>
+                        <button class="bookmark-btn" onclick="event.stopPropagation(); toggleBookmark(${job.id})">
+                            <i data-lucide="heart" style="width: 18px; height: 18px; fill: var(--accent-orange); color: var(--accent-orange);"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function renderAppliedJobs() {
+            const container = document.getElementById('appliedJobList');
+            const appliedJobs = jobData.filter(j => j.applied);
+
+            if (appliedJobs.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-panel" style="text-align: center; padding: 36px 16px;">
+                        <i data-lucide="clipboard-list" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 14px;">No Active Applications</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Submitted applications will appear here.</div>
+                    </div>`;
+            } else {
+                container.innerHTML = appliedJobs.map(job => {
+                    const isPending = job.appliedDate === "pending";
+                    return `
+                    <div class="slim-card" onclick="openModal(${job.id})">
+                        <div>
+                            <div class="slim-job-title">${job.title}</div>
+                            <div class="slim-company-name">
+                                ${job.company}
+                                ${job.verified ? scallopedBadgeSVG : ''}
+                            </div>
+                            <div class="slim-meta-text">${isPending ? 'Draft in progress' : job.appliedDate}</div>
+                        </div>
+                        <span class="status-applied-pill" style="${isPending ? 'background: rgba(245, 158, 11, 0.12); color: #f59e0b;' : ''}">
+                            <i data-lucide="${isPending ? 'clock' : 'check-circle'}" style="width:10px; height:10px;"></i> 
+                            ${isPending ? 'pending' : 'Applied'}
+                        </span>
+                    </div>`;
+                }).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function toggleBookmark(id) {
+            const job = jobData.find(j => j.id === id);
+            if(job) {
+                job.bookmarked = !job.bookmarked;
+                renderJobs();
+                renderSavedJobs();
+                
+                const activeTab = document.querySelector('.tab-view.active').id;
+                if(activeTab === 'savedTab') {
+                    updateHeaderContext('savedTab');
+                }
+            }
+        }
+
+        function selectChip(el) {
+            document.querySelectorAll('.chip-bar .filter-chip').forEach(chip => chip.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function updateHeaderContext(tabId) {
+            const container = document.getElementById('headerContextContainer');
+            const savedCount = jobData.filter(j => j.bookmarked).length;
+            const appliedCount = jobData.filter(j => j.applied).length;
+
+            if (tabId === 'discoverTab') {
+                container.classList.remove('hidden');
+                container.innerHTML = `
+                    <div class="chip-bar">
+                        <div class="filter-chip active" onclick="selectChip(this)">
+                            <i data-lucide="sparkles" style="width: 11px; height: 11px;"></i>
+                            All Matches
+                        </div>
+                        <div class="filter-chip" onclick="selectChip(this)">
+                            <i data-lucide="wifi" style="width: 11px; height: 11px;"></i>
+                            Remote
+                        </div>
+                        <div class="filter-chip" onclick="selectChip(this)">
+                            <i data-lucide="briefcase" style="width: 11px; height: 11px;"></i>
+                            Full-Time
+                        </div>
+                    </div>
+                `;
+            } else if (tabId === 'savedTab') {
+                container.classList.remove('hidden');
+                container.innerHTML = `
+                    <div class="summary-banner">
+                        <div class="summary-title">
+                            <i data-lucide="heart" style="width:14px; height:14px; color: var(--accent-orange); fill: var(--accent-orange-light);"></i>
+                            Saved Positions
+                        </div>
+                        <span class="summary-count">${savedCount} BOOKMARKED</span>
+                    </div>
+                `;
+            } else if (tabId === 'appliedTab') {
+                container.classList.remove('hidden');
+                container.innerHTML = `
+                    <div class="summary-banner">
+                        <div class="summary-title">
+                            <i data-lucide="clipboard-check" style="width:14px; height:14px; color: #10b981;"></i>
+                            Application History
+                        </div>
+                        <span class="summary-count" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">${appliedCount} SUBMITTED</span>
+                    </div>
+                `;
+            } else if (tabId === 'profileTab') {
+                container.classList.add('hidden');
+            }
+            lucide.createIcons();
+        }
+
+        function switchTab(element, tabId) {
+            document.querySelectorAll('.bottom-nav .nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            document.querySelectorAll('.tab-view').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            evt.currentTarget.classList.add('active');
 
-            if (tabId === 'tab-email') {
-                syncEmailBody();
+            updateHeaderContext(tabId);
+
+            if (tabId === 'discoverTab') {
+                renderJobs();
+            } else if (tabId === 'savedTab') {
+                renderSavedJobs();
+            } else if (tabId === 'appliedTab') {
+                renderAppliedJobs();
             }
         }
 
-        function selectVersion(type, btn) {
-            const container = btn.parentElement;
-            container.querySelectorAll('.version-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            const icon = document.getElementById('themeIcon');
+            if(document.body.classList.contains('dark-theme')) {
+                icon.setAttribute('data-lucide', 'sun');
+            } else {
+                icon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
         }
 
-        function syncEmailBody() {
-            const coverText = document.getElementById('cover-text-body').innerText;
-            const emailBodyDiv = document.getElementById('email-dynamic-body');
-            emailBodyDiv.innerHTML = `Dear Hiring Team,
+        function openModal(id) {
+            activeJobId = id;
+            const job = jobData.find(j => j.id === id);
+            if(!job) return;
 
-Please find attached my curated CV, cover letter, and academic transcripts prepared via Kazini AI for this position.
+            document.getElementById('modalTitle').innerText = job.title;
+            document.getElementById('modalCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${job.location}`;
+            document.getElementById('modalTimePosted').innerText = job.timePosted;
+            document.getElementById('modalSalary').innerText = job.salary;
+            document.getElementById('modalMatch').innerText = job.matchScore;
+            document.getElementById('modalDesc').innerText = job.desc;
+            
+            document.getElementById('modalMatchedSkillsBullets').innerHTML = job.matchedSkillsList.map(s => `<li>${s}</li>`).join('');
+            document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
 
-${coverText}
+            document.getElementById('emailPreviewSubject').innerText = `Application: ${job.title} – Robin Muchiri`;
 
-Looking forward to contributing to your team.
+            const applyBtn = document.getElementById('applyActionBtn');
+            if (job.applied && job.appliedDate !== "pending") {
+                applyBtn.style.background = '#10b981';
+                applyBtn.innerHTML = `<span>Job Applied</span><i data-lucide="check-circle" style="width:14px; height:14px;"></i>`;
+                applyBtn.disabled = true;
+            } else {
+                applyBtn.style.background = 'var(--accent-orange)';
+                applyBtn.innerHTML = `<span>Resume Application</span><i data-lucide="arrow-right" style="width:14px; height:14px;"></i>`;
+                applyBtn.disabled = false;
+            }
 
-Best regards,
-Robin Muchiri`;
+            document.getElementById('jobModal').style.display = 'flex';
+            lucide.createIcons();
         }
 
-        function handleFiles(input) {
-            if (input.files && input.files.length > 0) {
-                alert(input.files.length + " file(s) attached successfully.");
+        function closeModal() {
+            document.getElementById('jobModal').style.display = 'none';
+        }
+
+        function handleApplyButtonClick() {
+            closeModal();
+            openApplicationStudio();
+        }
+
+        function openApplicationStudio() {
+            switchStudioTab('cv');
+            document.getElementById('applicationStudioModal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function closeApplicationStudioWithoutSubmitting() {
+            document.getElementById('applicationStudioModal').style.display = 'none';
+            if (activeJobId) {
+                const job = jobData.find(j => j.id === activeJobId);
+                if (job && !job.applied) {
+                    job.applied = true;
+                    job.appliedDate = "pending";
+                    renderJobs();
+                    renderAppliedJobs();
+                }
             }
         }
 
-        function submitApplication() {
-            alert("Application successfully submitted via Kazini AI Application Studio!");
+        function switchStudioTab(tabName) {
+            const contents = document.querySelectorAll('.studio-tab-content');
+            contents.forEach(el => el.style.display = 'none');
+
+            const tabs = ['cv', 'cover', 'attachments', 'email'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                btn.style.color = 'var(--text-muted)';
+                btn.style.fontWeight = '600';
+                btn.style.borderBottomColor = 'transparent';
+            });
+
+            document.getElementById(`content-${tabName}`).style.display = 'block';
+            const activeBtn = document.getElementById(`tab-${tabName}`);
+            activeBtn.style.color = 'var(--accent-orange)';
+            activeBtn.style.fontWeight = '700';
+            activeBtn.style.borderBottomColor = 'var(--accent-orange)';
+
+            const submitBtn = document.getElementById('studioSubmitBtn');
+            const hint = document.getElementById('studioFooterHint');
+
+            if (tabName === 'email') {
+                submitBtn.disabled = false;
+                submitBtn.style.background = 'var(--accent-orange)';
+                submitBtn.style.color = '#ffffff';
+                submitBtn.style.border = 'none';
+                submitBtn.style.cursor = 'pointer';
+                submitBtn.style.boxShadow = '0 4px 16px var(--accent-orange-glow)';
+                hint.textContent = "All documents verified. Ready for final dispatch.";
+                hint.style.color = 'var(--emerald-green)';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.style.background = 'var(--bg-surface)';
+                submitBtn.style.color = 'var(--text-muted)';
+                submitBtn.style.border = '1px solid var(--border-subtle)';
+                submitBtn.style.cursor = 'not-allowed';
+                submitBtn.style.boxShadow = 'none';
+                hint.textContent = "Switch to Email Preview tab to submit application.";
+                hint.style.color = 'var(--text-muted)';
+            }
+            lucide.createIcons();
         }
+
+        function setCVVersion(version, el) {
+            document.querySelectorAll('#content-cv .version-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            
+            const container = document.getElementById('cvVersionContent');
+            if (version === 'professional') {
+                container.innerHTML = `
+                    <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Summary:</p>
+                    <p style="margin-bottom: 8px;">Results-driven specialist with robust expertise in digital commerce ecosystems, python automated analysis, and verified trust frameworks.</p>
+                    <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Key Professional Experience:</p>
+                    <ul style="padding-left: 16px; margin-bottom: 8px;">
+                        <li><strong>Founder & Chief Steward, Smartika Initiative (2024–Present):</strong> Built secure digital commerce transaction layers and trust models.</li>
+                        <li><strong>Data Analytics Lead, Nairobi Tech Hub (2022–2024):</strong> Implemented multi-source data processing pipelines and visualization dashboards.</li>
+                    </ul>
+                    <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Education & Credentials:</p>
+                    <ul style="padding-left: 16px;">
+                        <li>B.Sc. Information Technology & Data Systems – University of Nairobi</li>
+                        <li>Certified Python & Tableau Professional</li>
+                    </ul>`;
+            } else if (version === 'friendly') {
+                container.innerHTML = `
+                    <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Overview:</p>
+                    <p style="margin-bottom: 8px;">Passionate digital innovator and problem solver dedicated to uplifting local smart-collar economies through clean data and transparent tech solutions.</p>
+                    <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Highlights:</p>
+                    <ul style="padding-left: 16px; margin-bottom: 8px;">
+                        <li>Expert in collaborative team environments and accessible data visualization.</li>
+                        <li>Active contributor to digital inclusion initiatives in East Africa.</li>
+                    </ul>`;
+            } else {
+                container.innerHTML = `
+                    <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Executive Profile:</p>
+                    <p style="margin-bottom: 8px;">Chief executive steward steering technological shifts in social commerce and secure identity verification infrastructures.</p>
+                    <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Leadership Impact:</p>
+                    <ul style="padding-left: 16px;">
+                        <li>Successfully architected pilot deployment phases across Nairobi hubs.</li>
+                        <li>Secured high-level strategic partnerships.</li>
+                    </ul>`;
+            }
+        }
+
+        function setCoverVersion(version, el) {
+            document.querySelectorAll('#content-cover .version-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+
+            const container = document.getElementById('coverVersionContent');
+            if (version === 'professional') {
+                container.innerHTML = `I am writing to express my strong enthusiasm for this position. With extensive hands-on experience in data analytics, digital commerce ecosystems, and Python-driven automation, I am well-positioned to deliver immediate value to your technical teams.`;
+            } else if (version === 'friendly') {
+                container.innerHTML = `Hello there! I'm thrilled at the prospect of joining your dynamic team. My background in building community-focused digital solutions makes me eager to contribute fresh energy and robust technical skills to your projects.`;
+            } else {
+                container.innerHTML = `I am offering direct, high-impact execution capability for this role. My proven track record in architecting data layers and driving digital innovation ensures immediate performance and metric success upon onboarding.`;
+            }
+        }
+
+        function handleStudioFiles(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            const container = document.getElementById('attachmentListContainer');
+            for (let file of files) {
+                container.innerHTML += `
+                    <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="file-text" style="width: 13px; height: 13px; color: var(--accent-orange);"></i>
+                            <span style="font-size: 11px; font-weight: 600; color: var(--text-primary);">${escapeHtml(file.name)}</span>
+                        </div>
+                        <span style="font-size: 10px; font-weight: 700; color: var(--emerald-green);">Attached ✅</span>
+                    </div>`;
+            }
+            lucide.createIcons();
+        }
+
+        function submitApplicationFromStudio() {
+            if (!activeJobId) return;
+            const job = jobData.find(j => j.id === activeJobId);
+            if (job) {
+                job.applied = true;
+                job.appliedDate = "Applied just now";
+                
+                document.getElementById('applicationStudioModal').style.display = 'none';
+                renderJobs();
+                renderAppliedJobs();
+                
+                const activeTab = document.querySelector('.tab-view.active').id;
+                updateHeaderContext(activeTab);
+            }
+        }
+
+        function openChatModal() {
+            document.getElementById('chatModal').style.display = 'flex';
+            const container = document.getElementById('chatMessages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function closeChatModal() {
+            document.getElementById('chatModal').style.display = 'none';
+        }
+
+        function handleChatKeypress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function handleQuickReply(text) {
+            const footer = document.getElementById('quickRepliesFooter');
+            if (footer) footer.style.display = 'none';
+
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
+            container.scrollTop = container.scrollHeight;
+
+            showTypingAndReply(`Hi Robin 😊, how can I help you today?
+                <div>
+                    <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
+                        <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
+                    </button>
+                </div>`);
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const footer = document.getElementById('quickRepliesFooter');
+            if (footer) footer.style.display = 'none';
+
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+
+            let botReply = "";
+            if (chatStep === 0) {
+                botReply = `Noted your focus in <strong>${escapeHtml(text)}</strong>. What are your core technical tools or software skills? (e.g., Python, SQL, Tableau, Excel)`;
+                chatStep++;
+            } else if (chatStep === 1) {
+                botReply = `Fantastic toolset! 🛠️ Lastly, what is your preferred location or work mode? (e.g., Nairobi, Mombasa, Remote)`;
+                chatStep++;
+            } else {
+                botReply = `Profile successfully verified! 🎉 Your career profile is now active in our Smartika Trust Network. I have updated your AI match rankings in the Discover feed.`;
+                chatStep = 0;
+            }
+
+            showTypingAndReply(botReply);
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const footer = document.getElementById('quickRepliesFooter');
+            if (footer) footer.style.display = 'none';
+
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<div class="chat-bubble user"><i data-lucide="file-text" style="width:14px; height:14px; vertical-align:middle;"></i> Uploaded: ${escapeHtml(file.name)}</div>`;
+            container.scrollTop = container.scrollHeight;
+
+            const botReply = `Document received and verified! 📄 I've extracted your professional credentials from <strong>${escapeHtml(file.name)}</strong>. Your profile is fully updated.
+                <div>
+                    <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
+                        <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
+                    </button>
+                </div>`;
+
+            showTypingAndReply(botReply);
+        }
+
+        function showTypingAndReply(responseHtml) {
+            const container = document.getElementById('chatMessages');
+            const typingId = 'typing-' + Date.now();
+            
+            container.innerHTML += `
+                <div class="typing-indicator" id="${typingId}">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+
+            setTimeout(() => {
+                const typingEl = document.getElementById(typingId);
+                if (typingEl) typingEl.remove();
+
+                const bubble = document.createElement('div');
+                bubble.className = 'chat-bubble assistant';
+                bubble.innerHTML = responseHtml;
+                container.appendChild(bubble);
+                container.scrollTop = container.scrollHeight;
+                lucide.createIcons();
+
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        playKaziniMessageSound();
+                    });
+                });
+
+            }, 900);
+        }
+
+        function triggerFindJob() {
+            closeChatModal();
+            switchTab(document.querySelector('.nav-item'), 'discoverTab');
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateHeaderContext('discoverTab');
+            renderJobs();
+            lucide.createIcons();
+        });
     </script>
 </body>
 </html>
