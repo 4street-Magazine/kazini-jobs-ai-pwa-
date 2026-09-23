@@ -33,6 +33,8 @@
             /* Status Colors */
             --status-applied-bg: rgba(16, 185, 129, 0.12);
             --status-applied-text: #10b981;
+            --status-pending-bg: rgba(245, 158, 11, 0.12);
+            --status-pending-text: #f59e0b;
             
             /* Theme Base Colors (Default Light) */
             --bg-app: #f8fafc;
@@ -287,11 +289,12 @@
             height: 15px;
             flex-shrink: 0;
             filter: drop-shadow(0px 1px 3px var(--deep-vivid-blue-glow));
+            vertical-align: middle;
         }
 
         .scalloped-badge.lg {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
         }
 
         /* Tab Views */
@@ -490,6 +493,18 @@
             gap: 4px;
         }
 
+        .status-pending-pill {
+            background: var(--status-pending-bg);
+            color: var(--status-pending-text);
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
         /* Profile Section */
         .glass-panel {
             background: var(--bg-card);
@@ -623,27 +638,50 @@
             align-items: center;
         }
 
-        .modal-card {
+        /* Job Details Modal Card (Sticky Header & Footer, Scrollable Body) */
+        .job-modal-card {
             background: var(--bg-card);
             border-radius: 24px 24px 0 0;
-            padding: 20px;
-            max-height: 85vh;
+            height: 88vh;
+            max-height: 88vh;
             width: 100%;
             max-width: 800px;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
             border-top: 1px solid var(--border-subtle);
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
             animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            padding-bottom: max(20px, env(safe-area-inset-bottom));
+        }
+
+        .job-modal-sticky-header {
+            padding: 16px 20px 12px 20px;
+            background: var(--bg-sticky);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .job-modal-scroll-body {
+            flex: 1;
+            padding: 16px 20px;
+            overflow-y: auto;
+            background: var(--bg-app);
+        }
+
+        .job-modal-scroll-body::-webkit-scrollbar {
+            display: none;
+        }
+
+        .job-modal-sticky-footer {
+            padding: 14px 20px max(14px, env(safe-area-inset-bottom)) 20px;
+            background: var(--bg-sticky);
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
         }
 
         @keyframes slideUp {
             from { transform: translateY(100%); }
             to { transform: translateY(0); }
-        }
-
-        .modal-card::-webkit-scrollbar {
-            display: none;
         }
 
         .apply-btn-full {
@@ -655,7 +693,7 @@
             border-radius: 12px;
             font-size: 13.5px;
             font-weight: 800;
-            margin-top: 14px;
+            margin-top: 0;
             cursor: pointer;
             box-shadow: 0 4px 16px var(--accent-orange-glow);
             display: flex;
@@ -970,7 +1008,7 @@
                             <div class="stat-label">AI Match Score</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value">1</div>
+                            <div class="stat-value">0</div>
                             <div class="stat-label">Applications</div>
                         </div>
                         <div class="stat-card">
@@ -1049,63 +1087,102 @@
 
         <!-- JOB DETAILS MODAL -->
         <div class="modal-overlay" id="jobModal" onclick="closeModal()">
-            <div class="modal-card" onclick="event.stopPropagation()">
-                <div style="width: 36px; height: 4px; background: var(--border-subtle); border-radius: 2px; margin: 0 auto 14px auto;"></div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                    <div>
-                        <h2 id="modalTitle" style="font-size: 17px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 4px;"></h2>
-                        <div id="modalCompany" style="color: var(--text-secondary); font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 5px;"></div>
+            <div class="job-modal-card" onclick="event.stopPropagation()">
+                <!-- Sticky Header Section -->
+                <div class="job-modal-sticky-header">
+                    <div style="width: 36px; height: 4px; background: var(--border-subtle); border-radius: 2px; margin: 0 auto 10px auto;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <h2 id="modalTitle" style="font-size: 17px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 4px;"></h2>
+                            <div id="modalCompany" style="color: var(--text-secondary); font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 5px;"></div>
+                        </div>
+                        <button onclick="closeModal()" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
+                            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                        </button>
                     </div>
-                    <span class="scalloped-badge lg" title="Verified Employer">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
-                            <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </span>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
-                    <div class="detail-block" style="margin-bottom:0;">
-                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Est. Salary</div>
-                        <div id="modalSalary" style="font-size: 12.5px; font-weight: 700; color: #10b981; margin-top: 3px;"></div>
-                    </div>
-                    <div class="detail-block" style="margin-bottom:0;">
-                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
-                        <div id="modalMatch" style="font-size: 12.5px; font-weight: 800; color: var(--emerald-green); margin-top: 3px;"></div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+                        <i data-lucide="clock" style="width: 12px; height: 12px;"></i> 2hrs ago
                     </div>
                 </div>
 
-                <div class="section-label-modal">
-                    <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why it matches you
-                </div>
-                <div class="detail-block" style="margin-bottom: 14px;">
-                    <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 10px;">Your verified profile skills align strongly with this role:</p>
-                    <div id="modalMatchingSkills" class="skills-row" style="margin-bottom: 0;"></div>
+                <!-- Scrollable Body Section -->
+                <div class="job-modal-scroll-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+                        <div class="detail-block" style="margin-bottom:0;">
+                            <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Est. Salary</div>
+                            <div id="modalSalary" style="font-size: 12.5px; font-weight: 700; color: #10b981; margin-top: 3px;"></div>
+                        </div>
+                        <div class="detail-block" style="margin-bottom:0;">
+                            <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
+                            <div id="modalMatch" style="font-size: 12.5px; font-weight: 800; color: var(--emerald-green); margin-top: 3px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Provided by Kazini AI Section -->
+                    <div class="section-label-modal">
+                        <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> Provided by Kazini AI
+                    </div>
+                    <div class="detail-block" style="margin-bottom: 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 11.5px; color: var(--text-primary); font-weight: 600;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--accent-orange);"></i>
+                                Ready CV
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 4px; color: var(--emerald-green); font-size: 11px; font-weight: 700;">
+                                <div style="width: 16px; height: 16px; border-radius: 50%; background: var(--emerald-green); display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i data-lucide="check" style="width: 10px; height: 10px;"></i>
+                                </div>
+                                tailored for this job
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--text-primary); font-weight: 600;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--accent-orange);"></i>
+                                Ready Cover Letter
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 4px; color: var(--emerald-green); font-size: 11px; font-weight: 700;">
+                                <div style="width: 16px; height: 16px; border-radius: 50%; background: var(--emerald-green); display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i data-lucide="check" style="width: 10px; height: 10px;"></i>
+                                </div>
+                                tailored for this job
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-label-modal">
+                        <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why it matches you
+                    </div>
+                    <div class="detail-block" style="margin-bottom: 14px;">
+                        <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 10px;">Your verified profile skills align strongly with this role:</p>
+                        <div id="modalMatchingSkills" class="skills-row" style="margin-bottom: 0;"></div>
+                    </div>
+
+                    <div class="section-label-modal">
+                        <i data-lucide="layers" style="width: 12px; height: 12px;"></i> Required Tech Stack
+                    </div>
+                    <div id="modalSkills" class="skills-row" style="margin-bottom: 14px;"></div>
+
+                    <div class="section-label-modal">
+                        <i data-lucide="align-left" style="width: 12px; height: 12px;"></i> Role Overview
+                    </div>
+                    <div class="detail-block">
+                        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;" id="modalDesc"></p>
+                    </div>
+
+                    <div class="section-label-modal">
+                        <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Key Responsibilities
+                    </div>
+                    <div class="detail-block" style="margin-bottom: 14px;">
+                        <ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalResp"></ul>
+                    </div>
                 </div>
 
-                <div class="section-label-modal">
-                    <i data-lucide="layers" style="width: 12px; height: 12px;"></i> Required Tech Stack
+                <!-- Sticky Footer Section -->
+                <div class="job-modal-sticky-footer">
+                    <button class="apply-btn-full" id="applyActionBtn" onclick="handleApplyButtonClick()">
+                        <i data-lucide="send" style="width: 15px; height: 15px;"></i> Apply Job
+                    </button>
                 </div>
-                <div id="modalSkills" class="skills-row" style="margin-bottom: 14px;"></div>
-
-                <div class="section-label-modal">
-                    <i data-lucide="align-left" style="width: 12px; height: 12px;"></i> Role Overview
-                </div>
-                <div class="detail-block">
-                    <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;" id="modalDesc"></p>
-                </div>
-
-                <div class="section-label-modal">
-                    <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Key Responsibilities
-                </div>
-                <div class="detail-block" style="margin-bottom: 14px;">
-                    <ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalResp"></ul>
-                </div>
-
-                <button class="apply-btn-full" id="applyActionBtn" onclick="handleApplyButtonClick()">
-                    <i data-lucide="send" style="width: 15px; height: 15px;"></i> Apply Job
-                </button>
             </div>
         </div>
 
@@ -1113,23 +1190,15 @@
         <div class="modal-overlay" id="applicationStudioModal" onclick="closeApplicationStudio()">
             <div class="studio-modal-card" onclick="event.stopPropagation()">
 
-                <!-- Header: job title, employer and verified badge, as on the Job Details modal -->
+                <!-- Header: job title, employer with verification badge -->
                 <div style="padding: 20px 20px 14px 20px; border-bottom: 1px solid var(--border-color); background: var(--bg-sticky); flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
                     <div style="min-width: 0;">
                         <h2 id="studioJobTitle" style="font-size: 17px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 4px;"></h2>
                         <div id="studioJobCompany" style="color: var(--text-secondary); font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 5px;"></div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-                        <span class="scalloped-badge lg" title="Verified Employer">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
-                                <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </span>
-                        <button onclick="closeApplicationStudio()" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
-                            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-                        </button>
-                    </div>
+                    <button onclick="closeApplicationStudio()" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
+                        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                    </button>
                 </div>
 
                 <!-- Tabs -->
@@ -1187,7 +1256,7 @@
                         <div id="attachmentListContainer"></div>
                     </div>
 
-                    <!-- Email (employer address masked) -->
+                    <!-- Email (employer address masked & body synced with cover letter) -->
                     <div id="content-email" class="studio-tab-content" style="display: none;">
                         <div class="detail-block" style="margin-bottom: 0; font-size: 11.5px; line-height: 1.6;">
                             <div style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 5px; margin-bottom: 6px;">
@@ -1199,15 +1268,10 @@
                             <div style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 5px; margin-bottom: 6px;">
                                 <strong style="color: var(--text-muted);">Subject:</strong> <span id="emailPreviewSubject" style="color: var(--text-primary); font-weight: 700;">Application: Role Title – Robin Muchiri</span>
                             </div>
-                            <div style="color: var(--text-secondary);">
-                                Dear Hiring Team,<br><br>
-                                Please find attached my curated CV, cover letter, and academic transcripts prepared via Kazini AI for this position.<br><br>
-                                Looking forward to contributing to your team.<br><br>
-                                Best regards,<br>
-                                Robin Muchiri
+                            <div id="emailBodyContent" style="color: var(--text-secondary);">
+                                <!-- Dynamically synced from cover letter tab -->
                             </div>
                         </div>
-                        <!-- Uploaded attachments, listed below the email preview -->
                         <div id="emailAttachmentList" style="margin-top: 10px;"></div>
                     </div>
 
@@ -1228,7 +1292,6 @@
             <div class="chat-modal-card" onclick="event.stopPropagation()">
                 <div class="chat-header">
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <!-- Profile Picture Container with Active Green Dot -->
                         <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
                             <img src="kazini-ai-avatar.png" alt="Kazini AI" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-orange); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
                             <span style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--emerald-green); border: 2.5px solid var(--bg-sticky); border-radius: 50%;"></span>
@@ -1253,10 +1316,8 @@
                     </button>
                 </div>
 
-                <!-- Chat messages container starts clean -->
                 <div class="chat-messages-container" id="chatMessages"></div>
 
-                <!-- Horizontal Quick Reply Pills Footer -->
                 <div class="quick-replies-footer" id="quickRepliesFooter">
                     <div class="quick-reply-chip" onclick="handleQuickReply('Hi Kazini 👋')">Hi Kazini 👋</div>
                     <div class="quick-reply-chip" onclick="handleQuickReply('Hello Kazini')">Hello Kazini</div>
@@ -1301,8 +1362,8 @@
                 salary: "KSH 75,000 - 95,000",
                 matchScore: "94%",
                 bookmarked: true,
-                applied: true,
-                appliedDate: "Applied 2 days ago",
+                status: "none", // none, pending, completed
+                appliedDate: "",
                 desc: "Analyze complex datasets, build custom automated reporting scripts in Python, and collaborate with teams across Nairobi to drive digital transformation.",
                 resp: [
                     "Clean, process, and analyze multi-source operational data.",
@@ -1321,7 +1382,7 @@
                 salary: "KSH 120,000 - 150,000",
                 matchScore: "88%",
                 bookmarked: true,
-                applied: false,
+                status: "none",
                 appliedDate: "",
                 desc: "Design high-impact Tableau dashboards and optimize financial reporting sheets for tech ecosystem partners in East Africa.",
                 resp: [
@@ -1341,7 +1402,7 @@
                 salary: "KSH 45,000 - 60,000",
                 matchScore: "75%",
                 bookmarked: false,
-                applied: false,
+                status: "none",
                 appliedDate: "",
                 desc: "Support agricultural intelligence projects by collecting field data, creating R analytics pipelines, and visualizing market trends in PowerBI.",
                 resp: [
@@ -1362,6 +1423,7 @@
 
         let activeJobId = null;
         let chatStep = 0;
+        let studioAttachments = ['Job CV attachment.pdf'];
 
         function renderJobs() {
             const container = document.getElementById('jobList');
@@ -1438,14 +1500,14 @@
 
         function renderAppliedJobs() {
             const container = document.getElementById('appliedJobList');
-            const appliedJobs = jobData.filter(j => j.applied);
+            const appliedJobs = jobData.filter(j => j.status !== 'none');
 
             if (appliedJobs.length === 0) {
                 container.innerHTML = `
                     <div class="glass-panel" style="text-align: center; padding: 36px 16px;">
                         <i data-lucide="clipboard-list" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
                         <div style="font-weight: 700; color: var(--text-primary); font-size: 14px;">No Active Applications</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Submitted applications will appear here.</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Started applications will appear here.</div>
                     </div>`;
             } else {
                 container.innerHTML = appliedJobs.map(job => `
@@ -1456,11 +1518,17 @@
                                 ${job.company}
                                 ${job.verified ? scallopedBadgeSVG : ''}
                             </div>
-                            <div class="slim-meta-text">${job.appliedDate}</div>
+                            <div class="slim-meta-text">${job.appliedDate || 'Pending submission'}</div>
                         </div>
-                        <span class="status-applied-pill">
-                            <i data-lucide="check-circle" style="width:10px; height:10px;"></i> Applied
-                        </span>
+                        ${job.status === 'completed' ? `
+                            <span class="status-applied-pill">
+                                <i data-lucide="check-circle" style="width:10px; height:10px;"></i> Applied
+                            </span>
+                        ` : `
+                            <span class="status-pending-pill">
+                                <i data-lucide="clock" style="width:10px; height:10px;"></i> Pending
+                            </span>
+                        `}
                     </div>
                 `).join('');
             }
@@ -1489,7 +1557,7 @@
         function updateHeaderContext(tabId) {
             const container = document.getElementById('headerContextContainer');
             const savedCount = jobData.filter(j => j.bookmarked).length;
-            const appliedCount = jobData.filter(j => j.applied).length;
+            const appliedCount = jobData.filter(j => j.status !== 'none').length;
 
             if (tabId === 'discoverTab') {
                 container.classList.remove('hidden');
@@ -1528,7 +1596,7 @@
                             <i data-lucide="clipboard-check" style="width:14px; height:14px; color: #10b981;"></i>
                             Application History
                         </div>
-                        <span class="summary-count" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">${appliedCount} SUBMITTED</span>
+                        <span class="summary-count" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">${appliedCount} TRACKED</span>
                     </div>
                 `;
             } else if (tabId === 'profileTab') {
@@ -1572,7 +1640,7 @@
             if(!job) return;
 
             document.getElementById('modalTitle').innerText = job.title;
-            document.getElementById('modalCompany').innerHTML = `${job.company} <span class="location-dot">•</span> ${job.location}`;
+            document.getElementById('modalCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${job.location}`;
             document.getElementById('modalSalary').innerText = job.salary;
             document.getElementById('modalMatch').innerText = job.matchScore;
             document.getElementById('modalDesc').innerText = job.desc;
@@ -1589,10 +1657,14 @@
             `).join('');
 
             const applyBtn = document.getElementById('applyActionBtn');
-            if (job.applied) {
+            if (job.status === 'completed') {
                 applyBtn.style.background = '#10b981';
                 applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:14px; height:14px;"></i> Application Submitted`;
                 applyBtn.disabled = true;
+            } else if (job.status === 'pending') {
+                applyBtn.style.background = 'var(--accent-orange)';
+                applyBtn.innerHTML = `<i data-lucide="play-circle" style="width:14px; height:14px;"></i> Resume Application`;
+                applyBtn.disabled = false;
             } else {
                 applyBtn.style.background = 'var(--accent-orange)';
                 applyBtn.innerHTML = `<i data-lucide="send" style="width:14px; height:14px;"></i> Apply Job`;
@@ -1608,6 +1680,11 @@
         }
 
         function handleApplyButtonClick() {
+            const job = jobData.find(j => j.id === activeJobId);
+            if (job && job.status === 'none') {
+                job.status = 'pending';
+                job.appliedDate = 'Pending';
+            }
             closeModal();
             openApplicationStudio();
         }
@@ -1616,16 +1693,19 @@
             const job = jobData.find(j => j.id === activeJobId);
             if (job) {
                 document.getElementById('studioJobTitle').innerText = job.title;
-                document.getElementById('studioJobCompany').innerText = job.company;
+                document.getElementById('studioJobCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''}`;
                 document.getElementById('emailPreviewSubject').innerText = `Application: ${job.title} – Robin Muchiri`;
             }
             switchStudioTab('cv');
+            renderStudioAttachments();
             document.getElementById('applicationStudioModal').style.display = 'flex';
             lucide.createIcons();
         }
 
         function closeApplicationStudio() {
             document.getElementById('applicationStudioModal').style.display = 'none';
+            renderJobs();
+            renderAppliedJobs();
         }
 
         function switchStudioTab(tabName) {
@@ -1643,6 +1723,11 @@
             activeBtn.style.color = 'var(--accent-orange)';
             activeBtn.style.fontWeight = '700';
             activeBtn.style.borderBottomColor = 'var(--accent-orange)';
+
+            if (tabName === 'email') {
+                const coverContent = document.getElementById('content-cover').querySelector('.studio-editable').innerHTML;
+                document.getElementById('emailBodyContent').innerHTML = coverContent;
+            }
 
             const submitBtn = document.getElementById('studioSubmitBtn');
             if (tabName === 'email') {
@@ -1662,9 +1747,10 @@
             }
         }
 
-        let studioAttachments = [];
-
         function renderStudioAttachments() {
+            if (!studioAttachments.includes('Job CV attachment.pdf')) {
+                studioAttachments.unshift('Job CV attachment.pdf');
+            }
             const fileIcon = `<i data-lucide="file-text" style="width: 13px; height: 13px; color: var(--accent-orange); flex-shrink: 0;"></i>`;
             const clipIcon = `<i data-lucide="paperclip" style="width: 13px; height: 13px; color: var(--accent-orange); flex-shrink: 0;"></i>`;
             const row = (name, icon, showStatus) => `
@@ -1683,7 +1769,11 @@
         function handleStudioFiles(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
-            for (const file of files) studioAttachments.push(file.name);
+            for (const file of files) {
+                if (!studioAttachments.includes(file.name)) {
+                    studioAttachments.push(file.name);
+                }
+            }
             event.target.value = '';
             renderStudioAttachments();
         }
@@ -1692,7 +1782,7 @@
             if (!activeJobId) return;
             const job = jobData.find(j => j.id === activeJobId);
             if (job) {
-                job.applied = true;
+                job.status = 'completed';
                 job.appliedDate = "Applied just now";
 
                 closeApplicationStudio();
