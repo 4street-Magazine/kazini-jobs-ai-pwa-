@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#FF5500">
     <link rel="apple-touch-icon" href="icon-192.png">
 
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
@@ -25,14 +25,14 @@
             --deep-vivid-blue-light: rgba(0, 82, 255, 0.10);
             --deep-vivid-blue-glow: rgba(0, 82, 255, 0.22);
 
-            /* Emerald Green for Match Scores & Metrics */
+            /* Emerald Green for Match Scores & Metrics (#008C51) */
             --emerald-green: #008C51;
             --emerald-green-light: rgba(0, 140, 81, 0.12);
             --emerald-green-glow: rgba(0, 140, 81, 0.22);
             
             /* Status Colors */
-            --status-applied-bg: rgba(16, 185, 129, 0.12);
-            --status-applied-text: #10b981;
+            --status-applied-bg: rgba(0, 140, 81, 0.12);
+            --status-applied-text: #008C51;
             
             /* Theme Base Colors (Default Light) */
             --bg-app: #f8fafc;
@@ -52,7 +52,7 @@
             --fab-border: 1px solid rgba(0, 0, 0, 0.08);
         }
 
-        /* True Black Dark Mode */
+        /* True Black Dark Mode (#000000) */
         body.dark-theme {
             --bg-app: #000000;
             --bg-card: #0a0a0a;
@@ -74,7 +74,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Montserrat', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -623,27 +623,9 @@
             align-items: center;
         }
 
-        .modal-card {
-            background: var(--bg-card);
-            border-radius: 24px 24px 0 0;
-            padding: 20px;
-            max-height: 85vh;
-            width: 100%;
-            max-width: 800px;
-            overflow-y: auto;
-            border-top: 1px solid var(--border-subtle);
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
-            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            padding-bottom: max(20px, env(safe-area-inset-bottom));
-        }
-
         @keyframes slideUp {
             from { transform: translateY(100%); }
             to { transform: translateY(0); }
-        }
-
-        .modal-card::-webkit-scrollbar {
-            display: none;
         }
 
         /* CHAT UI & APPLICATION STUDIO MODALS (88vh Height) */
@@ -1024,10 +1006,10 @@
                         <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> Verified Core Skills
                     </div>
                     <div class="skills-row" style="margin-bottom: 0;">
-                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Data Analytics</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Python</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> SQL</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Social Commerce</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: var(--emerald-green);"></i> Data Analytics</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: var(--emerald-green);"></i> Python</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: var(--emerald-green);"></i> SQL</div>
+                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: var(--emerald-green);"></i> Social Commerce</div>
                     </div>
                 </div>
 
@@ -1116,7 +1098,7 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
                         <div class="detail-block" style="margin-bottom:0;">
                             <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Est. Salary</div>
-                            <div id="modalSalary" style="font-size: 12px; font-weight: 700; color: #10b981; margin-top: 3px;"></div>
+                            <div id="modalSalary" style="font-size: 12px; font-weight: 700; color: var(--emerald-green); margin-top: 3px;"></div>
                         </div>
                         <div class="detail-block" style="margin-bottom:0;">
                             <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
@@ -1294,7 +1276,7 @@
 
                 </div>
 
-                <!-- Studio Footer / Submit Action Bar (Present on all tabs, active ONLY on email tab) -->
+                <!-- Studio Footer / Submit Action Bar -->
                 <div style="padding: 14px 20px; border-top: 1px solid var(--border-color); background: var(--bg-sticky); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                     <div id="studioFooterHint" style="font-size: 10.5px; color: var(--text-muted);">Switch to Email Preview tab to submit application.</div>
                     <button id="studioSubmitBtn" onclick="submitApplicationFromStudio()" disabled style="background: var(--bg-surface); color: var(--text-muted); border: 1px solid var(--border-subtle); padding: 9px 18px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: not-allowed; transition: all 0.2s;">
@@ -1470,7 +1452,7 @@
                     <div class="skills-row">
                         ${job.skills.slice(0, 2).map(s => `
                             <div class="skill-badge">
-                                <i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i>
+                                <i data-lucide="check" style="width:10px; height:10px; color: var(--emerald-green);"></i>
                                 ${s}
                             </div>
                         `).join('')}
@@ -1613,10 +1595,10 @@
                 container.innerHTML = `
                     <div class="summary-banner">
                         <div class="summary-title">
-                            <i data-lucide="clipboard-check" style="width:14px; height:14px; color: #10b981;"></i>
+                            <i data-lucide="clipboard-check" style="width:14px; height:14px; color: var(--emerald-green);"></i>
                             Application History
                         </div>
-                        <span class="summary-count" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">${appliedCount} SUBMITTED</span>
+                        <span class="summary-count" style="background: var(--emerald-green-light); color: var(--emerald-green);">${appliedCount} SUBMITTED</span>
                     </div>
                 `;
             } else if (tabId === 'profileTab') {
@@ -1673,7 +1655,7 @@
 
             const applyBtn = document.getElementById('applyActionBtn');
             if (job.applied && job.appliedDate !== "pending") {
-                applyBtn.style.background = '#10b981';
+                applyBtn.style.background = 'var(--emerald-green)';
                 applyBtn.innerHTML = `<span>Job Applied</span><i data-lucide="check-circle" style="width:14px; height:14px;"></i>`;
                 applyBtn.disabled = true;
             } else {
