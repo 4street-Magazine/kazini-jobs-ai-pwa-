@@ -815,6 +815,24 @@
             transform: scale(0.95);
         }
 
+        .chat-bubble.assistant.wide{max-width:100%;width:100%;padding:0;background:transparent;border:none}
+        .pc{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:20px;overflow:hidden;box-shadow:var(--card-shadow)}
+        .pc-top{display:flex;gap:12px;align-items:center;padding:16px;background:linear-gradient(135deg,var(--accent-orange-light),var(--emerald-green-light))}
+        .pc-av{position:relative;width:62px;height:62px;border-radius:50%;background:var(--accent-orange);color:#fff;font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:3px solid var(--bg-card);overflow:hidden}
+        .pc-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+        .pc-name{font-size:17px;font-weight:800;line-height:1.2}
+        .pc-pill{display:inline-block;margin-top:6px;border:1.5px solid var(--accent-orange);color:var(--accent-orange);border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700}
+        .pc-sec{padding:12px 16px;border-top:1px solid var(--border-color)}
+        .pc-h{font-size:11px;font-weight:800;color:var(--accent-orange);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between}
+        .pc-tl{position:relative;border-left:2px solid var(--accent-orange-light);padding-left:12px;margin:0 0 10px 4px;font-size:11.5px;color:var(--text-secondary)}
+        .pc-tl::before{content:'';position:absolute;left:-6px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--accent-orange)}
+        .pc-t{font-weight:800;font-size:12.5px;color:var(--text-primary)}
+        .pc-x{float:right;color:var(--text-muted);cursor:pointer;font-size:11px;font-weight:700}
+        .pc-chips{border:1.5px solid var(--emerald-green);background:var(--emerald-green-light);color:var(--emerald-green);border-radius:12px;padding:6px 10px;font-size:11.5px;font-weight:700}
+        .pc-add{color:var(--accent-orange);font-size:11px;font-weight:800;cursor:pointer;text-transform:none;letter-spacing:0}
+        .pc-e{outline:none;border-radius:5px;min-height:1.2em;font-size:inherit}
+        .pc-e:focus{background:var(--accent-orange-light)}
+        .pc-e:empty::before{content:attr(data-ph);opacity:.45}
         /* Outlined Action Button in Chat Bubble */
         .chat-action-btn-outlined {
             display: inline-flex;
@@ -1293,7 +1311,7 @@
                 <div class="chat-header">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
-                            <img src="kazini-ai-avatar.png" alt="Kazini AI" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-orange); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                            <img src="kazini-ai-avatar.png" alt="Kazini AI" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
                             <span style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--emerald-green); border: 2.5px solid var(--bg-sticky); border-radius: 50%;"></span>
                         </div>
                         <div>
@@ -1318,11 +1336,7 @@
 
                 <div class="chat-messages-container" id="chatMessages"></div>
 
-                <div class="quick-replies-footer" id="quickRepliesFooter">
-                    <div class="quick-reply-chip" onclick="handleQuickReply('Hi Kazini 👋')">Hi Kazini 👋</div>
-                    <div class="quick-reply-chip" onclick="handleQuickReply('Hello Kazini')">Hello Kazini</div>
-                    <div class="quick-reply-chip" onclick="handleQuickReply('Sasa Kazini 👋')">Sasa Kazini 👋</div>
-                </div>
+                <div class="quick-replies-footer" id="quickRepliesFooter" style="display:none"></div>
 
                 <div class="chat-input-area">
                     <input type="file" id="fileInput" style="display: none;" onchange="handleFileUpload(event)">
@@ -1422,8 +1436,7 @@
             </span>`;
 
         let activeJobId = null;
-        let chatStep = 0;
-        let studioAttachments = ['Job CV attachment.pdf'];
+                let studioAttachments = ['Job CV attachment.pdf'];
 
         function renderJobs() {
             const container = document.getElementById('jobList');
@@ -1796,6 +1809,7 @@
 
         function openChatModal() {
             document.getElementById('chatModal').style.display = 'flex';
+            if (!document.getElementById('chatMessages').children.length) startChat();
             const container = document.getElementById('chatMessages');
             container.scrollTop = container.scrollHeight;
         }
@@ -1810,48 +1824,180 @@
             }
         }
 
-        function handleQuickReply(text) {
-            const footer = document.getElementById('quickRepliesFooter');
-            if (footer) footer.style.display = 'none';
+        /* ===== KAZINI CHAT FLOW ===== */
+        const KAZINI_API = ''; // paste your Worker URL here, e.g. https://kazini-chat.yourname.workers.dev
+        const byId = id => document.getElementById(id);
+        const deviceId = localStorage.getItem('kazini_device') || (() => { const d = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(); localStorage.setItem('kazini_device', d); return d; })();
+        let profile = { past_jobs: [] };
+        try { const s = JSON.parse(localStorage.getItem('kazini_profile')); if (s) profile = s; } catch (e) {}
+        let flow = 'idle', Q = [], qi = -1, pjCur = {}, history = [], wi = 0;
+        const AGREE = /^\s*(yes|yeah|yep|yup|ndio|sure|ok|okay|go ahead|proceed|sawa|let'?s go|start|find me a job|create( my)? profile)\b/i;
+        const WARM = ['Great 😃', 'Nice one 👌', 'Perfect! 🔥', 'Wonderful! 😊', 'Safi kabisa 👊', 'Wazi! 😎', 'Kabisa 👊', 'Sawa sawa 👌'];
+        const warm = () => WARM[wi++ % WARM.length];
+        const cw = p => p.currently_working === 'Yes', we = p => p.work_experience === 'Yes';
+        const STEPS = [
+            { k: 'full_name', q: 'So, what is your full name?', ex: 'eg. John Kamau' },
+            { k: 'gender', q: 'Are you male or female?', opts: ['Male', 'Female'] },
+            { k: 'education', q: 'What is your highest education level?' },
+            { k: 'institution', q: 'Which institution did you attend?' },
+            { k: 'course', q: 'What did you study?' },
+            { k: 'education_period', q: 'When did you attend?', ex: 'eg. 2020 - 2024' },
+            { k: 'skills', q: 'What skills do you have?', ex: 'eg. Python, SQL, Excel' },
+            { k: 'work_experience', q: 'Do you have any work experience?', yn: 1 },
+            { k: 'currently_working', q: 'Are you currently working?', yn: 1, when: we },
+            { k: 'workplace', q: 'Where do you currently work?', when: cw },
+            { k: 'job_title', q: 'What is your current job title?', when: cw },
+            { k: 'responsibilities', q: 'What are your responsibilities?', when: cw },
+            { k: 'work_period', q: 'When did you start working there?', ex: 'eg. Jan 2023', when: cw },
+            { k: 'related_to_study', q: 'Is your current job related to your course of study?', yn: 1, when: cw },
+            { k: 'past_any', q: 'Do you have any past jobs?', yn: 1, when: we },
+            { k: 'years_experience', q: 'How many years of work experience do you have?', when: we },
+            { k: 'certifications', q: 'Do you have any certifications?' },
+            { k: 'projects', q: 'Do you have any projects?', yn: 1 },
+            { k: 'project_details', q: 'Please tell me about your project.', when: p => p.projects === 'Yes' },
+            { k: 'achievements', q: 'What achievements do you have?' },
+            { k: 'languages', q: 'What languages do you speak?' },
+            { k: 'phone', q: 'What is your phone number?', ex: 'eg. 0712 345 678' }
+        ];
+        const PJ = [
+            { k: 'company', q: 'Which company did you work for?' },
+            { k: 'title', q: 'What was your job title there?' },
+            { k: 'resp', q: 'What were your responsibilities?' },
+            { k: 'period', q: 'When did you work there?', ex: 'eg. 2021 - 2023' }
+        ];
 
-            const container = document.getElementById('chatMessages');
-            container.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
-            container.scrollTop = container.scrollHeight;
+        async function api(path, body) {
+            if (!KAZINI_API) return null;
+            try {
+                const c = new AbortController(), t = setTimeout(() => c.abort(), 9000);
+                const r = await fetch(KAZINI_API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: c.signal });
+                clearTimeout(t);
+                return r.ok ? await r.json() : null;
+            } catch (e) { return null; }
+        }
+        const bot = (html, cb, cls, delay) => showTypingAndReply(html, cb, cls, delay);
+        const stepReplies = s => s ? (s.yn ? ['Yes', 'No'] : (s.opts || [])) : [];
+        function setQuickReplies(arr) {
+            const f = byId('quickRepliesFooter');
+            f.innerHTML = arr.map(l => `<div class="quick-reply-chip" onclick="handleUserText('${l}')">${l}</div>`).join('');
+            f.style.display = arr.length ? '' : 'none';
+        }
+        function restoreReplies() {
+            setQuickReplies(flow === 'ask_help' ? ['Find Me a Job'] : flow === 'ask_profile' ? ['Create Profile'] : flow === 'review' ? ['Submit Profile'] : flow === 'onboarding' ? stepReplies(Q[qi]) : []);
+        }
+        function typingOn() {
+            const c = byId('chatMessages');
+            c.insertAdjacentHTML('beforeend', '<div class="typing-indicator" id="tLLM"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>');
+            c.scrollTop = c.scrollHeight;
+        }
+        function typingOff() { const e = byId('tLLM'); if (e) e.remove(); }
 
-            showTypingAndReply(`Hi Robin 😊, how can I help you today?
-                <div>
-                    <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
-                        <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
-                    </button>
-                </div>`);
+        function startChat() {
+            if (profile.full_name && localStorage.getItem('kazini_profile')) {
+                flow = 'chat';
+                return bot(`Hi ${escapeHtml(profile.full_name.split(' ')[0])} 😊, how can I help you today? Ask me anything about Kazini AI.`);
+            }
+            flow = 'ask_help';
+            bot('Hi 😊, how can I help you today?', restoreReplies);
+        }
+        function askProfile() { flow = 'ask_profile'; bot("Great 😃, let's create you a career profile to find jobs that match your skills.", restoreReplies); }
+        function startOnboarding() { flow = 'onboarding'; profile = { past_jobs: [] }; Q = STEPS.slice(); qi = -1; showStep(nextStep(), 'Awesome 😃'); }
+        function nextStep() { do { qi++; } while (Q[qi] && Q[qi].when && !Q[qi].when(profile)); return Q[qi]; }
+        function ask(s) { return escapeHtml(s.q) + (s.ex ? `<br><span style="opacity:.6">${escapeHtml(s.ex)}</span>` : ''); }
+        function showStep(s, pre) { bot((pre ? escapeHtml(pre) + '<br><br>' : '') + ask(s), restoreReplies); }
+
+        async function handleUserText(text) {
+            const c = byId('chatMessages');
+            c.insertAdjacentHTML('beforeend', `<div class="chat-bubble user">${escapeHtml(text)}</div>`);
+            c.scrollTop = c.scrollHeight;
+            setQuickReplies([]);
+            if (flow === 'ask_help' && AGREE.test(text)) return askProfile();
+            if (flow === 'ask_profile' && AGREE.test(text)) return startOnboarding();
+            if (flow === 'onboarding') return answer(text);
+            if (flow === 'review' && /submit|confirm|done/i.test(text)) return submitProfile();
+            return freeChat(text);
+        }
+        function sendChatMessage() {
+            const i = byId('chatInput'), t = i.value.trim();
+            if (!t) return;
+            i.value = '';
+            handleUserText(t);
         }
 
-        function sendChatMessage() {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-
-            const footer = document.getElementById('quickRepliesFooter');
-            if (footer) footer.style.display = 'none';
-
-            const container = document.getElementById('chatMessages');
-            container.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
-            input.value = '';
-            container.scrollTop = container.scrollHeight;
-
-            let botReply = "";
-            if (chatStep === 0) {
-                botReply = `Noted your focus in <strong>${escapeHtml(text)}</strong>. What are your core technical tools or software skills? (e.g., Python, SQL, Tableau, Excel)`;
-                chatStep++;
-            } else if (chatStep === 1) {
-                botReply = `Fantastic toolset! 🛠️ Lastly, what is your preferred location or work mode? (e.g., Nairobi, Mombasa, Remote)`;
-                chatStep++;
+        async function answer(text) {
+            const s = Q[qi]; let val = text.trim(), pre = null;
+            if (s.yn) {
+                const y = /^(yes|y|yeah|yep|ndio|sure|i do|i have)\b/i.test(val), n = /^(no|n|nope|nah|hapana|none|i don'?t)\b/i.test(val);
+                if (!y && !n) return bot('Please answer Yes or No 🙂<br><br>' + ask(s), restoreReplies);
+                val = y ? 'Yes' : 'No';
+            } else if (s.opts) {
+                const o = s.opts.find(x => x.toLowerCase() === val.toLowerCase());
+                if (!o) return bot('Please choose one 👇<br><br>' + ask(s), restoreReplies);
+                val = o;
             } else {
-                botReply = `Profile successfully verified! 🎉 Your career profile is now active in our Smartika Trust Network. I have updated your AI match rankings in the Discover feed.`;
-                chatStep = 0;
+                typingOn();
+                const r = await api('/onboard', { field: s.k, question: s.q, answer: val });
+                typingOff();
+                if (r && r.ok === false) return bot(escapeHtml(r.reply || 'Sorry, could you rephrase that?') + '<br><br>' + ask(s), restoreReplies, '', 250);
+                if (r) { val = r.value || val; pre = r.reply; }
             }
+            if (s.pj) { pjCur[s.k] = val; if (s.k === 'period') { profile.past_jobs.push(pjCur); pjCur = {}; } }
+            else if (!s.more) profile[s.k] = val;
+            if (val === 'Yes' && (s.k === 'past_any' || s.more)) Q.splice(qi + 1, 0, ...PJ.map(p => ({ ...p, pj: 1 })), { k: 'pj_more', q: 'Do you have any other past job?', yn: 1, more: 1 });
+            api('/profile', { deviceId, status: 'draft', profile });
+            const n = nextStep();
+            n ? showStep(n, pre || warm()) : showReview();
+        }
 
-            showTypingAndReply(botReply);
+        function showReview() {
+            flow = 'review';
+            profile.headline = profile.headline || profile.job_title || profile.course || '';
+            bot(warm() + ' Here is your career profile. Tap any detail to edit it 👇', () =>
+                bot(`<div class="pc" id="profileCard">${cardHtml()}</div>`, restoreReplies, 'wide', 300));
+        }
+        function cardHtml() {
+            const p = profile, E = escapeHtml;
+            const ed = (f, v, ph, i, cls) => `<div class="pc-e ${cls || ''}" contenteditable="plaintext-only" data-f="${f}"${i !== undefined ? ` data-pj="${i}"` : ''} data-ph="${ph}">${E(v || '')}</div>`;
+            const tl = (src, kt, ko, kd, kr, i) => `<div class="pc-tl">${i !== undefined ? `<span class="pc-x" onclick="removePastJob(${i})">✕</span>` : ''}${ed(kt, src[kt], 'Job title', i, 'pc-t')}${ed(ko, src[ko], 'Company', i)}${ed(kd, src[kd], 'When', i)}${ed(kr, src[kr], 'Responsibilities', i)}</div>`;
+            const ini = E((p.full_name || 'K').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase());
+            const img = p.gender ? `<img src="${p.gender === 'Female' ? 'female%20avatar.png' : 'male%20avatar.png'}" alt="" onerror="this.remove()">` : '';
+            const sec = (h, body) => `<div class="pc-sec"><div class="pc-h">${h}</div>${body}</div>`;
+            return `<div class="pc-top"><div class="pc-av">${ini}${img}</div><div style="min-width:0;flex:1">${ed('full_name', p.full_name, 'Full name', undefined, 'pc-name')}${ed('headline', p.headline, 'Job title', undefined, 'pc-pill')}</div></div>`
+                + sec('Education', `<div class="pc-tl">${ed('course', p.course, 'Course', undefined, 'pc-t')}${ed('education', p.education, 'Education level')}${ed('institution', p.institution, 'Institution')}${ed('education_period', p.education_period, 'Period')}</div>`)
+                + (we(p) ? sec('<span>Work Experience</span><span class="pc-add" onclick="addPastJob()">+ Add past job</span>',
+                    (cw(p) ? tl(p, 'job_title', 'workplace', 'work_period', 'responsibilities') : '') + p.past_jobs.map((j, i) => tl(j, 'title', 'company', 'period', 'resp', i)).join('')
+                    + `<div style="font-size:11px;color:var(--text-muted)">Years of experience</div>${ed('years_experience', p.years_experience, 'e.g. 3')}`) : '')
+                + sec('Skills', ed('skills', p.skills, 'Skills', undefined, 'pc-chips'))
+                + sec('Certifications', ed('certifications', p.certifications, 'Certifications', undefined, 'pc-chips'))
+                + sec('Languages', ed('languages', p.languages, 'Languages', undefined, 'pc-chips'))
+                + (p.projects === 'Yes' ? sec('Projects', ed('project_details', p.project_details, 'Project details')) : '')
+                + sec('Achievements', ed('achievements', p.achievements, 'Achievements'))
+                + sec('Contact', ed('phone', p.phone, 'Phone number'));
+        }
+        document.addEventListener('input', e => {
+            const t = e.target, f = t.dataset && t.dataset.f;
+            if (!f || !t.closest('.pc')) return;
+            const v = t.innerText.trim();
+            if (t.dataset.pj !== undefined) profile.past_jobs[+t.dataset.pj][f] = v; else profile[f] = v;
+        });
+        function refreshCard() { const c = byId('profileCard'); if (c) c.innerHTML = cardHtml(); }
+        function addPastJob() { profile.past_jobs.push({}); refreshCard(); }
+        function removePastJob(i) { profile.past_jobs.splice(i, 1); refreshCard(); }
+
+        function submitProfile() {
+            flow = 'chat'; setQuickReplies([]);
+            localStorage.setItem('kazini_profile', JSON.stringify(profile));
+            api('/profile', { deviceId, status: 'submitted', profile });
+            bot('Confirmed 🎉<br><br>You have successfully created your career profile! We shall notify you through SMS once we find a job opportunity that matches your profile. Until then, enjoy a nice time.<br><br>Kazini AI 😊');
+        }
+        async function freeChat(text) {
+            history.push({ role: 'user', content: text });
+            typingOn();
+            const r = await api('/chat', { messages: history.slice(-10) });
+            typingOff();
+            const reply = r && r.reply ? r.reply : "I'm having trouble connecting right now. Please try again in a moment 🙏";
+            history.push({ role: 'assistant', content: reply });
+            bot(escapeHtml(reply).replace(/\n/g, '<br>'), restoreReplies, '', 250);
         }
 
         function handleFileUpload(event) {
@@ -1875,7 +2021,7 @@
             showTypingAndReply(botReply);
         }
 
-        function showTypingAndReply(responseHtml) {
+        function showTypingAndReply(responseHtml, cb, cls, delay) {
             const container = document.getElementById('chatMessages');
             const typingId = 'typing-' + Date.now();
             
@@ -1892,8 +2038,9 @@
                 if (typingEl) typingEl.remove();
 
                 const bubble = document.createElement('div');
-                bubble.className = 'chat-bubble assistant';
+                bubble.className = 'chat-bubble assistant ' + (cls || '');
                 bubble.innerHTML = responseHtml;
+                if (cb) setTimeout(cb, 0);
                 container.appendChild(bubble);
                 container.scrollTop = container.scrollHeight;
                 lucide.createIcons();
@@ -1904,7 +2051,7 @@
                     });
                 });
 
-            }, 900);
+            }, delay ?? 900);
         }
 
         function triggerFindJob() {
