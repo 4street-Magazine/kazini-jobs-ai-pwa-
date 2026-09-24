@@ -833,6 +833,12 @@
         .pc-e{outline:none;border-radius:5px;min-height:1.2em;font-size:inherit}
         .pc-e:focus{background:var(--accent-orange-light)}
         .pc-e:empty::before{content:attr(data-ph);opacity:.45}
+        .ai-mode{display:inline-flex;align-items:center;gap:7px;background:var(--emerald-green-light);color:var(--emerald-green);border:1px solid var(--emerald-green);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800}
+        .live-dot{width:8px;height:8px;border-radius:50%;background:var(--emerald-green);animation:livePulse 1.3s infinite}
+        @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(0,140,81,.6);opacity:1}70%{box-shadow:0 0 0 8px rgba(0,140,81,0);opacity:.5}100%{box-shadow:0 0 0 0 rgba(0,140,81,0);opacity:1}}
+        .pf-btn{display:inline-flex;align-items:center;gap:5px;background:transparent;border:1.5px solid var(--border-subtle);color:var(--text-secondary);border-radius:12px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer}
+        .pf-save{background:var(--accent-orange);border-color:var(--accent-orange);color:#fff}
+        .pf-save:disabled{background:var(--bg-surface);border-color:var(--border-subtle);color:var(--text-muted);cursor:not-allowed}
         /* Outlined Action Button in Chat Bubble */
         .chat-action-btn-outlined {
             display: inline-flex;
@@ -997,58 +1003,8 @@
             </div>
 
             <!-- TAB 4: PROFILE -->
-            <div class="tab-view" id="profileTab">
-                <div class="glass-panel">
-                    <div class="profile-header">
-                        <div class="avatar-box">RM</div>
-                        <div>
-                            <div style="font-size: 17px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
-                                Robin Muchiri
-                                <span class="scalloped-badge lg" title="Verified Professional">
-                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
-                                        <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </span>
-                            </div>
-                            <div style="font-size: 12px; color: var(--accent-orange); font-weight: 700; margin-top: 2px;">
-                                Digital Innovation & Data Specialist
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
-                                Nairobi, Kenya
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stat-grid">
-                        <div class="stat-card">
-                            <div class="stat-value">96%</div>
-                            <div class="stat-label">AI Match Score</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">0</div>
-                            <div class="stat-label">Applications</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">2</div>
-                            <div class="stat-label">Saved Roles</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-panel">
-                    <div class="section-label-modal">
-                        <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> Verified Core Skills
-                    </div>
-                    <div class="skills-row" style="margin-bottom: 0;">
-                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Data Analytics</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Python</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> SQL</div>
-                        <div class="skill-badge"><i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i> Social Commerce</div>
-                    </div>
-                </div>
-
-                <div class="glass-panel">
+            <div class="tab-view" id="profileTab"><div id="profileView"></div>
+                <div id="profileShield"><div class="glass-panel">
                     <div class="section-label-modal">
                         <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Kazini Verification Shield
                     </div>
@@ -1067,6 +1023,7 @@
                         </div>
                         <span style="font-size: 11px; font-weight: 800; color: var(--emerald-green);">VERIFIED</span>
                     </div>
+                </div>
                 </div>
             </div>
 
@@ -1138,6 +1095,32 @@
 
                     <!-- Provided by Kazini AI Section -->
                     <div class="section-label-modal">
+                        <i data-lucide="align-left" style="width: 12px; height: 12px;"></i> About the job
+                    </div>
+                    <div class="detail-block">
+                        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;" id="modalDesc"></p>
+                    </div>
+
+                    <div class="section-label-modal">
+                        <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Key Responsibilities
+                    </div>
+                    <div class="detail-block" style="margin-bottom: 14px;">
+                        <ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalResp"></ul>
+                    </div><div class="section-label-modal">
+                        <i data-lucide="layers" style="width: 12px; height: 12px;"></i> Requirements
+                    </div>
+                    <div class="detail-block" style="margin-bottom: 10px;"><ul id="modalReq" style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;"></ul></div>
+                    <div id="modalSkills" class="skills-row" style="margin-bottom: 14px;"></div>
+
+                    <div class="section-label-modal">
+                        <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why it matches you
+                    </div>
+                    <div class="detail-block" style="margin-bottom: 14px;">
+                        <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 10px;">Your verified profile skills align strongly with this role:</p>
+                        <div id="modalMatchingSkills" class="skills-row" style="margin-bottom: 0;"></div>
+                    </div>
+
+                    <div class="section-label-modal">
                         <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> Provided by Kazini AI
                     </div>
                     <div class="detail-block" style="margin-bottom: 14px;">
@@ -1167,32 +1150,7 @@
                         </div>
                     </div>
 
-                    <div class="section-label-modal">
-                        <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why it matches you
-                    </div>
-                    <div class="detail-block" style="margin-bottom: 14px;">
-                        <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 10px;">Your verified profile skills align strongly with this role:</p>
-                        <div id="modalMatchingSkills" class="skills-row" style="margin-bottom: 0;"></div>
-                    </div>
-
-                    <div class="section-label-modal">
-                        <i data-lucide="layers" style="width: 12px; height: 12px;"></i> Required Tech Stack
-                    </div>
-                    <div id="modalSkills" class="skills-row" style="margin-bottom: 14px;"></div>
-
-                    <div class="section-label-modal">
-                        <i data-lucide="align-left" style="width: 12px; height: 12px;"></i> Role Overview
-                    </div>
-                    <div class="detail-block">
-                        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;" id="modalDesc"></p>
-                    </div>
-
-                    <div class="section-label-modal">
-                        <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Key Responsibilities
-                    </div>
-                    <div class="detail-block" style="margin-bottom: 14px;">
-                        <ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalResp"></ul>
-                    </div>
+                    
                 </div>
 
                 <!-- Sticky Footer Section -->
@@ -1467,7 +1425,7 @@
                         ${job.skills.length > 2 ? `<div class="skill-badge more">+${job.skills.length - 2}</div>` : ''}
                     </div>
 
-                    <div class="salary-text">${job.salary}</div>
+                    <div class="salary-text">${fmtSalary(job.salary)}</div>
 
                     <div class="card-footer">
                         <span class="match-score">Match Score: ${job.matchScore}</span>
@@ -1500,7 +1458,7 @@
                                 ${job.company}
                                 ${job.verified ? scallopedBadgeSVG : ''}
                             </div>
-                            <div class="slim-meta-text">${job.location} • ${job.salary}</div>
+                            <div class="slim-meta-text">${job.location} • ${fmtSalary(job.salary)}</div>
                         </div>
                         <button class="bookmark-btn" onclick="event.stopPropagation(); toggleBookmark(${job.id})">
                             <i data-lucide="heart" style="width: 18px; height: 18px; fill: var(--accent-orange); color: var(--accent-orange);"></i>
@@ -1614,6 +1572,7 @@
                 `;
             } else if (tabId === 'profileTab') {
                 container.classList.add('hidden');
+                renderProfile();
             }
             lucide.createIcons();
         }
@@ -1654,10 +1613,11 @@
 
             document.getElementById('modalTitle').innerText = job.title;
             document.getElementById('modalCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${job.location}`;
-            document.getElementById('modalSalary').innerText = job.salary;
+            document.getElementById('modalSalary').innerText = fmtSalary(job.salary);
             document.getElementById('modalMatch').innerText = job.matchScore;
             document.getElementById('modalDesc').innerText = job.desc;
             document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
+            document.getElementById('modalReq').innerHTML = (JOB_REQ[job.id] || []).map(r => `<li>${r}</li>`).join('');
 
             document.getElementById('modalMatchingSkills').innerHTML = job.skills.map(s => `
                 <div class="skill-badge" style="background: var(--status-applied-bg); color: var(--status-applied-text); border: 1px solid rgba(16, 185, 129, 0.2);">
@@ -1955,16 +1915,16 @@
             bot(warm() + ' Here is your career profile. Tap any detail to edit it 👇', () =>
                 bot(`<div class="pc" id="profileCard">${cardHtml()}</div>`, restoreReplies, 'wide', 300));
         }
-        function cardHtml() {
+        function cardHtml(edit = true, tab = false) {
             const p = profile, E = escapeHtml;
-            const ed = (f, v, ph, i, cls) => `<div class="pc-e ${cls || ''}" contenteditable="plaintext-only" data-f="${f}"${i !== undefined ? ` data-pj="${i}"` : ''} data-ph="${ph}">${E(v || '')}</div>`;
-            const tl = (src, kt, ko, kd, kr, i) => `<div class="pc-tl">${i !== undefined ? `<span class="pc-x" onclick="removePastJob(${i})">✕</span>` : ''}${ed(kt, src[kt], 'Job title', i, 'pc-t')}${ed(ko, src[ko], 'Company', i)}${ed(kd, src[kd], 'When', i)}${ed(kr, src[kr], 'Responsibilities', i)}</div>`;
+            const ed = (f, v, ph, i, cls) => !edit ? (v ? `<div class="${cls || ''}">${E(v)}</div>` : '') : `<div class="pc-e ${cls || ''}" contenteditable="plaintext-only" data-f="${f}"${i !== undefined ? ` data-pj="${i}"` : ''} data-ph="${ph}">${E(v || '')}</div>`;
+            const tl = (src, kt, ko, kd, kr, i) => `<div class="pc-tl">${edit && i !== undefined ? `<span class="pc-x" onclick="removePastJob(${i})">✕</span>` : ''}${ed(kt, src[kt], 'Job title', i, 'pc-t')}${ed(ko, src[ko], 'Company', i)}${ed(kd, src[kd], 'When', i)}${ed(kr, src[kr], 'Responsibilities', i)}</div>`;
             const ini = E((p.full_name || 'K').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase());
             const img = p.gender ? `<img src="${p.gender === 'Female' ? 'female%20avatar.png' : 'male%20avatar.png'}" alt="" onerror="this.remove()">` : '';
-            const sec = (h, body) => `<div class="pc-sec"><div class="pc-h">${h}</div>${body}</div>`;
-            return `<div class="pc-top"><div class="pc-av">${ini}${img}</div><div style="min-width:0;flex:1">${ed('full_name', p.full_name, 'Full name', undefined, 'pc-name')}${ed('headline', p.headline, 'Job title', undefined, 'pc-pill')}</div></div>`
+            const sec = (h, body) => !edit && !body.trim() ? '' : `<div class="pc-sec"><div class="pc-h">${h}</div>${body}</div>`;
+            return `<div class="pc-top"><div class="pc-av">${ini}${img}</div><div style="min-width:0;flex:1"><div style="display:flex;align-items:center;gap:6px">${ed('full_name', p.full_name, 'Full name', undefined, 'pc-name')}${tab ? scallopedBadgeSVG.replace('Verified Employer', 'Verified Professional') : ''}</div>${ed('headline', p.headline, 'Job title', undefined, 'pc-pill')}</div></div>`
                 + sec('Education', `<div class="pc-tl">${ed('course', p.course, 'Course', undefined, 'pc-t')}${ed('education', p.education, 'Education level')}${ed('institution', p.institution, 'Institution')}${ed('education_period', p.education_period, 'Period')}</div>`)
-                + (we(p) ? sec('<span>Work Experience</span><span class="pc-add" onclick="addPastJob()">+ Add past job</span>',
+                + (we(p) ? sec('<span>Work Experience</span>' + (edit ? '<span class="pc-add" onclick="addPastJob()">+ Add past job</span>' : ''),
                     (cw(p) ? tl(p, 'job_title', 'workplace', 'work_period', 'responsibilities') : '') + p.past_jobs.map((j, i) => tl(j, 'title', 'company', 'period', 'resp', i)).join('')
                     + `<div style="font-size:11px;color:var(--text-muted)">Years of experience</div>${ed('years_experience', p.years_experience, 'e.g. 3')}`) : '')
                 + sec('Skills', ed('skills', p.skills, 'Skills', undefined, 'pc-chips'))
@@ -1978,11 +1938,55 @@
             const t = e.target, f = t.dataset && t.dataset.f;
             if (!f || !t.closest('.pc')) return;
             const v = t.innerText.trim();
+            if (f === 'full_name' && !v) return;
             if (t.dataset.pj !== undefined) profile.past_jobs[+t.dataset.pj][f] = v; else profile[f] = v;
+            if (t.closest('#profileView')) autosave();
         });
-        function refreshCard() { const c = byId('profileCard'); if (c) c.innerHTML = cardHtml(); }
+        function refreshCard() { const c = byId('profileCard'); if (c) c.innerHTML = cardHtml(); if (pEdit) { renderProfile(); autosave(true); } }
         function addPastJob() { profile.past_jobs.push({}); refreshCard(); }
         function removePastJob(i) { profile.past_jobs.splice(i, 1); refreshCard(); }
+
+        const JOB_REQ = {
+            1: ['Diploma or degree in Statistics, Computer Science, Economics or a related field.', 'Working knowledge of Python and SQL.', 'Experience building dashboards in Tableau or similar tools.', 'Clear communication and attention to detail.'],
+            2: ['Degree in a data, design or IT-related field.', 'Strong skills in Tableau, Power BI or similar tools.', 'Ability to turn complex data into clear visual stories.', 'Good SQL and spreadsheet skills.'],
+            3: ['Degree in Economics, Statistics, Social Sciences or a related field.', 'Strong research, writing and analysis skills.', 'Comfortable with Excel and basic statistical tools.', 'Able to work independently and meet deadlines.']
+        };
+        function fmtSalary(s) {
+            return String(s).replace(/KSH/i, 'Ksh').replace(/\d[\d,]*(\.\d+)?/g, m => {
+                const n = parseFloat(m.replace(/,/g, ''));
+                if (n >= 1e6) return +(n / 1e6).toFixed(1) + 'M';
+                if (n >= 1000) return +(n / 1000).toFixed(1) + 'k';
+                return m;
+            });
+        }
+        let pEdit = false, pSnap = '';
+        function renderProfile() {
+            const v = byId('profileView'), sh = byId('profileShield');
+            if (!v) return;
+            const has = profile.full_name && localStorage.getItem('kazini_profile');
+            if (sh) sh.style.display = has ? '' : 'none';
+            if (!has) {
+                v.innerHTML = `<div class="glass-panel" style="text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Your career profile is empty</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Chat with Kazini to build it in a few minutes.</div><button class="apply-btn-full" onclick="openChatModal()">Create Profile</button></div>`;
+                return;
+            }
+            const apps = jobData.filter(j => j.status === 'completed').length, saved = jobData.filter(j => j.bookmarked).length;
+            const ctl = pEdit
+                ? `<button class="pf-btn" onclick="doneProfile()" style="border-color:var(--accent-orange);color:var(--accent-orange)"><i data-lucide="check" style="width:13px;height:13px"></i> Done</button>`
+                : `<button class="pf-btn" onclick="editProfile()" aria-label="Edit profile"><i data-lucide="pencil" style="width:13px;height:13px"></i> Edit</button>`;
+            v.innerHTML = `<div class="glass-panel" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="ai-mode"><span class="live-dot"></span>AI Matching Mode</div><div style="display:flex;gap:6px">${ctl}</div></div>`
+                + `<div class="pc" style="margin-bottom:14px">${cardHtml(pEdit, true)}</div>`
+                + `<div class="stat-grid" style="grid-template-columns:1fr 1fr"><div class="stat-card"><div class="stat-value">${apps}</div><div class="stat-label">Applications</div></div><div class="stat-card"><div class="stat-value">${saved}</div><div class="stat-label">Saved Roles</div></div></div>`;
+            lucide.createIcons();
+        }
+        function editProfile() { pEdit = true; renderProfile(); }
+        function doneProfile() { pEdit = false; renderProfile(); }
+        let saveT;
+        function autosave(now) {
+            if (!localStorage.getItem('kazini_profile')) return;
+            localStorage.setItem('kazini_profile', JSON.stringify(profile));
+            clearTimeout(saveT);
+            saveT = setTimeout(() => api('/profile', { deviceId, status: 'submitted', profile }), now ? 0 : 900);
+        }
 
         function submitProfile() {
             flow = 'chat'; setQuickReplies([]);
