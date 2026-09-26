@@ -1151,6 +1151,14 @@
                         <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;" id="modalDesc"></p>
                     </div>
 
+                    <!-- About Company Section -->
+                    <div class="section-label-modal">
+                        <i data-lucide="building-2" style="width: 12px; height: 12px;"></i> About Company
+                    </div>
+                    <div class="detail-block">
+                        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;" id="modalCompanyAbout"></p>
+                    </div>
+
                     <div class="section-label-modal">
                         <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Key Responsibilities
                     </div>
@@ -1180,10 +1188,9 @@
                                 Ready CV
                             </div>
                             <div style="display: flex; align-items: center; gap: 4px; color: var(--emerald-green); font-size: 11px; font-weight: 700;">
-                                <div style="width: 16px; height: 16px; border-radius: 50%; background: var(--emerald-green); display: flex; align-items: center; justify-content: center; color: white;">
-                                    <i data-lucide="check" style="width: 10px; height: 10px;"></i>
+                                <div style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--emerald-green); display: flex; align-items: center; justify-content: center; color: var(--emerald-green); background: transparent;">
+                                    <i data-lucide="check" style="width: 10px; height: 10px; stroke-width: 3;"></i>
                                 </div>
-                                tailored for this job
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--text-primary); font-weight: 600;">
@@ -1192,10 +1199,9 @@
                                 Ready Cover Letter
                             </div>
                             <div style="display: flex; align-items: center; gap: 4px; color: var(--emerald-green); font-size: 11px; font-weight: 700;">
-                                <div style="width: 16px; height: 16px; border-radius: 50%; background: var(--emerald-green); display: flex; align-items: center; justify-content: center; color: white;">
-                                    <i data-lucide="check" style="width: 10px; height: 10px;"></i>
+                                <div style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--emerald-green); display: flex; align-items: center; justify-content: center; color: var(--emerald-green); background: transparent;">
+                                    <i data-lucide="check" style="width: 10px; height: 10px; stroke-width: 3;"></i>
                                 </div>
-                                tailored for this job
                             </div>
                         </div>
                     </div>
@@ -1387,6 +1393,7 @@
                 status: "none",
                 appliedDate: "",
                 desc: "Analyze complex datasets, build custom automated reporting scripts in Python, and collaborate with teams across Nairobi to drive digital transformation.",
+                companyAbout: "Nexus Labs Africa is an innovative technology hub focused on pioneering advanced data solutions, scalable cloud systems, and empowering digital transformation across the East African ecosystem.",
                 resp: [
                     "Clean, process, and analyze multi-source operational data.",
                     "Build automated Python ETL scripts and SQL queries.",
@@ -1407,6 +1414,7 @@
                 status: "none",
                 appliedDate: "",
                 desc: "Design high-impact Tableau dashboards and optimize financial reporting sheets for tech ecosystem partners in East Africa.",
+                companyAbout: "SafariTech Ventures incubates and accelerates high-growth technology enterprises, providing strategic capital, technical infrastructure, and data-driven market insights.",
                 resp: [
                     "Create intuitive, decision-ready data visualizations in Tableau.",
                     "Partner with financial teams to streamline reporting frameworks.",
@@ -1427,6 +1435,7 @@
                 status: "none",
                 appliedDate: "",
                 desc: "Support agricultural intelligence projects by collecting field data, creating R analytics pipelines, and visualizing market trends in PowerBI.",
+                companyAbout: "Kilimo Data Solutions is an agri-tech pioneer harnessing deep analytics and machine learning to optimize agricultural value chains, food security, and rural market distribution.",
                 resp: [
                     "Gather agricultural ecosystem datasets across regional hubs.",
                     "Perform statistical analysis using R and Excel.",
@@ -1666,6 +1675,7 @@
             document.getElementById('modalSalary').innerText = job.salary;
             document.getElementById('modalMatch').innerText = job.matchScore;
             document.getElementById('modalDesc').innerText = job.desc;
+            document.getElementById('modalCompanyAbout').innerText = job.companyAbout;
             document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
             document.getElementById('modalReq').innerHTML = (JOB_REQ[job.id] || []).map(r => `<li>${r}</li>`).join('');
 
