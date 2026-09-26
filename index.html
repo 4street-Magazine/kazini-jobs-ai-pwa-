@@ -510,10 +510,13 @@
 
         /* Profile Section Layout (Unscrollable/Fitted layout matching user screenshot) */
         #profileTab {
+            overflow: hidden;
+        }
+
+        #profileTab.active {
             height: 100%;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
         }
         
         .profile-container-fitted {
@@ -745,18 +748,26 @@
         .chat-bubble.user {
             background: var(--accent-orange-gradient);
             color: white;
-            align-self: flex-end;
             border-top-right-radius: 4px;
             box-shadow: 0 2px 8px var(--accent-orange-glow);
+            max-width: 100%;
+        }
+
+        /* Groups the user bubble with its timestamp so the timestamp can
+           genuinely left-align under the bubble's own rendered width,
+           instead of the screen edge */
+        .chat-msg-wrap-user {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            align-self: flex-end;
+            max-width: 85%;
         }
 
         /* Chat Message Metadata (Timestamp & Vivid Green Ticks Outside Bubble Below Left) */
         .chat-meta-container-user {
-            align-self: flex-end;
             display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            margin-top: -10px;
+            margin-top: 3px;
             margin-bottom: 4px;
             font-size: 9.5px;
             color: var(--text-muted);
@@ -769,6 +780,47 @@
             color: var(--text-muted);
             margin-top: -10px;
             margin-bottom: 4px;
+            margin-left: 32px;
+        }
+
+        /* Messenger-style small avatar shown beside assistant replies */
+        .chat-row-assistant {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            align-self: flex-start;
+            max-width: 92%;
+        }
+
+        .chat-row-assistant .chat-bubble.assistant {
+            align-self: auto;
+            max-width: 100%;
+            min-width: 0;
+        }
+
+        .chat-avatar-assistant {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .chat-avatar-assistant img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .typing-indicator-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            align-self: flex-start;
         }
 
         .chat-timestamp-external {
@@ -804,6 +856,13 @@
             display: flex;
             flex-wrap: nowrap;
             white-space: nowrap;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        .quick-replies-footer.education-line .quick-reply-chip {
+            padding: 7px 10px;
+            font-size: 10.5px;
         }
 
         .quick-reply-chip {
@@ -1277,6 +1336,11 @@
                 </svg>
             </span>`;
 
+        const chatBotAvatarSVG = `
+            <div class="chat-avatar-assistant">
+                <img src="kazini-ai-avatar.png" alt="Chania AI" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.src=''">
+            </div>`;
+
         let activeJobId = null;
         let studioAttachments = ['Job CV attachment.pdf'];
 
@@ -1497,7 +1561,7 @@
 
         function typingOn() {
             const c = byId('chatMessages');
-            c.insertAdjacentHTML('beforeend', '<div class="typing-indicator" id="tLLM"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>');
+            c.insertAdjacentHTML('beforeend', `<div class="typing-indicator-row" id="tLLM">${chatBotAvatarSVG}<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`);
             c.scrollTop = c.scrollHeight;
         }
         function typingOff() { const e = byId('tLLM'); if (e) e.remove(); }
@@ -1527,17 +1591,19 @@
             
             // Append User Message Bubble
             c.insertAdjacentHTML('beforeend', `
-                <div class="chat-bubble user">
-                    ${escapeHtml(text)}
-                </div>
-                <div class="chat-meta-container-user">
-                    <span class="chat-timestamp-external">
-                        ${nowTime}
-                        <span class="vivid-green-tick">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-left:-8px"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <div class="chat-msg-wrap-user">
+                    <div class="chat-bubble user">
+                        ${escapeHtml(text)}
+                    </div>
+                    <div class="chat-meta-container-user">
+                        <span class="chat-timestamp-external">
+                            ${nowTime}
+                            <span class="vivid-green-tick">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-left:-8px"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </span>
                         </span>
-                    </span>
+                    </div>
                 </div>
             `);
             c.scrollTop = c.scrollHeight;
@@ -1571,7 +1637,7 @@
             const container = document.getElementById('chatMessages');
             const typingId = 'typing-' + Date.now();
             
-            container.insertAdjacentHTML('beforeend', `<div class="typing-indicator" id="${typingId}"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`);
+            container.insertAdjacentHTML('beforeend', `<div class="typing-indicator-row" id="${typingId}">${chatBotAvatarSVG}<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`);
             container.scrollTop = container.scrollHeight;
 
             setTimeout(() => {
@@ -1579,15 +1645,21 @@
                 if (typingEl) typingEl.remove();
 
                 const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                const row = document.createElement('div');
+                row.className = 'chat-row-assistant';
+                row.innerHTML = chatBotAvatarSVG;
+
                 const bubble = document.createElement('div');
                 bubble.className = 'chat-bubble assistant ' + (cls || '');
                 bubble.innerHTML = responseHtml;
-                
+                row.appendChild(bubble);
+
                 const metaDiv = document.createElement('div');
                 metaDiv.className = 'chat-meta-container-assistant';
                 metaDiv.innerText = nowTime;
 
-                container.appendChild(bubble);
+                container.appendChild(row);
                 container.appendChild(metaDiv);
                 
                 if (cb) setTimeout(cb, 0);
@@ -1600,21 +1672,52 @@
         function renderProfile() {
             const v = document.getElementById('profileView');
             if (!v) return;
-            
+
+            const name = profile.full_name || 'Your Name';
+            const initials = name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'U';
+            const skillsArr = (profile.skills || '').split(',').map(s => s.trim()).filter(Boolean);
+            const skillsHtml = skillsArr.length
+                ? skillsArr.map(s => `<span class="skill-badge" style="background:var(--accent-orange-light); color:var(--accent-orange); font-weight:700;">${escapeHtml(s)}</span>`).join('')
+                : `<span style="font-size:11px; color:var(--text-muted); font-weight:600;">No skills added yet</span>`;
+
             v.innerHTML = `
-                <div class="glass-panel" style="padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="glass-panel" style="padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                     <div class="ai-mode"><span class="live-dot"></span>AI Matching Mode</div>
                     <button class="pf-btn" onclick="openChatModal()"><i data-lucide="pencil" style="width:12px; height:12px;"></i> Update</button>
                 </div>
-                <div class="glass-panel" style="flex: 1; display: flex; flex-direction: column; gap: 8px; overflow: hidden;">
-                    <div style="font-weight: 800; font-size: 14px;">${escapeHtml(profile.full_name || 'Robin Muchiri')}</div>
-                    <div class="detail-block" style="margin-bottom: 0;">
-                        <div style="font-size: 10.5px; color: var(--text-muted); font-weight: 700;">EDUCATION</div>
-                        <div style="font-size: 11.5px; font-weight: 700;">${escapeHtml(profile.education || 'Degree')} - ${escapeHtml(profile.institution || 'University of Nairobi')}</div>
+
+                <div class="glass-panel" style="padding: 12px 14px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+                    <div style="width: 50px; height: 50px; border-radius: 16px; background: var(--accent-orange-gradient); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px; font-weight: 800; box-shadow: 0 4px 14px var(--accent-orange-glow); flex-shrink: 0;">${escapeHtml(initials)}</div>
+                    <div style="min-width: 0;">
+                        <div style="font-size: 15px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(name)}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(profile.gender || 'Job Seeker')}${profile.education ? ' • ' + escapeHtml(profile.education) : ''}</div>
                     </div>
+                </div>
+
+                <div class="glass-panel" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow: hidden;">
+                    <div class="section-label-modal"><i data-lucide="user-check" style="width:12px; height:12px;"></i>Profile Details</div>
+
+                    <div class="detail-block" style="display: flex; align-items: center; gap: 10px; margin-bottom: 0;">
+                        <i data-lucide="graduation-cap" style="width:16px; height:16px; color: var(--accent-orange); flex-shrink: 0;"></i>
+                        <div style="min-width: 0;">
+                            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;">Education</div>
+                            <div style="font-size: 11.5px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(profile.education || 'Not set')}${profile.institution ? ' - ' + escapeHtml(profile.institution) : ''}</div>
+                        </div>
+                    </div>
+
                     <div class="detail-block" style="margin-bottom: 0;">
-                        <div style="font-size: 10.5px; color: var(--text-muted); font-weight: 700;">SKILLS</div>
-                        <div style="font-size: 11.5px; font-weight: 700; color: var(--emerald-green);">${escapeHtml(profile.skills || 'Python, SQL, Tableau')}</div>
+                        <div style="display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px;">
+                            <i data-lucide="sparkles" style="width:13px; height:13px; color: var(--accent-orange);"></i>Skills
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 5px;">${skillsHtml}</div>
+                    </div>
+
+                    <div class="detail-block" style="display: flex; align-items: center; gap: 10px; margin-bottom: 0;">
+                        <i data-lucide="phone" style="width:16px; height:16px; color: var(--accent-orange); flex-shrink: 0;"></i>
+                        <div style="min-width: 0;">
+                            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;">Phone</div>
+                            <div style="font-size: 11.5px; font-weight: 700; color: var(--text-primary);">${escapeHtml(profile.phone || 'Not set')}</div>
+                        </div>
                     </div>
                 </div>
             `;
