@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>KAZINI AI - Smart Job Matching</title>
+    <title>CHANIA AI - Smart Job Matching</title>
 
     <!-- PWA Metadata Tags -->
     <link rel="manifest" href="manifest.json">
@@ -19,20 +19,21 @@
             --accent-orange-hover: #E04B00;
             --accent-orange-light: rgba(255, 85, 0, 0.10);
             --accent-orange-glow: rgba(255, 85, 0, 0.22);
+            --accent-orange-gradient: linear-gradient(135deg, #FF7700 0%, #FF3300 100%);
             
             /* Deep Vivid Premium Blue Color for Verification Badges */
             --deep-vivid-blue: #0052FF;
             --deep-vivid-blue-light: rgba(0, 82, 255, 0.10);
             --deep-vivid-blue-glow: rgba(0, 82, 255, 0.22);
 
-            /* Emerald Green for Match Scores & Metrics */
-            --emerald-green: #008C51;
-            --emerald-green-light: rgba(0, 140, 81, 0.12);
-            --emerald-green-glow: rgba(0, 140, 81, 0.22);
+            /* Premium Vivid Green Color (Replaces emerald green for balanced UI coordination) */
+            --emerald-green: #00B050;
+            --emerald-green-light: rgba(0, 176, 80, 0.12);
+            --emerald-green-glow: rgba(0, 176, 80, 0.22);
             
             /* Status Colors */
-            --status-applied-bg: rgba(16, 185, 129, 0.12);
-            --status-applied-text: #10b981;
+            --status-applied-bg: rgba(0, 176, 80, 0.12);
+            --status-applied-text: #00B050;
             --status-pending-bg: rgba(245, 158, 11, 0.12);
             --status-pending-text: #f59e0b;
             
@@ -761,6 +762,7 @@
             font-size: 12.5px;
             line-height: 1.4;
             animation: fadeIn 0.2s ease;
+            position: relative;
         }
 
         .chat-bubble.assistant {
@@ -777,9 +779,38 @@
             align-self: flex-end;
             border-top-right-radius: 4px;
             box-shadow: 0 2px 8px var(--accent-orange-glow);
+            padding-bottom: 22px; /* make room for timestamp & ticks */
         }
 
-        /* Horizontal Quick Reply Pills at Bottom of Chat UI (Facebook Messenger style) */
+        /* Chat Message Metadata (Timestamp & Vivid Green Ticks) */
+        .chat-meta {
+            position: absolute;
+            bottom: 4px;
+            right: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 9.5px;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 600;
+        }
+
+        .chat-meta-assistant {
+            font-size: 9.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: block;
+            text-align: left;
+        }
+
+        .vivid-green-tick {
+            color: var(--emerald-green);
+            display: inline-flex;
+            align-items: center;
+            filter: drop-shadow(0 0 2px rgba(0, 176, 80, 0.4));
+        }
+
+        /* Horizontal Quick Reply Pills at Bottom of Chat UI (Premium Vivid Orange Gradient) */
         .quick-replies-footer {
             padding: 10px 16px;
             background: var(--bg-sticky);
@@ -795,24 +826,22 @@
         }
 
         .quick-reply-chip {
-            background: var(--bg-surface);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-subtle);
-            padding: 7px 14px;
+            background: var(--accent-orange-gradient);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
             border-radius: 18px;
             font-size: 11.5px;
             font-weight: 700;
             white-space: nowrap;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            box-shadow: 0 4px 12px var(--accent-orange-glow);
         }
 
         .quick-reply-chip:active {
-            background: var(--accent-orange-light);
-            color: var(--accent-orange);
-            border-color: var(--accent-orange);
             transform: scale(0.95);
+            opacity: 0.9;
         }
 
         .chat-bubble.assistant.wide{max-width:100%;width:100%;padding:0;background:transparent;border:none}
@@ -835,7 +864,7 @@
         .pc-e:empty::before{content:attr(data-ph);opacity:.45}
         .ai-mode{display:inline-flex;align-items:center;gap:7px;background:var(--emerald-green-light);color:var(--emerald-green);border:1px solid var(--emerald-green);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800}
         .live-dot{width:8px;height:8px;border-radius:50%;background:var(--emerald-green);animation:livePulse 1.3s infinite}
-        @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(0,140,81,.6);opacity:1}70%{box-shadow:0 0 0 8px rgba(0,140,81,0);opacity:.5}100%{box-shadow:0 0 0 0 rgba(0,140,81,0);opacity:1}}
+        @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(0,176,80,.6);opacity:1}70%{box-shadow:0 0 0 8px rgba(0,176,80,0);opacity:.5}100%{box-shadow:0 0 0 0 rgba(0,176,80,0);opacity:1}}
         .pf-btn{display:inline-flex;align-items:center;gap:5px;background:transparent;border:1.5px solid var(--border-subtle);color:var(--text-secondary);border-radius:12px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer}
         .pf-save{background:var(--accent-orange);border-color:var(--accent-orange);color:#fff}
         .pf-save:disabled{background:var(--bg-surface);border-color:var(--border-subtle);color:var(--text-muted);cursor:not-allowed}
@@ -973,7 +1002,7 @@
                             <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
                         </svg>
                     </div>
-                    <div class="brand-text">Kazini <span>AI</span></div>
+                    <div class="brand-text">Chania <span>AI</span></div>
                 </div>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
                     <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
@@ -1006,7 +1035,7 @@
             <div class="tab-view" id="profileTab"><div id="profileView"></div>
                 <div id="profileShield"><div class="glass-panel">
                     <div class="section-label-modal">
-                        <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Kazini Verification Shield
+                        <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Chania Verification Shield
                     </div>
                     <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -1030,7 +1059,7 @@
         </div>
 
         <!-- FIXED FLOATING ACTION BUTTON (FAB) - OPENS CHAT UI -->
-        <button class="fab-kazini" onclick="openChatModal()" aria-label="Open Kazini Assistant">
+        <button class="fab-kazini" onclick="openChatModal()" aria-label="Open Chania Assistant">
             <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
                 <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
@@ -1085,7 +1114,7 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
                         <div class="detail-block" style="margin-bottom:0;">
                             <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Est. Salary</div>
-                            <div id="modalSalary" style="font-size: 12.5px; font-weight: 700; color: #10b981; margin-top: 3px;"></div>
+                            <div id="modalSalary" style="font-size: 12.5px; font-weight: 700; color: var(--emerald-green); margin-top: 3px;"></div>
                         </div>
                         <div class="detail-block" style="margin-bottom:0;">
                             <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">AI Match Score</div>
@@ -1093,7 +1122,7 @@
                         </div>
                     </div>
 
-                    <!-- Provided by Kazini AI Section -->
+                    <!-- Provided by Chania AI Section -->
                     <div class="section-label-modal">
                         <i data-lucide="align-left" style="width: 12px; height: 12px;"></i> About the job
                     </div>
@@ -1121,7 +1150,7 @@
                     </div>
 
                     <div class="section-label-modal">
-                        <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> Provided by Kazini AI
+                        <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> Provided by Chania AI
                     </div>
                     <div class="detail-block" style="margin-bottom: 14px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 11.5px; color: var(--text-primary); font-weight: 600;">
@@ -1253,10 +1282,10 @@
 
                 </div>
 
-                <!-- Footer: full-width Submit (enabled on the Email tab) -->
+                <!-- Footer: full-width Submit with Send Icon (enabled on the Email tab) -->
                 <div style="padding: 14px 20px max(14px, env(safe-area-inset-bottom)) 20px; border-top: 1px solid var(--border-color); background: var(--bg-sticky); flex-shrink: 0;">
                     <button class="apply-btn-full" id="studioSubmitBtn" onclick="submitApplicationFromStudio()" disabled style="margin-top: 0;">
-                        Submit Application
+                        <i data-lucide="send" style="width: 15px; height: 15px;"></i> Submit Application
                     </button>
                 </div>
 
@@ -1269,12 +1298,14 @@
                 <div class="chat-header">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
-                            <img src="kazini-ai-avatar.png" alt="Kazini AI" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
-                            <span style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--emerald-green); border: 2.5px solid var(--bg-sticky); border-radius: 50%;"></span>
+                            <!-- Added a visible black circular ring on the chatbot profile picture -->
+                            <div style="position: absolute; inset: -3px; border-radius: 50%; border: 3px solid #000000; z-index: 2; pointer-events: none;"></div>
+                            <img src="kazini-ai-avatar.png" alt="Chania AI" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; position: relative; z-index: 1;">
+                            <span style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--emerald-green); border: 2.5px solid var(--bg-sticky); border-radius: 50%; z-index: 3;"></span>
                         </div>
                         <div>
                             <div style="font-size: 14.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
-                                Kazini AI
+                                Chania AI
                                 <span class="scalloped-badge" title="Verified Assistant">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
@@ -1331,7 +1362,7 @@
                 location: "Nairobi",
                 skills: ["Python", "SQL", "Tableau"],
                 moreSkills: 1,
-                salary: "KSH 75,000 - 95,000",
+                salary: "KSH 20000 - 40000",
                 matchScore: "94%",
                 bookmarked: true,
                 status: "none", // none, pending, completed
@@ -1351,7 +1382,7 @@
                 location: "Mombasa",
                 skills: ["Excel", "Tableau", "PowerBI"],
                 moreSkills: 1,
-                salary: "KSH 120,000 - 150,000",
+                salary: "KSH 25000 - 45000",
                 matchScore: "88%",
                 bookmarked: true,
                 status: "none",
@@ -1371,7 +1402,7 @@
                 location: "Nairobi",
                 skills: ["PowerBI", "R", "SQL"],
                 moreSkills: 1,
-                salary: "KSH 45,000 - 60,000",
+                salary: "KSH 20000 - 35000",
                 matchScore: "75%",
                 bookmarked: false,
                 status: "none",
@@ -1418,14 +1449,14 @@
                     <div class="skills-row">
                         ${job.skills.slice(0, 2).map(s => `
                             <div class="skill-badge">
-                                <i data-lucide="check" style="width:10px; height:10px; color: #10b981;"></i>
+                                <i data-lucide="check" style="width:10px; height:10px; color: var(--emerald-green);"></i>
                                 ${s}
                             </div>
                         `).join('')}
                         ${job.skills.length > 2 ? `<div class="skill-badge more">+${job.skills.length - 2}</div>` : ''}
                     </div>
 
-                    <div class="salary-text">${fmtSalary(job.salary)}</div>
+                    <div class="salary-text">${job.salary}</div>
 
                     <div class="card-footer">
                         <span class="match-score">Match Score: ${job.matchScore}</span>
@@ -1458,7 +1489,7 @@
                                 ${job.company}
                                 ${job.verified ? scallopedBadgeSVG : ''}
                             </div>
-                            <div class="slim-meta-text">${job.location} • ${fmtSalary(job.salary)}</div>
+                            <div class="slim-meta-text">${job.location} • ${job.salary}</div>
                         </div>
                         <button class="bookmark-btn" onclick="event.stopPropagation(); toggleBookmark(${job.id})">
                             <i data-lucide="heart" style="width: 18px; height: 18px; fill: var(--accent-orange); color: var(--accent-orange);"></i>
@@ -1564,10 +1595,10 @@
                 container.innerHTML = `
                     <div class="summary-banner">
                         <div class="summary-title">
-                            <i data-lucide="clipboard-check" style="width:14px; height:14px; color: #10b981;"></i>
+                            <i data-lucide="clipboard-check" style="width:14px; height:14px; color: var(--emerald-green);"></i>
                             Application History
                         </div>
-                        <span class="summary-count" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">${appliedCount} TRACKED</span>
+                        <span class="summary-count" style="background: var(--emerald-green-light); color: var(--emerald-green);">${appliedCount} TRACKED</span>
                     </div>
                 `;
             } else if (tabId === 'profileTab') {
@@ -1613,25 +1644,25 @@
 
             document.getElementById('modalTitle').innerText = job.title;
             document.getElementById('modalCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${job.location}`;
-            document.getElementById('modalSalary').innerText = fmtSalary(job.salary);
+            document.getElementById('modalSalary').innerText = job.salary;
             document.getElementById('modalMatch').innerText = job.matchScore;
             document.getElementById('modalDesc').innerText = job.desc;
             document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
             document.getElementById('modalReq').innerHTML = (JOB_REQ[job.id] || []).map(r => `<li>${r}</li>`).join('');
 
             document.getElementById('modalMatchingSkills').innerHTML = job.skills.map(s => `
-                <div class="skill-badge" style="background: var(--status-applied-bg); color: var(--status-applied-text); border: 1px solid rgba(16, 185, 129, 0.2);">
+                <div class="skill-badge" style="background: var(--status-applied-bg); color: var(--status-applied-text); border: 1px solid rgba(0, 176, 80, 0.2);">
                     <i data-lucide="check-circle" style="width:10px; height:10px;"></i> ${s}
                 </div>
             `).join('');
 
             document.getElementById('modalSkills').innerHTML = job.skills.map(s => `
-                <div class="skill-badge"><i data-lucide="check" style="width:9px; height:9px; color: #10b981;"></i> ${s}</div>
+                <div class="skill-badge"><i data-lucide="check" style="width:9px; height:9px; color: var(--emerald-green);"></i> ${s}</div>
             `).join('');
 
             const applyBtn = document.getElementById('applyActionBtn');
             if (job.status === 'completed') {
-                applyBtn.style.background = '#10b981';
+                applyBtn.style.background = 'var(--emerald-green)';
                 applyBtn.innerHTML = `<i data-lucide="check-circle" style="width:14px; height:14px;"></i> Application Submitted`;
                 applyBtn.disabled = true;
             } else if (job.status === 'pending') {
@@ -1784,8 +1815,8 @@
             }
         }
 
-        /* ===== KAZINI CHAT FLOW ===== */
-        const KAZINI_API = ''; // paste your Worker URL here, e.g. https://kazini-chat.yourname.workers.dev
+        /* ===== CHANIA CHAT FLOW ===== */
+        const KAZINI_API = ''; // paste your Worker URL here, e.g. https://chania-chat.yourname.workers.dev
         const byId = id => document.getElementById(id);
         const deviceId = localStorage.getItem('kazini_device') || (() => { const d = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(); localStorage.setItem('kazini_device', d); return d; })();
         let profile = { past_jobs: [] };
@@ -1855,7 +1886,7 @@
         function startChat() {
             if (profile.full_name && localStorage.getItem('kazini_profile')) {
                 flow = 'chat';
-                return bot(`Hi ${escapeHtml(profile.full_name.split(' ')[0])} 😊, how can I help you today? Ask me anything about Kazini AI.`);
+                return bot(`Hi ${escapeHtml(profile.full_name.split(' ')[0])} 😊, how can I help you today? Ask me anything about Chania AI.`);
             }
             flow = 'ask_help';
             bot('Hi 😊, how can I help you today?', restoreReplies);
@@ -1868,7 +1899,18 @@
 
         async function handleUserText(text) {
             const c = byId('chatMessages');
-            c.insertAdjacentHTML('beforeend', `<div class="chat-bubble user">${escapeHtml(text)}</div>`);
+            const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            c.insertAdjacentHTML('beforeend', `
+                <div class="chat-bubble user">
+                    ${escapeHtml(text)}
+                    <span class="chat-meta">
+                        ${nowTime}
+                        <span class="vivid-green-tick">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </span>
+                    </span>
+                </div>
+            `);
             c.scrollTop = c.scrollHeight;
             setQuickReplies([]);
             if (flow === 'ask_help' && AGREE.test(text)) return askProfile();
@@ -1951,14 +1993,7 @@
             2: ['Degree in a data, design or IT-related field.', 'Strong skills in Tableau, Power BI or similar tools.', 'Ability to turn complex data into clear visual stories.', 'Good SQL and spreadsheet skills.'],
             3: ['Degree in Economics, Statistics, Social Sciences or a related field.', 'Strong research, writing and analysis skills.', 'Comfortable with Excel and basic statistical tools.', 'Able to work independently and meet deadlines.']
         };
-        function fmtSalary(s) {
-            return String(s).replace(/KSH/i, 'Ksh').replace(/\d[\d,]*(\.\d+)?/g, m => {
-                const n = parseFloat(m.replace(/,/g, ''));
-                if (n >= 1e6) return +(n / 1e6).toFixed(1) + 'M';
-                if (n >= 1000) return +(n / 1000).toFixed(1) + 'k';
-                return m;
-            });
-        }
+
         let pEdit = false, pSnap = '';
         function renderProfile() {
             const v = byId('profileView'), sh = byId('profileShield');
@@ -1966,7 +2001,7 @@
             const has = profile.full_name && localStorage.getItem('kazini_profile');
             if (sh) sh.style.display = has ? '' : 'none';
             if (!has) {
-                v.innerHTML = `<div class="glass-panel" style="text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Your career profile is empty</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Chat with Kazini to build it in a few minutes.</div><button class="apply-btn-full" onclick="openChatModal()">Create Profile</button></div>`;
+                v.innerHTML = `<div class="glass-panel" style="text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Your career profile is empty</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Chat with Chania to build it in a few minutes.</div><button class="apply-btn-full" onclick="openChatModal()">Create Profile</button></div>`;
                 return;
             }
             const apps = jobData.filter(j => j.status === 'completed').length, saved = jobData.filter(j => j.bookmarked).length;
@@ -1992,7 +2027,7 @@
             flow = 'chat'; setQuickReplies([]);
             localStorage.setItem('kazini_profile', JSON.stringify(profile));
             api('/profile', { deviceId, status: 'submitted', profile });
-            bot('Confirmed 🎉<br><br>You have successfully created your career profile! We shall notify you through SMS once we find a job opportunity that matches your profile. Until then, enjoy a nice time.<br><br>Kazini AI 😊');
+            bot('Confirmed 🎉<br><br>You have successfully created your career profile! We shall notify you through SMS once we find a job opportunity that matches your profile. Until then, enjoy a nice time.<br><br>Chania AI 😊');
         }
         async function freeChat(text) {
             history.push({ role: 'user', content: text });
@@ -2012,7 +2047,17 @@
             if (footer) footer.style.display = 'none';
 
             const container = document.getElementById('chatMessages');
-            container.innerHTML += `<div class="chat-bubble user"><i data-lucide="file-text" style="width:14px; height:14px; vertical-align:middle;"></i> Uploaded: ${escapeHtml(file.name)}</div>`;
+            const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            container.innerHTML += `
+                <div class="chat-bubble user">
+                    <i data-lucide="file-text" style="width:14px; height:14px; vertical-align:middle;"></i> Uploaded: ${escapeHtml(file.name)}
+                    <span class="chat-meta">
+                        ${nowTime}
+                        <span class="vivid-green-tick">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </span>
+                    </span>
+                </div>`;
             container.scrollTop = container.scrollHeight;
 
             const botReply = `Document received and verified! 📄 I've extracted your professional credentials from <strong>${escapeHtml(file.name)}</strong>. Your profile is fully updated.
@@ -2020,7 +2065,8 @@
                     <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
                         <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
                     </button>
-                </div>`;
+                </div>
+                <span class="chat-meta-assistant">${nowTime}</span>`;
 
             showTypingAndReply(botReply);
         }
@@ -2041,9 +2087,12 @@
                 const typingEl = document.getElementById(typingId);
                 if (typingEl) typingEl.remove();
 
+                const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const fullResponse = responseHtml.includes('chat-meta-assistant') ? responseHtml : `${responseHtml}<span class="chat-meta-assistant">${nowTime}</span>`;
+
                 const bubble = document.createElement('div');
                 bubble.className = 'chat-bubble assistant ' + (cls || '');
-                bubble.innerHTML = responseHtml;
+                bubble.innerHTML = fullResponse;
                 if (cb) setTimeout(cb, 0);
                 container.appendChild(bubble);
                 container.scrollTop = container.scrollHeight;
