@@ -1053,27 +1053,29 @@
             </div>
 
             <!-- TAB 4: PROFILE -->
-            <div class="tab-view" id="profileTab"><div id="profileView"></div>
-                <div id="profileShield"><div class="glass-panel">
-                    <div class="section-label-modal">
-                        <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Chania Verification Shield
-                    </div>
-                    <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="scalloped-badge lg">
-                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
-                                    <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </span>
-                            <div>
-                                <div style="font-size: 12.5px; font-weight: 700; color: var(--text-primary);">Smartika Trust Network</div>
-                                <div style="font-size: 10.5px; color: var(--text-muted);">Verified Credentials Active</div>
-                            </div>
+            <div class="tab-view" id="profileTab">
+                <div id="profileView"></div>
+                <div id="profileShield">
+                    <div class="glass-panel">
+                        <div class="section-label-modal">
+                            <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Chania Verification Shield
                         </div>
-                        <span style="font-size: 11px; font-weight: 800; color: var(--emerald-green);">VERIFIED</span>
+                        <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="scalloped-badge lg">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
+                                        <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </span>
+                                <div>
+                                    <div style="font-size: 12.5px; font-weight: 700; color: var(--text-primary);">Smartika Trust Network</div>
+                                    <div style="font-size: 10.5px; color: var(--text-muted);">Verified Credentials Active</div>
+                                </div>
+                            </div>
+                            <span style="font-size: 11px; font-weight: 800; color: var(--emerald-green);">VERIFIED</span>
+                        </div>
                     </div>
-                </div>
                 </div>
             </div>
 
@@ -1164,7 +1166,8 @@
                     </div>
                     <div class="detail-block" style="margin-bottom: 14px;">
                         <ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;" id="modalResp"></ul>
-                    </div><div class="section-label-modal">
+                    </div>
+                    <div class="section-label-modal">
                         <i data-lucide="layers" style="width: 12px; height: 12px;"></i> Requirements
                     </div>
                     <div class="detail-block" style="margin-bottom: 10px;"><ul id="modalReq" style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;"></ul></div>
@@ -1205,8 +1208,6 @@
                             </div>
                         </div>
                     </div>
-
-                    
                 </div>
 
                 <!-- Sticky Footer Section -->
@@ -1886,6 +1887,10 @@
             { k: 'period', q: 'When did you work there?', ex: 'eg. 2021 - 2023' }
         ];
 
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
         async function api(path, body) {
             if (!CHANIA_API) return null;
             try {
@@ -1895,6 +1900,24 @@
                 return r.ok ? await r.json() : null;
             } catch (e) { return null; }
         }
+
+        function showTypingAndReply(html, cb, cls, delay = 0) {
+            typingOn();
+            setTimeout(() => {
+                typingOff();
+                const c = byId('chatMessages');
+                const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                c.insertAdjacentHTML('beforeend', `
+                    <div style="display:flex; flex-direction:column; align-items:flex-start; width:100%;">
+                        <div class="chat-bubble assistant ${cls || ''}">${html}</div>
+                        <div class="chat-timestamp">${nowTime}</div>
+                    </div>`);
+                c.scrollTop = c.scrollHeight;
+                if (cb) cb();
+                playKaziniMessageSound();
+            }, delay || 400);
+        }
+
         const bot = (html, cb, cls, delay) => showTypingAndReply(html, cb, cls, delay);
         const stepReplies = s => s ? (s.singleLineOpts || (s.yn ? ['Yes', 'No'] : (s.opts || []))) : [];
         function setQuickReplies(arr) {
@@ -2004,6 +2027,7 @@
                 + sec('Achievements', ed('achievements', p.achievements, 'Achievements'))
                 + sec('Contact', ed('phone', p.phone, 'Phone number'));
         }
+
         document.addEventListener('input', e => {
             const t = e.target, f = t.dataset && t.dataset.f;
             if (!f || !t.closest('.pc')) return;
@@ -2012,6 +2036,7 @@
             if (t.dataset.pj !== undefined) profile.past_jobs[+t.dataset.pj][f] = v; else profile[f] = v;
             if (t.closest('#profileView')) autosave();
         });
+
         function refreshCard() { const c = byId('profileCard'); if (c) c.innerHTML = cardHtml(); if (pEdit) { renderProfile(); autosave(true); } }
         function addPastJob() { profile.past_jobs.push({}); refreshCard(); }
         function removePastJob(i) { profile.past_jobs.splice(i, 1); refreshCard(); }
@@ -2038,102 +2063,66 @@
                 : `<button class="pf-btn" onclick="editProfile()" aria-label="Edit profile"><i data-lucide="pencil" style="width:13px;height:13px"></i> Edit</button>`;
             v.innerHTML = `<div class="glass-panel" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="ai-mode"><span class="live-dot"></span>AI Matching Mode</div><div style="display:flex;gap:6px">${ctl}</div></div>`
                 + `<div class="pc" style="margin-bottom:14px">${cardHtml(pEdit, true)}</div>`
-                + `<div class="stat-grid" style="grid-template-columns:1fr 1fr"><div class="stat-card"><div class="stat-value">${apps}</div><div class="stat-label">Applications</div></div><div class="stat-card"><div class="stat-value">${saved}</div><div class="stat-label">Saved Roles</div></div></div>`;
+                + `<div class="stat-grid" style="grid-template-columns:1fr 1fr"><div class="stat-card"><div class="stat-value">${apps}</div><div class="stat-label">Applications</div></div><div class="stat-card"><div class="stat-value">${saved}</div><div class="stat-label">Saved Jobs</div></div></div>`;
             lucide.createIcons();
         }
-        function editProfile() { pEdit = true; renderProfile(); }
-        function doneProfile() { pEdit = false; renderProfile(); }
-        let saveT;
-        function autosave(now) {
-            if (!localStorage.getItem('chania_profile')) return;
+
+        function editProfile() {
+            pSnap = JSON.stringify(profile);
+            pEdit = true;
+            renderProfile();
+        }
+
+        function doneProfile() {
+            pEdit = false;
             localStorage.setItem('chania_profile', JSON.stringify(profile));
-            clearTimeout(saveT);
-            saveT = setTimeout(() => api('/profile', { deviceId, status: 'submitted', profile }), now ? 0 : 900);
+            renderProfile();
+        }
+
+        function autosave(force = false) {
+            localStorage.setItem('chania_profile', JSON.stringify(profile));
+        }
+
+        async function freeChat(text) {
+            history.push({ role: 'user', parts: [{ text }] });
+            typingOn();
+            try {
+                const res = await fetch(CHANIA_API || '/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: history })
+                });
+                const data = await res.json();
+                typingOff();
+                if (data.reply) {
+                    history.push({ role: 'model', parts: [{ text: data.reply }] });
+                    bot(escapeHtml(data.reply));
+                } else {
+                    bot("I'm here for you! Let me know if you need any help with your job search.");
+                }
+            } catch (e) {
+                typingOff();
+                bot("Connection error. Let's keep moving forward!");
+            }
         }
 
         function submitProfile() {
-            flow = 'chat'; setQuickReplies([]);
             localStorage.setItem('chania_profile', JSON.stringify(profile));
-            api('/profile', { deviceId, status: 'submitted', profile });
-            bot('Confirmed 🎉<br><br>You have successfully created your career profile! We shall notify you through SMS once we find a job opportunity that matches your profile. Until then, enjoy a nice time.<br><br>Chania AI 😊');
-        }
-        async function freeChat(text) {
-            history.push({ role: 'user', content: text });
-            typingOn();
-            const r = await api('/chat', { messages: history.slice(-10) });
-            typingOff();
-            const reply = r && r.reply ? r.reply : "I'm having trouble connecting right now. Please try again in a moment 🙏";
-            history.push({ role: 'assistant', content: reply });
-            bot(escapeHtml(reply).replace(/\n/g, '<br>'), restoreReplies, '', 250);
+            flow = 'chat';
+            bot("Fantastic! Your profile is saved and active. You can now explore matched jobs in the Discover tab. Chania AI 😊");
         }
 
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const footer = document.getElementById('quickRepliesFooter');
-            if (footer) footer.style.display = 'none';
-
-            const container = document.getElementById('chatMessages');
-            container.innerHTML += `<div style="display:flex; flex-direction:column; align-items:flex-end; width:100%;"><div class="chat-bubble user"><i data-lucide="file-text" style="width:14px; height:14px; vertical-align:middle;"></i> Uploaded: ${escapeHtml(file.name)}</div></div>`;
-            container.scrollTop = container.scrollHeight;
-
-            const botReply = `Document received and verified! 📄 I've extracted your professional credentials from <strong>${escapeHtml(file.name)}</strong>. Your profile is fully updated.
-                <div>
-                    <button class="chat-action-btn-outlined" onclick="triggerFindJob()">
-                        <i data-lucide="briefcase" style="width:14px; height:14px;"></i> Find me a Job
-                    </button>
-                </div>`;
-
-            showTypingAndReply(botReply);
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleUserText(`[Attached document: ${file.name}]`);
+            }
         }
 
-        function showTypingAndReply(responseHtml, cb, cls, delay) {
-            const container = document.getElementById('chatMessages');
-            const typingId = 'typing-' + Date.now();
-            
-            container.innerHTML += `
-                <div class="typing-indicator" id="${typingId}">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>`;
-            container.scrollTop = container.scrollHeight;
-
-            setTimeout(() => {
-                const typingEl = document.getElementById(typingId);
-                if (typingEl) typingEl.remove();
-
-                const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const bubble = document.createElement('div');
-                bubble.className = 'chat-bubble assistant ' + (cls || '');
-                bubble.innerHTML = responseHtml + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px; text-align:right;">${nowTime}</div>`;
-                if (cb) setTimeout(cb, 0);
-                container.appendChild(bubble);
-                container.scrollTop = container.scrollHeight;
-                lucide.createIcons();
-
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        playKaziniMessageSound();
-                    });
-                });
-
-            }, delay ?? 900);
-        }
-
-        function triggerFindJob() {
-            closeChatModal();
-            switchTab(document.querySelector('.nav-item'), 'discoverTab');
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            updateHeaderContext('discoverTab');
+        // Initialize App View
+        window.addEventListener('DOMContentLoaded', () => {
             renderJobs();
+            updateHeaderContext('discoverTab');
             lucide.createIcons();
         });
     </script>
