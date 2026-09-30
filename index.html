@@ -639,6 +639,10 @@
             align-items: center;
         }
 
+        #applicationStudioModal {
+            z-index: 1100;
+        }
+
         /* Job Details Modal Card (Sticky Header & Footer, Scrollable Body) */
         .job-modal-card {
             background: var(--bg-card);
@@ -1728,12 +1732,16 @@
 
         function handleApplyButtonClick() {
             const job = jobData.find(j => j.id === activeJobId);
-            if (job && job.status === 'none') {
+            if (!job) return;
+
+            if (job.status === 'none') {
                 job.status = 'pending';
                 job.appliedDate = 'Pending';
             }
-            closeModal();
-            openApplicationStudio();
+
+            // Close the job-details drawer and explicitly hand off to the CV studio.
+            document.getElementById('jobModal').style.display = 'none';
+            requestAnimationFrame(() => openApplicationStudio());
         }
 
         function openApplicationStudio() {
@@ -1749,9 +1757,9 @@
             document.getElementById('studioSubmitBtn').innerHTML = isRedirect
                 ? `<i data-lucide="external-link" style="width: 15px; height: 15px;"></i> Complete Application`
                 : `<i data-lucide="send" style="width: 15px; height: 15px;"></i> Submit Application`;
+            document.getElementById('applicationStudioModal').style.display = 'flex';
             switchStudioTab('cv');
             renderStudioAttachments();
-            document.getElementById('applicationStudioModal').style.display = 'flex';
             lucide.createIcons();
         }
 
