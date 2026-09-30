@@ -624,7 +624,7 @@
         }
 
         /* Modals Overlay (Shared Drawer Style) */
-        #applicationStudioModal { z-index: 9999 !important; }\n\n        .modal-overlay {
+        .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -637,10 +637,6 @@
             justify-content: flex-end;
             flex-direction: column;
             align-items: center;
-        }
-
-        #applicationStudioModal {
-            z-index: 1100;
         }
 
         /* Job Details Modal Card (Sticky Header & Footer, Scrollable Body) */
@@ -1229,7 +1225,7 @@
 
                 <!-- Sticky Footer Section -->
                 <div class="job-modal-sticky-footer">
-                    <button type="button" class="apply-btn-full" id="applyActionBtn" onclick="event.stopPropagation(); handleApplyButtonClick(event)">
+                    <button class="apply-btn-full" id="applyActionBtn" onclick="handleApplyButtonClick()">
                         <i data-lucide="plus" style="width: 15px; height: 15px;"></i> Generate CV
                     </button>
                 </div>
@@ -1730,80 +1726,33 @@
             document.getElementById('jobModal').style.display = 'none';
         }
 
-        function handleApplyButtonClick(event) {
-            if (event) event.preventDefault();
-
+        function handleApplyButtonClick() {
             const job = jobData.find(j => j.id === activeJobId);
-            if (!job) return;
-
-            if (job.status === 'none') {
+            if (job && job.status === 'none') {
                 job.status = 'pending';
                 job.appliedDate = 'Pending';
             }
-
-            // Close Job Details.
-            const jobModal = document.getElementById('jobModal');
-            if (jobModal) jobModal.style.display = 'none';
-
-            // SHOW THE APPLICATION STUDIO FIRST.
-            const studio = document.getElementById('applicationStudioModal');
-            if (!studio) {
-                console.error('Application Studio modal element not found.');
-                return;
-            }
-            studio.style.display = 'flex';
-            studio.style.zIndex = '9999';
-
-            // Populate the studio after it is visible.
-            try {
-                openApplicationStudio(job);
-            } catch (err) {
-                console.error('Application Studio initialization error:', err);
-            }
+            closeModal();
+            openApplicationStudio();
         }
 
-        function openApplicationStudio(jobOverride) {
-            const job = jobOverride || jobData.find(j => j.id === activeJobId);
-            const studio = document.getElementById('applicationStudioModal');
-            if (!studio) return;
-
-            // Keep it visible even if a content initialization step fails.
-            studio.style.display = 'flex';
-            studio.style.zIndex = '9999';
-
+        function openApplicationStudio() {
+            const job = jobData.find(j => j.id === activeJobId);
             if (job) {
-                const title = document.getElementById('studioJobTitle');
-                const company = document.getElementById('studioJobCompany');
-                const subject = document.getElementById('emailPreviewSubject');
-
-                if (title) title.innerText = job.title;
-                if (company) company.innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''}`;
-                if (subject) subject.innerText = `Application: ${job.title} – Robin Muchiri`;
+                document.getElementById('studioJobTitle').innerText = job.title;
+                document.getElementById('studioJobCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''}`;
+                document.getElementById('emailPreviewSubject').innerText = `Application: ${job.title} – Robin Muchiri`;
             }
-
-            try {
-                const isRedirect = !!(job && job.applyUrl);
-                ['attachments', 'email'].forEach(t => {
-                    const el = document.getElementById(`tab-${t}`);
-                    if (el) el.style.display = isRedirect ? 'none' : '';
-                });
-
-                const previewTab = document.getElementById('tab-preview');
-                if (previewTab) previewTab.style.display = isRedirect ? '' : 'none';
-
-                const submitBtn = document.getElementById('studioSubmitBtn');
-                if (submitBtn) {
-                    submitBtn.innerHTML = isRedirect
-                        ? `<i data-lucide="external-link" style="width: 15px; height: 15px;"></i> Complete Application`
-                        : `<i data-lucide="send" style="width: 15px; height: 15px;"></i> Submit Application`;
-                }
-
-                switchStudioTab('cv');
-                renderStudioAttachments();
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            } catch (err) {
-                console.error('Application Studio content error:', err);
-            }
+            const isRedirect = !!(job && job.applyUrl);
+            ['attachments', 'email'].forEach(t => document.getElementById(`tab-${t}`).style.display = isRedirect ? 'none' : '');
+            document.getElementById('tab-preview').style.display = isRedirect ? '' : 'none';
+            document.getElementById('studioSubmitBtn').innerHTML = isRedirect
+                ? `<i data-lucide="external-link" style="width: 15px; height: 15px;"></i> Complete Application`
+                : `<i data-lucide="send" style="width: 15px; height: 15px;"></i> Submit Application`;
+            switchStudioTab('cv');
+            renderStudioAttachments();
+            document.getElementById('applicationStudioModal').style.display = 'flex';
+            lucide.createIcons();
         }
 
         function closeApplicationStudio() {
