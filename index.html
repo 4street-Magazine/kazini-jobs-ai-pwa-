@@ -1196,29 +1196,24 @@
                         <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> Provided by Chania AI
                     </div>
                     <div class="detail-block" style="margin-bottom: 14px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 11.5px; color: var(--text-primary); font-weight: 600;">
+                        <div style="display: flex; align-items: center; margin-bottom: 10px; font-size: 11.5px; color: var(--text-primary); font-weight: 600;">
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--accent-orange);"></i>
                                 Ready CV
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 4px; color: var(--emerald-green); font-size: 11px; font-weight: 700;">
-                                <div style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--emerald-green); display: flex; align-items: center; justify-content: center; color: var(--emerald-green); background: transparent;">
+                                <span style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--emerald-green); color: var(--emerald-green); background: transparent; flex-shrink: 0;">
                                     <i data-lucide="check" style="width: 10px; height: 10px; stroke-width: 3;"></i>
-                                </div>
+                                </span>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--text-primary); font-weight: 600;">
+                        <div style="display: flex; align-items: center; font-size: 11.5px; color: var(--text-primary); font-weight: 600;">
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--accent-orange);"></i>
                                 Ready Cover Letter
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 4px; color: var(--emerald-green); font-size: 11px; font-weight: 700;">
-                                <div style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--emerald-green); display: flex; align-items: center; justify-content: center; color: var(--emerald-green); background: transparent;">
+                                <span style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--emerald-green); color: var(--emerald-green); background: transparent; flex-shrink: 0;">
                                     <i data-lucide="check" style="width: 10px; height: 10px; stroke-width: 3;"></i>
-                                </div>
+                                </span>
                             </div>
                         </div>
-                    </div>
 
                     
                 </div>
@@ -1714,7 +1709,7 @@
                 applyBtn.disabled = false;
             } else {
                 applyBtn.style.background = 'var(--premium-orange-gradient)';
-                applyBtn.innerHTML = `<i data-lucide="file-plus-2" style="width:14px; height:14px;"></i> Generate CV`;
+                applyBtn.innerHTML = `<i data-lucide="plus" style="width:15px; height:15px;"></i> Generate CV`;
                 applyBtn.disabled = false;
             }
 
@@ -1743,12 +1738,6 @@
                 document.getElementById('studioJobCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''}`;
                 document.getElementById('emailPreviewSubject').innerText = `Application: ${job.title} – Robin Muchiri`;
             }
-            const isRedirect = !!(job && job.applyUrl);
-            ['attachments', 'email'].forEach(t => document.getElementById(`tab-${t}`).style.display = isRedirect ? 'none' : '');
-            document.getElementById('tab-preview').style.display = isRedirect ? '' : 'none';
-            document.getElementById('studioSubmitBtn').innerHTML = isRedirect
-                ? `<i data-lucide="external-link" style="width: 15px; height: 15px;"></i> Complete Application`
-                : `<i data-lucide="send" style="width: 15px; height: 15px;"></i> Submit Application`;
             switchStudioTab('cv');
             renderStudioAttachments();
             document.getElementById('applicationStudioModal').style.display = 'flex';
@@ -1764,7 +1753,7 @@
         function switchStudioTab(tabName) {
             document.querySelectorAll('.studio-tab-content').forEach(el => el.style.display = 'none');
 
-            ['cv', 'cover', 'attachments', 'email', 'preview'].forEach(t => {
+            ['cv', 'cover', 'attachments', 'email'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 btn.style.color = 'var(--text-muted)';
                 btn.style.fontWeight = '600';
@@ -1783,9 +1772,7 @@
             }
 
             const submitBtn = document.getElementById('studioSubmitBtn');
-            const curJob = jobData.find(j => j.id === activeJobId);
-            const canSubmit = (curJob && curJob.applyUrl) ? tabName === 'preview' : tabName === 'email';
-            if (canSubmit) {
+            if (tabName === 'email') {
                 submitBtn.disabled = false;
                 submitBtn.style.background = '';
                 submitBtn.style.color = '';
@@ -1833,91 +1820,10 @@
             renderStudioAttachments();
         }
 
-
-        /* ===== Minimal PDF export (no external libraries) ===== */
-        function domToLines(root) {
-            const lines = []; let cur = '';
-            const flush = () => { const t = cur.replace(/\s+/g, ' ').trim(); if (t) lines.push(t); cur = ''; };
-            const BLOCK = /^(P|DIV|LI|UL|OL|H[1-6]|BR)$/;
-            (function walk(n) {
-                n.childNodes.forEach(c => {
-                    if (c.nodeType === 3) { cur += c.nodeValue; }
-                    else if (c.nodeType === 1) {
-                        const b = BLOCK.test(c.tagName);
-                        if (b) flush();
-                        if (c.tagName === 'LI') cur = '\u2022 ';
-                        walk(c);
-                        if (b) flush();
-                    }
-                });
-            })(root);
-            flush();
-            return lines;
-        }
-
-        function buildPdfBlob(lines, boldFirst) {
-            const enc = t => t.replace(/\u2022/g, '\x95').replace(/\u2013/g, '\x96').replace(/\u2014/g, '\x97')
-                .replace(/[\u2018\u2019]/g, '\x92').replace(/[\u201C\u201D]/g, '\x94').replace(/[^\x00-\xFF]/g, '?');
-            const esc = t => enc(t).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
-            const wrap = (t, max) => {
-                const out = []; let l = '';
-                t.split(' ').forEach(w => {
-                    if ((l + ' ' + w).trim().length > max) { if (l) out.push(l); l = w; }
-                    else l = l ? l + ' ' + w : w;
-                });
-                if (l) out.push(l);
-                return out;
-            };
-            const TOP = 842 - 56;
-            const pages = []; let cur = [], y = TOP;
-            lines.forEach((ln, i) => {
-                const title = boldFirst && i === 0;
-                const bold = title || /:$/.test(ln);
-                const size = title ? 16 : 11;
-                if (bold && i > 0) y -= 6;
-                wrap(ln, title ? 55 : 88).forEach(seg => {
-                    if (y < 56) { pages.push(cur.join('\n')); cur = []; y = TOP; }
-                    cur.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf 56 ${y} Td (${esc(seg)}) Tj ET`);
-                    y -= size + 5;
-                });
-            });
-            pages.push(cur.join('\n'));
-
-            const objs = [];
-            objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
-            objs[2] = `<< /Type /Pages /Kids [${pages.map((_, i) => `${5 + i * 2} 0 R`).join(' ')}] /Count ${pages.length} >>`;
-            objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
-            objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
-            pages.forEach((c, i) => {
-                objs[5 + i * 2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + i * 2} 0 R >>`;
-                objs[6 + i * 2] = `<< /Length ${c.length} >>\nstream\n${c}\nendstream`;
-            });
-            let pdf = '%PDF-1.4\n'; const off = [];
-            for (let i = 1; i < objs.length; i++) { off[i] = pdf.length; pdf += `${i} 0 obj\n${objs[i]}\nendobj\n`; }
-            const xref = pdf.length;
-            pdf += `xref\n0 ${objs.length}\n0000000000 65535 f \n`;
-            for (let i = 1; i < objs.length; i++) pdf += String(off[i]).padStart(10, '0') + ' 00000 n \n';
-            pdf += `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-            const bytes = new Uint8Array(pdf.length);
-            for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 255;
-            return new Blob([bytes], { type: 'application/pdf' });
-        }
-
-        function downloadStudioPdf(kind) {
-            const src = document.getElementById(kind === 'cv' ? 'content-cv' : 'content-cover').querySelector('.studio-editable');
-            const blob = buildPdfBlob(domToLines(src), kind === 'cv');
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = kind === 'cv' ? 'Job CV.pdf' : 'Cover Letter.pdf';
-            document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-        }
-
         function submitApplicationFromStudio() {
             if (!activeJobId) return;
             const job = jobData.find(j => j.id === activeJobId);
             if (job) {
-                if (job.applyUrl) window.open(job.applyUrl, '_blank', 'noopener');
                 job.status = 'completed';
                 job.appliedDate = "Applied just now";
 
