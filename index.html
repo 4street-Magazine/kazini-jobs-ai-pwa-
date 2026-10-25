@@ -719,6 +719,18 @@
             box-shadow: 0 0 0 3px var(--accent-orange-glow);
         }
 
+
+        /* Studio loading skeleton */
+        @keyframes skelShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @keyframes skelLogoPulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.12); opacity: 1; } }
+        .skel-line {
+            height: 9px; border-radius: 6px; margin-bottom: 8px;
+            background: linear-gradient(90deg, var(--bg-surface) 25%, var(--border-subtle) 50%, var(--bg-surface) 75%);
+            background-size: 200% 100%;
+            animation: skelShimmer 1.4s linear infinite;
+        }
+        .skel-logo { width: 30px; height: 30px; flex-shrink: 0; animation: skelLogoPulse 1.2s ease-in-out infinite; }
+
         /* CHAT UI & APPLICATION STUDIO (88vh drawer) */
         .chat-modal-card, .studio-modal-card {
             background: var(--bg-card);
@@ -1253,10 +1265,35 @@
                     <button onclick="switchStudioTab('cover')" id="tab-cover" style="background: none; border: none; padding: 10px 0; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;">Cover Letter</button>
                     <button onclick="switchStudioTab('attachments')" id="tab-attachments" style="background: none; border: none; padding: 10px 0; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;">Attachments</button>
                     <button onclick="switchStudioTab('email')" id="tab-email" style="background: none; border: none; padding: 10px 0; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;">Email</button>
+                    <button onclick="switchStudioTab('preview')" id="tab-preview" style="display: none; background: none; border: none; padding: 10px 0; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;">Summary</button>
+                </div>
+
+                <!-- Loading skeleton (shown ~3s while CV & Cover Letter generate) -->
+                <div id="studioSkeleton" style="display: none; padding: 16px 20px; overflow-y: auto; flex: 1; background: var(--bg-app);" aria-busy="true" aria-label="Generating your CV and cover letter">
+                    <div class="detail-block" style="margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+                            <svg class="skel-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/><path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/></svg>
+                            <div style="min-width: 0;">
+                                <div style="font-size: 12px; font-weight: 800; color: var(--text-primary);">Generating your CV</div>
+                                <div style="font-size: 10.5px; color: var(--text-muted);">Chania AI is writing…</div>
+                            </div>
+                        </div>
+                        <div class="skel-line" style="width:45%;"></div><div class="skel-line" style="width:70%;"></div><div class="skel-line" style="width:100%;"></div><div class="skel-line" style="width:92%;"></div><div class="skel-line" style="width:100%;"></div><div class="skel-line" style="width:60%;"></div><div class="skel-line" style="width:85%;"></div><div class="skel-line" style="width:78%;"></div>
+                    </div>
+                    <div class="detail-block" style="margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+                            <svg class="skel-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/><path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/></svg>
+                            <div style="min-width: 0;">
+                                <div style="font-size: 12px; font-weight: 800; color: var(--text-primary);">Generating your Cover Letter</div>
+                                <div style="font-size: 10.5px; color: var(--text-muted);">Chania AI is writing…</div>
+                            </div>
+                        </div>
+                        <div class="skel-line" style="width:40%;"></div><div class="skel-line" style="width:100%;"></div><div class="skel-line" style="width:95%;"></div><div class="skel-line" style="width:100%;"></div><div class="skel-line" style="width:88%;"></div><div class="skel-line" style="width:55%;"></div>
+                    </div>
                 </div>
 
                 <!-- Tab Contents -->
-                <div style="padding: 16px 20px; overflow-y: auto; flex: 1; background: var(--bg-app);">
+                <div id="studioContentArea" style="padding: 16px 20px; overflow-y: auto; flex: 1; background: var(--bg-app);">
 
                     <!-- CV (editable) -->
                     <div id="content-cv" class="studio-tab-content">
@@ -1300,6 +1337,34 @@
                             <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">PDF, DOCX up to 10MB</div>
                         </div>
                         <div id="attachmentListContainer"></div>
+                    </div>
+
+                    <!-- Summary (redirect applications) -->
+                    <div id="content-preview" class="studio-tab-content" style="display: none;">
+                        <div class="detail-block" style="margin-bottom: 12px; text-align: center; padding: 20px 16px;">
+                            <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--emerald-green-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto;">
+                                <i data-lucide="check-circle-2" style="width: 28px; height: 28px; color: var(--emerald-green);"></i>
+                            </div>
+                            <p style="font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">You are now ready to complete the application.</p>
+                            <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 8px;">When you click this button you will be redirected to employer portal and complete the application.</p>
+                            <p style="font-size: 12px; font-weight: 700; color: var(--text-primary); line-height: 1.6;">We wish you success. Good luck! 👊</p>
+                        </div>
+                        <div class="section-label-modal" style="margin-bottom: 8px;">Your documents</div>
+                        <div class="detail-block" onclick="downloadStudioPdf('cv')" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer;">
+                            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                <i data-lucide="file-text" style="width: 15px; height: 15px; color: var(--accent-orange); flex-shrink: 0;"></i>
+                                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Job CV.pdf</span>
+                            </div>
+                            <i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--emerald-green); flex-shrink: 0;"></i>
+                        </div>
+                        <div class="detail-block" onclick="downloadStudioPdf('cover')" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 0; cursor: pointer;">
+                            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                <i data-lucide="file-text" style="width: 15px; height: 15px; color: var(--accent-orange); flex-shrink: 0;"></i>
+                                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Cover Letter.pdf</span>
+                            </div>
+                            <i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--emerald-green); flex-shrink: 0;"></i>
+                        </div>
+                        <div style="font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 8px;">Tap a document to download it</div>
                     </div>
 
                     <!-- Email (employer address masked & body synced with cover letter) -->
@@ -1728,15 +1793,29 @@
 
         function handleApplyButtonClick() {
             const job = jobData.find(j => j.id === activeJobId);
-            if (job && job.status === 'none') {
+            const isFresh = !!(job && job.status === 'none');
+            if (isFresh) {
                 job.status = 'pending';
                 job.appliedDate = 'Pending';
             }
             closeModal();
-            openApplicationStudio();
+            openApplicationStudio(isFresh);
         }
 
-        function openApplicationStudio() {
+        let studioTimer = null;
+        let studioDlTimer = null;
+
+        function setStudioLoading(on) {
+            document.getElementById('studioSkeleton').style.display = on ? 'block' : 'none';
+            document.getElementById('studioContentArea').style.display = on ? 'none' : 'block';
+            ['cv', 'cover', 'attachments', 'email', 'preview'].forEach(t => {
+                const b = document.getElementById(`tab-${t}`);
+                b.style.pointerEvents = on ? 'none' : '';
+                b.style.opacity = on ? '0.5' : '';
+            });
+        }
+
+        function openApplicationStudio(generate) {
             const job = jobData.find(j => j.id === activeJobId);
             if (job) {
                 document.getElementById('studioJobTitle').innerText = job.title;
@@ -1751,11 +1830,23 @@
                 : `<i data-lucide="send" style="width: 15px; height: 15px;"></i> Submit Application`;
             switchStudioTab('cv');
             renderStudioAttachments();
+            clearTimeout(studioTimer); clearTimeout(studioDlTimer);
+            setStudioLoading(!!generate);
             document.getElementById('applicationStudioModal').style.display = 'flex';
             lucide.createIcons();
+            if (generate) {
+                studioTimer = setTimeout(() => {
+                    setStudioLoading(false);
+                    switchStudioTab('cv');
+                    // Auto-download both documents (staggered so the browser accepts both)
+                    downloadStudioPdf('cv');
+                    studioDlTimer = setTimeout(() => downloadStudioPdf('cover'), 700);
+                }, 3000);
+            }
         }
 
         function closeApplicationStudio() {
+            clearTimeout(studioTimer); clearTimeout(studioDlTimer);
             document.getElementById('applicationStudioModal').style.display = 'none';
             renderJobs();
             renderAppliedJobs();
