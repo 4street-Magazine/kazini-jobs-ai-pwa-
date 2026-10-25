@@ -720,6 +720,8 @@
         }
 
 
+        @keyframes mpesaSpin { to { transform: rotate(360deg); } }
+        #mpesaSendBtn:disabled { background: #9AD7B5 !important; cursor: not-allowed !important; }
         /* Studio loading skeleton */
         @keyframes skelShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         @keyframes skelLogoPulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.12); opacity: 1; } }
@@ -1398,6 +1400,38 @@
             </div>
         </div>
 
+        <!-- M-PESA STK PUSH (green branded) -->
+        <div class="modal-overlay" id="mpesaModal" style="z-index: 1100; justify-content: center; padding: 20px;">
+            <div role="dialog" aria-modal="true" aria-labelledby="mpesaTitle" style="background: var(--bg-card); width: 100%; max-width: 340px; border-radius: 18px; overflow: hidden; border: 1px solid var(--border-subtle); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeIn 0.2s ease;">
+                <div style="background: #00A651; padding: 14px 18px; display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 30px; height: 30px; border-radius: 8px; background: #fff; color: #00A651; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px;">M</div>
+                    <div id="mpesaTitle" style="color: #fff; font-size: 15px; font-weight: 800; letter-spacing: 0.04em;">M-PESA</div>
+                </div>
+
+                <div id="mpesaStepPin" style="padding: 18px;">
+                    <p style="font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.5; margin-bottom: 14px;">Do you want to pay KSH 30 to CHANIA AI for Job application services ?</p>
+                    <label for="mpesaPin" style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">Enter M-PESA PIN</label>
+                    <input id="mpesaPin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="••••" oninput="this.value = this.value.replace(/\D/g, ''); document.getElementById('mpesaSendBtn').disabled = this.value.length !== 4;" style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 20px; letter-spacing: 0.5em; text-align: center; border: 2px solid #00A651; border-radius: 12px; background: var(--bg-surface); color: var(--text-primary); outline: none; margin-bottom: 16px;">
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="cancelMpesa()" style="flex: 1; min-height: 46px; border-radius: 12px; border: 1.5px solid #00A651; background: transparent; color: #00A651; font-size: 13px; font-weight: 800; cursor: pointer;">Cancel</button>
+                        <button id="mpesaSendBtn" onclick="confirmMpesa()" disabled style="flex: 1; min-height: 46px; border-radius: 12px; border: none; background: #00A651; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; opacity: 1;">Send</button>
+                    </div>
+                </div>
+
+                <div id="mpesaStepWait" style="display: none; padding: 30px 18px; text-align: center;">
+                    <div style="width: 38px; height: 38px; border-radius: 50%; border: 4px solid rgba(0,166,81,0.2); border-top-color: #00A651; margin: 0 auto 14px; animation: mpesaSpin 0.9s linear infinite;"></div>
+                    <div style="font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">Processing payment…</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Please wait while we confirm your M-PESA payment.</div>
+                </div>
+
+                <div id="mpesaStepFail" style="display: none; padding: 22px 18px; text-align: center;">
+                    <div style="font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">Payment not completed</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">We could not confirm your payment. Please try again.</div>
+                    <button onclick="openMpesaPrompt()" style="width: 100%; min-height: 46px; border-radius: 12px; border: none; background: #00A651; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer;">Try again</button>
+                </div>
+            </div>
+        </div>
+
         <!-- CHAT UI MODAL -->
         <div class="modal-overlay" id="chatModal" onclick="closeChatModal()">
             <div class="chat-modal-card" onclick="event.stopPropagation()">
@@ -1794,12 +1828,60 @@
         function handleApplyButtonClick() {
             const job = jobData.find(j => j.id === activeJobId);
             const isFresh = !!(job && job.status === 'none');
-            if (isFresh) {
-                job.status = 'pending';
-                job.appliedDate = 'Pending';
-            }
             closeModal();
-            openApplicationStudio(isFresh);
+            if (isFresh) {
+                openMpesaPrompt();          // pay KSH 30 first, then generate
+            } else {
+                openApplicationStudio(false); // resuming: already paid
+            }
+        }
+
+        /* ===== M-PESA STK PUSH ===== */
+        const MPESA_AMOUNT = 30;
+        const MPESA_SIMULATE = true; // set to false once your backend exposes POST /mpesa/stk (Daraja)
+
+        function mpesaStep(step) {
+            ['Pin', 'Wait', 'Fail'].forEach(n => document.getElementById('mpesaStep' + n).style.display = (n === step) ? 'block' : 'none');
+        }
+
+        function openMpesaPrompt() {
+            const pin = document.getElementById('mpesaPin');
+            pin.value = '';
+            document.getElementById('mpesaSendBtn').disabled = true;
+            mpesaStep('Pin');
+            document.getElementById('mpesaModal').style.display = 'flex';
+            setTimeout(() => pin.focus(), 150);
+        }
+
+        function cancelMpesa() {
+            document.getElementById('mpesaPin').value = '';
+            document.getElementById('mpesaModal').style.display = 'none';
+        }
+
+        // The PIN typed here is never stored or sent anywhere; it is cleared immediately.
+        async function requestMpesaPayment(job) {
+            if (MPESA_SIMULATE) {
+                await new Promise(r => setTimeout(r, 2000));
+                return true;
+            }
+            // Real flow: backend triggers the Daraja STK push and confirms via the callback
+            const res = await api('/mpesa/stk', { amount: MPESA_AMOUNT, jobId: job.id, deviceId });
+            return !!(res && res.paid);
+        }
+
+        async function confirmMpesa() {
+            const job = jobData.find(j => j.id === activeJobId);
+            if (!job) return;
+            document.getElementById('mpesaPin').value = '';
+            mpesaStep('Wait');
+            let ok = false;
+            try { ok = await requestMpesaPayment(job); } catch (e) { ok = false; }
+            if (!ok) { mpesaStep('Fail'); return; }
+            document.getElementById('mpesaModal').style.display = 'none';
+            job.paid = true;
+            job.status = 'pending';
+            job.appliedDate = 'Pending';
+            openApplicationStudio(true);
         }
 
         let studioTimer = null;
