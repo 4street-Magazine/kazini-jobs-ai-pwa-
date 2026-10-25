@@ -1497,6 +1497,8 @@
                 company: "Nexus Labs Africa",
                 verified: true,
                 location: "Nairobi",
+                jobType: "Full-Time",
+                remote: false,
                 skills: ["Python", "SQL", "Tableau"],
                 moreSkills: 1,
                 salary: "KSH 20,000 - 40,000",
@@ -1518,6 +1520,8 @@
                 company: "SafariTech Ventures",
                 verified: true,
                 location: "Mombasa",
+                jobType: "Part-Time",
+                remote: false,
                 skills: ["Excel", "Tableau", "PowerBI"],
                 moreSkills: 1,
                 salary: "KSH 40,000 - 80,000",
@@ -1539,6 +1543,8 @@
                 company: "Kilimo Data Solutions",
                 verified: true,
                 location: "Nairobi",
+                jobType: "Full-Time",
+                remote: true,
                 skills: ["PowerBI", "R", "SQL"],
                 moreSkills: 1,
                 salary: "KSH 25,000 - 45,000",
@@ -1570,7 +1576,12 @@
 
         function renderJobs() {
             const container = document.getElementById('jobList');
-            container.innerHTML = jobData.map(job => `
+            const visibleJobs = jobData.filter(jobMatchesFilter);
+            if (!visibleJobs.length) {
+                container.innerHTML = `<div class="glass-panel" style="text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:4px">No jobs here yet</div><div style="font-size:12px;color:var(--text-secondary)">We will notify you when a matching job is found.</div></div>`;
+                return;
+            }
+            container.innerHTML = visibleJobs.map(job => `
                 <div class="job-card">
                     <div class="card-header-row">
                         <div>
@@ -1692,9 +1703,20 @@
             }
         }
 
-        function selectChip(el) {
+        let activeJobFilter = 'all';
+
+        function jobMatchesFilter(j) {
+            if (activeJobFilter === 'remote') return !!j.remote;
+            if (activeJobFilter === 'fulltime') return j.jobType === 'Full-Time';
+            if (activeJobFilter === 'parttime') return j.jobType === 'Part-Time';
+            return true;
+        }
+
+        function selectChip(el, filter) {
             document.querySelectorAll('.chip-bar .filter-chip').forEach(chip => chip.classList.remove('active'));
             el.classList.add('active');
+            activeJobFilter = filter || 'all';
+            renderJobs();
         }
 
         function updateHeaderContext(tabId) {
@@ -1706,18 +1728,11 @@
                 container.classList.remove('hidden');
                 container.innerHTML = `
                     <div class="chip-bar">
-                        <div class="filter-chip active" onclick="selectChip(this)">
-                            <i data-lucide="sparkles" style="width: 11px; height: 11px;"></i>
-                            All Matches
-                        </div>
-                        <div class="filter-chip" onclick="selectChip(this)">
-                            <i data-lucide="wifi" style="width: 11px; height: 11px;"></i>
-                            Remote
-                        </div>
-                        <div class="filter-chip" onclick="selectChip(this)">
-                            <i data-lucide="briefcase" style="width: 11px; height: 11px;"></i>
-                            Full-Time
-                        </div>
+                        ${[['all', 'sparkles', 'All Matches'], ['remote', 'wifi', 'Remote'], ['fulltime', 'briefcase', 'Full-Time'], ['parttime', 'clock', 'Part-Time']].map(([k, ic, label]) => `
+                        <div class="filter-chip ${activeJobFilter === k ? 'active' : ''}" onclick="selectChip(this, '${k}')">
+                            <i data-lucide="${ic}" style="width: 11px; height: 11px;"></i>
+                            ${label}
+                        </div>`).join('')}
                     </div>
                 `;
             } else if (tabId === 'savedTab') {
@@ -2103,6 +2118,37 @@
             }
         }
 
+        /* ===== Load this user's matched jobs from the worker ===== */
+        function mapMatchToJob(m, i) {
+            const pct = Math.round(Math.min(1, Math.max(0, m.score)) * 100);
+            return {
+                id: 1000 + i, serverId: m.id,
+                title: m.title, company: m.company || 'Employer', verified: false,
+                location: m.location || '',
+                jobType: m.employment_type || '', remote: !!m.remote,
+                skills: [], moreSkills: 0,
+                salary: 'Salary not listed',
+                matchScore: pct + '%',
+                bookmarked: false, status: 'none', appliedDate: '',
+                desc: m.description || '', companyAbout: '', resp: [],
+                applyUrl: m.apply_url || undefined
+            };
+        }
+
+        async function loadMyMatches() {
+            if (!CHANIA_API || !localStorage.getItem('chania_profile')) return; // no profile yet: keep demo jobs
+            try {
+                const r = await fetch(`${CHANIA_API}/matches?deviceId=${encodeURIComponent(deviceId)}`);
+                if (!r.ok) return;
+                const data = await r.json();
+                jobData.splice(0, jobData.length, ...(data.matches || []).map(mapMatchToJob));
+                renderJobs();
+                renderAppliedJobs();
+                lucide.createIcons();
+            } catch (e) { /* offline or worker not ready: keep what is on screen */ }
+        }
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMyMatches(); });
+
         function openChatModal() {
             document.getElementById('chatModal').style.display = 'flex';
             if (!document.getElementById('chatMessages').children.length) startChat();
@@ -2121,7 +2167,8 @@
         }
 
         /* ===== CHANIA CHAT FLOW ===== */
-        const CHANIA_API = ''; 
+        const CHANIA_API = 'https://chaniajobsai.muchirirobinson49.workers.dev'; 
+        
         const byId = id => document.getElementById(id);
         const deviceId = localStorage.getItem('chania_device') || (() => { const d = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(); localStorage.setItem('chania_device', d); return d; })();
         let profile = { past_jobs: [] };
@@ -2133,7 +2180,6 @@
         const cw = p => p.currently_working === 'Yes', we = p => p.work_experience === 'Yes';
         const STEPS = [
             { k: 'full_name', q: 'So, what is your full name?', ex: 'eg. John Kamau' },
-            { k: 'gender', q: 'Are you male or female?', opts: ['Male', 'Female'] },
             { k: 'education', q: 'What is your highest education level?', singleLineOpts: ['Kcse', 'Diploma', 'Degree', 'Masters', 'PHD'] },
             { k: 'institution', q: 'Which institution did you attend?' },
             { k: 'course', q: 'What did you study?' },
@@ -2349,7 +2395,7 @@
         function submitProfile() {
             flow = 'chat'; setQuickReplies([]);
             localStorage.setItem('chania_profile', JSON.stringify(profile));
-            api('/profile', { deviceId, status: 'submitted', profile });
+            api('/profile', { deviceId, status: 'submitted', profile }).then(() => setTimeout(loadMyMatches, 8000));
             bot('Confirmed 🎉<br><br>You have successfully created your career profile! We shall notify you through SMS once we find a job opportunity that matches your profile. Until then, enjoy a nice time.<br><br>Chania AI 😊');
         }
         async function freeChat(text) {
@@ -2433,8 +2479,34 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderContext('discoverTab');
             renderJobs();
+            loadMyMatches();
             lucide.createIcons();
         });
+    </script>
+    <script>
+        /* ===== Auto-update: register service worker and refresh when a new version is live ===== */
+        if ('serviceWorker' in navigator) {
+            const hadController = !!navigator.serviceWorker.controller;
+            let reloading = false;
+            const busy = () => ['applicationStudioModal', 'chatModal', 'mpesaModal', 'jobModal']
+                .some(id => { const el = document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; });
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!hadController || reloading) return;   // first install: nothing to refresh
+                const go = () => { reloading = true; location.reload(); };
+                if (!busy()) return go();
+                // user is mid-task (chat, payment, application): refresh as soon as they finish
+                const t = setInterval(() => { if (!busy()) { clearInterval(t); go(); } }, 2000);
+            });
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    const check = () => reg.update().catch(() => {});
+                    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+                    setInterval(check, 5 * 60 * 1000);
+                }).catch(() => {});
+            });
+        }
     </script>
 </body>
 </html>
