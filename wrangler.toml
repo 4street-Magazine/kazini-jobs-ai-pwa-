@@ -1,0 +1,29 @@
+name = "chaniajobsai"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "chania-db"
+database_id = "a831a7e7-5aa0-4b9a-a49f-512d3cfe6dc5"
+
+[[vectorize]]
+binding = "PROFILE_VEC"
+index_name = "chania-profiles"
+
+[[vectorize]]
+binding = "JOB_VEC"
+index_name = "chania-jobs"
+
+[triggers]
+crons = ["0 */6 * * *"]
+
+[vars]
+ALLOWED_ORIGIN = "*"
+WORKER_URL = "https://chaniajobsai.muchirirobinson49.workers.dev"
+MATCH_THRESHOLD = "0.62"
+BRIGHTDATA_DATASET_ID = ""
+BRIGHTDATA_INPUTS = '[{"location":"Nairobi","keyword":"data analyst","country":"KE"},{"location":"Kenya","keyword":"software developer","country":"KE"}]'
