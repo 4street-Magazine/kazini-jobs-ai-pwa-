@@ -183,6 +183,8 @@
             max-width: 800px;
             margin: 0 auto;
             width: 100%;
+            min-width: 0;
+            overflow: hidden;
         }
 
         .header-context-bar.hidden {
@@ -192,16 +194,28 @@
         /* Filter Chips Bar */
         .chip-bar {
             display: flex;
-            gap: 8px;
+            flex-wrap: nowrap;
+            gap: 6px;
             align-items: center;
+            width: 100%;
+            min-width: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .chip-bar::-webkit-scrollbar {
+            display: none;
         }
 
         .filter-chip {
             background: var(--bg-surface);
             color: var(--text-secondary);
-            font-size: 11.5px;
+            font-size: 10.5px;
             font-weight: 600;
-            padding: 5px 12px;
+            padding: 6px 10px;
             border-radius: 20px;
             border: 1px solid var(--border-subtle);
             white-space: nowrap;
@@ -209,7 +223,8 @@
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
+            flex: 0 0 auto;
         }
 
         .filter-chip.active {
@@ -732,6 +747,41 @@
             animation: skelShimmer 1.4s linear infinite;
         }
         .skel-logo { width: 30px; height: 30px; flex-shrink: 0; animation: skelLogoPulse 1.2s ease-in-out infinite; }
+        /* Tab loading skeletons */
+        .skel-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 12px; }
+        .skel-card {
+            background: var(--bg-card); border-radius: 16px; padding: 16px 18px;
+            box-shadow: var(--card-shadow); border: 1px solid var(--border-color);
+        }
+        .skel-card + .skel-card { margin-top: 14px; }
+        .skel-pill { display: inline-block; height: 20px; width: 64px; border-radius: 20px; margin: 0 6px 0 0;
+            background: linear-gradient(90deg, var(--bg-surface) 25%, var(--border-subtle) 50%, var(--bg-surface) 75%);
+            background-size: 200% 100%; animation: skelShimmer 1.4s linear infinite; }
+        .skel-slim { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .skel-slim .skel-line:last-child { margin-bottom: 0; }
+        .skel-dot { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; margin: 0;
+            background: linear-gradient(90deg, var(--bg-surface) 25%, var(--border-subtle) 50%, var(--bg-surface) 75%);
+            background-size: 200% 100%; animation: skelShimmer 1.4s linear infinite; }
+
+        /* Launch splash screen */
+        #splash {
+            position: fixed; inset: 0; z-index: 9999;
+            background: var(--bg-app);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.45s ease, visibility 0.45s ease;
+            padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+        }
+        #splash.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+        #splash .splash-logo { width: 88px; height: 88px; animation: skelLogoPulse 1.4s ease-in-out infinite; }
+        #splash .splash-name { margin-top: 14px; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary); }
+        #splash .splash-name span { color: var(--accent-orange); }
+        #splash .splash-dots { display: flex; gap: 7px; margin-top: 22px; }
+        #splash .splash-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-orange); opacity: 0.25; animation: splashDot 1.2s ease-in-out infinite; }
+        #splash .splash-dots i:nth-child(2) { animation-delay: 0.2s; }
+        #splash .splash-dots i:nth-child(3) { animation-delay: 0.4s; }
+        #splash .splash-tag { position: absolute; bottom: calc(28px + env(safe-area-inset-bottom)); font-size: 14px; font-weight: 400; color: var(--text-secondary); letter-spacing: 0.3px; }
+        @keyframes splashDot { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-5px); } }
+        @media (prefers-reduced-motion: reduce) { #splash .splash-logo, #splash .splash-dots i { animation: none; } }
 
         /* CHAT UI & APPLICATION STUDIO (88vh drawer) */
         .chat-modal-card, .studio-modal-card {
@@ -1038,6 +1088,19 @@
     </style>
 </head>
 <body class="dark-theme">
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <symbol id="chania-logo" viewBox="14 8 80 80">
+            <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
+            <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
+        </symbol>
+    </svg>
+    <div id="splash" role="status" aria-label="Loading Chania AI">
+        <svg class="splash-logo" aria-hidden="true"><use href="#chania-logo"/></svg>
+        <div class="splash-name">Chania <span>AI</span></div>
+        <div class="splash-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="splash-tag">We hunt. You apply.</div>
+    </div>
 
     <div class="phone-frame">
         <!-- STICKY TOP SECTION -->
@@ -1045,11 +1108,7 @@
             <div class="app-header">
                 <div class="brand-logo">
                     <div class="svg-logo-icon">
-                        <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
-                            <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
-                            <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
-                        </svg>
+                        <svg width="34" height="34" aria-hidden="true"><use href="#chania-logo"/></svg>
                     </div>
                     <div class="brand-text">Chania <span>AI</span></div>
                 </div>
@@ -1109,11 +1168,7 @@
 
         <!-- FIXED FLOATING ACTION BUTTON (FAB) - OPENS CHAT UI -->
         <button class="fab-kazini" onclick="openChatModal()" aria-label="Open Chania Assistant">
-            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/>
-                <path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/>
-                <path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/>
-            </svg>
+            <svg width="32" height="32" aria-hidden="true"><use href="#chania-logo"/></svg>
         </button>
 
         <!-- Bottom Navigation Bar -->
@@ -1274,7 +1329,7 @@
                 <div id="studioSkeleton" style="display: none; padding: 16px 20px; overflow-y: auto; flex: 1; background: var(--bg-app);" aria-busy="true" aria-label="Generating your CV and cover letter">
                     <div class="detail-block" style="margin-bottom: 12px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
-                            <svg class="skel-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/><path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/></svg>
+                            <svg class="skel-logo" aria-hidden="true"><use href="#chania-logo"/></svg>
                             <div style="min-width: 0;">
                                 <div style="font-size: 12px; font-weight: 800; color: var(--text-primary);">Generating your CV</div>
                                 <div style="font-size: 10.5px; color: var(--text-muted);">Chania AI is writing…</div>
@@ -1284,7 +1339,7 @@
                     </div>
                     <div class="detail-block" style="margin-bottom: 12px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
-                            <svg class="skel-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/><path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/></svg>
+                            <svg class="skel-logo" aria-hidden="true"><use href="#chania-logo"/></svg>
                             <div style="min-width: 0;">
                                 <div style="font-size: 12px; font-weight: 800; color: var(--text-primary);">Generating your Cover Letter</div>
                                 <div style="font-size: 10.5px; color: var(--text-muted);">Chania AI is writing…</div>
@@ -1574,6 +1629,42 @@
         let activeJobId = null;
         let studioAttachments = ['Job CV attachment.pdf'];
 
+        /* ===== Loading skeletons for every tab (CHANIA logo symbol + shimmer) ===== */
+        const SKEL_LOGO = `<svg class="skel-logo" aria-hidden="true"><use href="#chania-logo"/></svg>`;
+        const SKEL_TABS = {
+            discoverTab: { box: 'jobList', title: 'Finding jobs for you', kind: 'job' },
+            savedTab: { box: 'savedJobList', title: 'Loading your saved roles', kind: 'slim' },
+            appliedTab: { box: 'appliedJobList', title: 'Loading your applications', kind: 'slim' },
+            profileTab: { box: 'profileView', title: 'Loading your profile', kind: 'profile' }
+        };
+        const skelHead = t => `<div class="skel-head">${SKEL_LOGO}<div style="min-width:0"><div style="font-size:12px;font-weight:800;color:var(--text-primary)">${t}</div><div style="font-size:10.5px;color:var(--text-muted)">Chania AI is working…</div></div></div>`;
+        const skelJobCard = () => `<div class="skel-card"><div class="skel-line" style="width:60%;height:12px"></div><div class="skel-line" style="width:40%;margin-bottom:14px"></div><div style="margin-bottom:14px"><span class="skel-pill"></span><span class="skel-pill"></span></div><div class="skel-line" style="width:30%"></div><div class="skel-line" style="width:100%;margin-bottom:0"></div></div>`;
+        const skelSlimCard = () => `<div class="skel-card"><div class="skel-slim"><div style="flex:1;min-width:0"><div class="skel-line" style="width:55%;height:12px"></div><div class="skel-line" style="width:35%"></div><div class="skel-line" style="width:70%"></div></div><div class="skel-dot"></div></div></div>`;
+        const skelProfileCard = () => `<div class="skel-card"><div class="skel-line" style="width:50%;height:14px"></div><div class="skel-line" style="width:35%;margin-bottom:16px"></div><div class="skel-line" style="width:100%"></div><div class="skel-line" style="width:92%"></div><div class="skel-line" style="width:80%;margin-bottom:16px"></div><div><span class="skel-pill"></span><span class="skel-pill"></span><span class="skel-pill"></span></div></div>`;
+        function skeletonHtml(tabId) {
+            const c = SKEL_TABS[tabId];
+            const card = c.kind === 'job' ? skelJobCard : c.kind === 'slim' ? skelSlimCard : skelProfileCard;
+            const n = c.kind === 'profile' ? 1 : 3;
+            return skelHead(c.title) + Array.from({ length: n }, card).join('');
+        }
+        function showSkeleton(tabId) {
+            const c = SKEL_TABS[tabId], el = byId(c.box);
+            if (!el) return;
+            if (tabId === 'profileTab') { const sh = byId('profileShield'); if (sh) sh.style.display = 'none'; }
+            el.setAttribute('aria-busy', 'true');
+            el.innerHTML = skeletonHtml(tabId);
+        }
+        const skelTimers = {};
+        function withSkeleton(tabId, renderFn, ms) {
+            clearTimeout(skelTimers[tabId]);
+            showSkeleton(tabId);
+            skelTimers[tabId] = setTimeout(() => {
+                const el = byId(SKEL_TABS[tabId].box);
+                if (el) el.removeAttribute('aria-busy');
+                renderFn();
+            }, ms || 700);
+        }
+
         function renderJobs() {
             const container = document.getElementById('jobList');
             const visibleJobs = jobData.filter(jobMatchesFilter);
@@ -1728,9 +1819,9 @@
                 container.classList.remove('hidden');
                 container.innerHTML = `
                     <div class="chip-bar">
-                        ${[['all', 'sparkles', 'All Matches'], ['remote', 'wifi', 'Remote'], ['fulltime', 'briefcase', 'Full-Time'], ['parttime', 'clock', 'Part-Time']].map(([k, ic, label]) => `
+                        ${[['all', 'sparkles', 'All'], ['remote', 'wifi', 'Remote'], ['fulltime', 'briefcase', 'Full-time'], ['parttime', 'clock', 'Part-time']].map(([k, ic, label]) => `
                         <div class="filter-chip ${activeJobFilter === k ? 'active' : ''}" onclick="selectChip(this, '${k}')">
-                            <i data-lucide="${ic}" style="width: 11px; height: 11px;"></i>
+                            <i data-lucide="${ic}" style="width: 12px; height: 12px; flex-shrink: 0;"></i>
                             ${label}
                         </div>`).join('')}
                     </div>
@@ -1765,6 +1856,7 @@
         }
 
         function switchTab(element, tabId) {
+            const wasActive = document.getElementById(tabId).classList.contains('active');
             document.querySelectorAll('.bottom-nav .nav-item').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
 
@@ -1773,13 +1865,11 @@
 
             updateHeaderContext(tabId);
 
-            if (tabId === 'discoverTab') {
-                renderJobs();
-            } else if (tabId === 'savedTab') {
-                renderSavedJobs();
-            } else if (tabId === 'appliedTab') {
-                renderAppliedJobs();
-            }
+            const renderers = { discoverTab: renderJobs, savedTab: renderSavedJobs, appliedTab: renderAppliedJobs, profileTab: renderProfile };
+            const fn = renderers[tabId];
+            if (!fn) return;
+            if (wasActive) { fn(); return; }   // re-tapping the open tab: refresh instantly
+            withSkeleton(tabId, fn);
         }
 
         function toggleTheme() {
@@ -2478,8 +2568,18 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderContext('discoverTab');
-            renderJobs();
-            loadMyMatches();
+            const live = !!(CHANIA_API && localStorage.getItem('chania_profile'));
+            if (live) {
+                // real matches are being fetched: hold the skeleton until they arrive (8s cap)
+                showSkeleton('discoverTab');
+                Promise.race([loadMyMatches(), new Promise(r => setTimeout(r, 8000))]).then(() => {
+                    byId('jobList').removeAttribute('aria-busy');
+                    renderJobs();
+                    lucide.createIcons();
+                });
+            } else {
+                withSkeleton('discoverTab', () => { renderJobs(); lucide.createIcons(); }, 800);
+            }
             lucide.createIcons();
         });
     </script>
@@ -2507,6 +2607,20 @@
                 }).catch(() => {});
             });
         }
+    </script>
+    <script>
+        /* ===== Splash screen: hide after the page is ready (min 1.6s, max 4s) ===== */
+        (function () {
+            const sp = document.getElementById('splash'), t0 = Date.now();
+            let done = false;
+            const hide = () => {
+                if (done || !sp) return; done = true;
+                sp.classList.add('hide');
+                setTimeout(() => sp.remove(), 600);
+            };
+            window.addEventListener('load', () => setTimeout(hide, Math.max(0, 1600 - (Date.now() - t0))));
+            setTimeout(hide, 4000);
+        })();
     </script>
 </body>
 </html>
