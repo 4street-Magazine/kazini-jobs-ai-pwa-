@@ -2598,7 +2598,7 @@
         /* ===== VIBE: YouTube Shorts feed (served by the worker's /vibe endpoint; API key stays server-side) =====
            YouTube embed rules followed: nothing is drawn over the player, it is never cropped or restyled,
            playback starts only once a card is mostly on screen, and only one player runs at a time. */
-        const VIBE_TOPICS = [['trending', 'trending-up', 'Trending'], ['comedy', 'smile', 'Comedy'], ['music', 'music', 'Music'], ['sports', 'trophy', 'Sports'], ['motivation', 'flame', 'Motivation'], ['tech', 'cpu', 'Tech']];
+        const VIBE_TOPICS = [['trending', 'trending-up', 'Trending'], ['business', 'briefcase', 'Business'], ['money', 'wallet', 'Money'], ['mindset', 'brain', 'Mindset'], ['career', 'rocket', 'Career'], ['productivity', 'timer', 'Productivity'], ['skills', 'lightbulb', 'Skills'], ['wellness', 'heart-pulse', 'Wellness']];
         let vibeTopic = 'trending', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false;
         let vibeMuted = false, vibeCur = -1, vibeObs = null, vibeGen = 0, vibeSettleAt = 0, vibeUiTimer = null, vibeWired = false, vibeResume = -1;
 
