@@ -2600,7 +2600,7 @@
            playback starts only once a card is mostly on screen, and only one player runs at a time. */
         const VIBE_TOPICS = [['trending', 'trending-up', 'Trending'], ['comedy', 'smile', 'Comedy'], ['music', 'music', 'Music'], ['sports', 'trophy', 'Sports'], ['motivation', 'flame', 'Motivation'], ['tech', 'cpu', 'Tech']];
         let vibeTopic = 'trending', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false;
-        let vibeMuted = true, vibeCur = -1, vibeObs = null, vibeGen = 0, vibeSettleAt = 0, vibeUiTimer = null, vibeWired = false, vibeResume = -1;
+        let vibeMuted = false, vibeCur = -1, vibeObs = null, vibeGen = 0, vibeSettleAt = 0, vibeUiTimer = null, vibeWired = false, vibeResume = -1;
 
         function setVibeVars() {
             const top = document.querySelector('.sticky-top-section'), nav = document.querySelector('.bottom-nav');
@@ -2668,7 +2668,7 @@
                 const sp = card.querySelector('.vibe-spin'); if (sp) sp.remove();
                 if (f.contentWindow) f.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
                 vibeSettleAt = Date.now() + 2500;
-                if (!vibeMuted) setTimeout(() => vibeCmd(card, 'unMute'), 700);
+                if (!vibeMuted) { setTimeout(() => vibeCmd(card, 'unMute'), 700); setTimeout(() => vibeCmd(card, 'unMute'), 1600); }
             };
             card.querySelector('.vibe-stage').appendChild(f);
             vibeHideSoon(1000);   // a video is playing: tuck the header away
