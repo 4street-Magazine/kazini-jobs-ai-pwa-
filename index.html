@@ -315,26 +315,43 @@
 
 
         /* ===== VIBE TAB (YouTube Shorts feed) ===== */
-        #vibeTab { position: relative; margin: -16px -20px -90px -20px; }
+        /* Immersive: the feed fills the screen above the bottom nav. The header slides away while a video plays
+           and slides back (pushing the feed down, never covering it) while the user swipes. */
+        body.vibe-on { overflow: hidden; }
+        body.vibe-on .fab-kazini { display: none; }
+        body.vibe-on .app-body { padding: 0; max-width: none; }
+        body.vibe-on .sticky-top-section {
+            position: fixed; top: 0; left: 0; right: 0;
+            transform: translate3d(0, -100%, 0);
+            transition: transform 0.25s ease;
+            box-shadow: none;
+        }
+        body.vibe-on.vibe-ui .sticky-top-section { transform: translate3d(0, 0, 0); }
+
+        #vibeTab {
+            position: fixed; top: 0; left: 0; right: 0; bottom: var(--nav-h, 64px);
+            overflow: hidden; background: #000; animation: none;
+        }
         .vibe-feed {
-            height: var(--vibe-h, 70vh);
+            height: 100%;
             overflow-y: scroll;
             scroll-snap-type: y mandatory;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
             background: #000;
             scrollbar-width: none;
+            transition: transform 0.25s ease;
         }
         .vibe-feed::-webkit-scrollbar { display: none; }
+        body.vibe-ui .vibe-feed { transform: translate3d(0, var(--head-h, 0px), 0); }
         .vibe-card {
-            height: var(--vibe-h, 70vh);
+            height: 100%;
             scroll-snap-align: start;
             scroll-snap-stop: always;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #000;
-            position: relative;
             overflow: hidden;
         }
         .vibe-stage {
@@ -345,35 +362,17 @@
             background: #000 center / cover no-repeat;
         }
         .vibe-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-        .vibe-tap { position: absolute; inset: 0; z-index: 2; }
-        .vibe-info {
-            position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
-            padding: 40px 78px 18px 14px;
-            background: linear-gradient(to top, rgba(0,0,0,0.78), transparent);
-            color: #fff; pointer-events: none;
-        }
-        .vibe-info .v-title { font-size: 13px; font-weight: 700; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .vibe-info .v-chan { font-size: 11px; opacity: 0.8; margin-top: 3px; }
-        .vibe-flash {
-            position: absolute; top: 50%; left: 50%; z-index: 4; width: 64px; height: 64px; margin: -32px 0 0 -32px;
-            border-radius: 50%; background: rgba(0,0,0,0.5); color: #fff;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: opacity 0.25s;
-        }
-        .vibe-flash.show { opacity: 1; }
         .vibe-spin {
-            position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px; z-index: 1;
+            position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px; z-index: 0;
             border: 3px solid rgba(255,255,255,0.25); border-top-color: var(--accent-orange); border-radius: 50%;
             animation: vibeSpin 0.8s linear infinite;
         }
         @keyframes vibeSpin { to { transform: rotate(360deg); } }
-        .vibe-mute {
-            position: absolute; top: 12px; right: 14px; z-index: 10; width: 38px; height: 38px; border-radius: 50%;
-            background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.18); color: #fff;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
-        }
-        .vibe-mute:active { transform: scale(0.92); }
-        .vibe-empty { height: var(--vibe-h, 70vh); display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg-app); }
+        /* Pinned: the video still fits at (almost) full width with the header showing, so the header simply stays */
+        body.vibe-pin #vibeTab { top: var(--head-h, 0px); }
+        body.vibe-pin .vibe-feed { transform: none; }
+        body.vibe-on.vibe-pin .sticky-top-section { transform: translate3d(0, 0, 0); }
+        .vibe-empty { height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg-app); }
 
         /* Tab Views */
         .tab-view {
@@ -1193,9 +1192,6 @@
 
             <!-- TAB 2: VIBE (YouTube Shorts) -->
             <div class="tab-view" id="vibeTab">
-                <button class="vibe-mute" id="vibeMute" onclick="toggleVibeMute()" aria-label="Toggle sound">
-                    <i data-lucide="volume-x" style="width:18px;height:18px;"></i>
-                </button>
                 <div class="vibe-feed" id="vibeFeed"></div>
             </div>
 
@@ -1893,6 +1889,7 @@
 
             updateHeaderContext(tabId);
 
+            vibeSetMode(tabId === 'vibeTab');
             if (tabId !== 'vibeTab') vibeStop();
             if (tabId === 'vibeTab') { renderVibe(); return; }
 
@@ -2598,35 +2595,60 @@
         }
 
 
-        /* ===== VIBE: YouTube Shorts feed (served by the worker's /vibe endpoint; API key stays server-side) ===== */
+        /* ===== VIBE: YouTube Shorts feed (served by the worker's /vibe endpoint; API key stays server-side) =====
+           YouTube embed rules followed: nothing is drawn over the player, it is never cropped or restyled,
+           playback starts only once a card is mostly on screen, and only one player runs at a time. */
         const VIBE_TOPICS = [['foryou', 'sparkles', 'For You'], ['comedy', 'smile', 'Comedy'], ['music', 'music', 'Music'], ['sports', 'trophy', 'Sports'], ['motivation', 'flame', 'Motivation'], ['tech', 'cpu', 'Tech']];
-        let vibeTopic = 'foryou', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false, vibeMuted = true, vibeCur = -1, vibeObs = null, vibeGen = 0;
+        let vibeTopic = 'foryou', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false;
+        let vibeMuted = true, vibeCur = -1, vibeObs = null, vibeGen = 0, vibeSettleAt = 0, vibeUiTimer = null, vibeWired = false, vibeResume = -1;
 
-        function setVibeHeight() {
+        function setVibeVars() {
             const top = document.querySelector('.sticky-top-section'), nav = document.querySelector('.bottom-nav');
-            const h = window.innerHeight - (top ? top.offsetHeight : 0) - (nav ? nav.offsetHeight : 0);
-            document.documentElement.style.setProperty('--vibe-h', Math.max(300, h) + 'px');
+            const r = document.documentElement.style;
+            if (nav) r.setProperty('--nav-h', nav.offsetHeight + 'px');
+            if (top) r.setProperty('--head-h', top.offsetHeight + 'px');
+            if (!document.body.classList.contains('vibe-on')) return;
+            // Keep the header if the video loses under ~8% of its width by sharing the screen with it
+            const free = window.innerHeight - (nav ? nav.offsetHeight : 0) - (top ? top.offsetHeight : 0);
+            const pin = free * 9 / 16 >= 0.92 * window.innerWidth;
+            if (pin !== document.body.classList.contains('vibe-pin')) {
+                document.body.classList.toggle('vibe-pin', pin);
+                const card = document.querySelector(`.vibe-card[data-i="${vibeCur}"]`), feed = byId('vibeFeed');
+                if (card && feed) requestAnimationFrame(() => { feed.scrollTop = card.offsetTop; });
+            }
         }
-        window.addEventListener('resize', () => { setVibeHeight(); });
+        window.addEventListener('resize', setVibeVars);
+
+        // Header: hidden while a video plays, back while the user swipes
+        function vibeUi(show) { document.body.classList.toggle('vibe-ui', !!show); }
+        function vibeHideSoon(ms) {
+            clearTimeout(vibeUiTimer);
+            vibeUiTimer = setTimeout(() => { if (vibeCur >= 0) vibeUi(false); }, ms);
+        }
+        function vibeShowUi(holdMs) { vibeUi(true); vibeHideSoon(holdMs || 1100); }
+        function vibeSetMode(on) {
+            document.body.classList.toggle('vibe-on', on);
+            if (!on) document.body.classList.remove('vibe-pin');
+            clearTimeout(vibeUiTimer);
+            vibeUi(on);
+            setVibeVars();
+        }
 
         function vibeCmd(card, func) {
             const f = card && card.querySelector('iframe');
             if (f && f.contentWindow) f.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: [] }), '*');
         }
-        function vibeSyncMuteIcon() {
-            const b = byId('vibeMute');
-            if (b) { b.innerHTML = `<i data-lucide="${vibeMuted ? 'volume-x' : 'volume-2'}" style="width:18px;height:18px;"></i>`; lucide.createIcons(); }
-        }
-        function toggleVibeMute() {
-            vibeMuted = !vibeMuted;
-            vibeSyncMuteIcon();
-            const card = document.querySelector(`.vibe-card[data-i="${vibeCur}"]`);
-            vibeCmd(card, vibeMuted ? 'mute' : 'unMute');
-        }
+
+        // Remember the sound choice the viewer makes with YouTube's own speaker icon
+        window.addEventListener('message', e => {
+            if (!/^https:\/\/www\.youtube(-nocookie)?\.com$/.test(e.origin)) return;
+            let d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (_) { return; }
+            if (d && d.event === 'infoDelivery' && d.info && typeof d.info.muted === 'boolean' && Date.now() > vibeSettleAt) vibeMuted = d.info.muted;
+        });
 
         function vibeCardHtml(v, i) {
             const id = escapeHtml(v.id);
-            return `<div class="vibe-card" data-i="${i}" data-id="${id}"><div class="vibe-stage" style="background-image:url('https://i.ytimg.com/vi/${id}/hqdefault.jpg')"><div class="vibe-spin"></div><div class="vibe-tap" onclick="vibeTap(${i})"></div><div class="vibe-flash"></div><div class="vibe-info"><div class="v-title">${escapeHtml(v.title || '')}</div><div class="v-chan">${escapeHtml(v.channel || '')}</div></div></div></div>`;
+            return `<div class="vibe-card" data-i="${i}" data-id="${id}"><div class="vibe-stage" style="background-image:url('https://i.ytimg.com/vi/${id}/hqdefault.jpg')"><div class="vibe-spin"></div></div></div>`;
         }
 
         function vibeActivate(i) {
@@ -2638,12 +2660,18 @@
             const origin = location.protocol.startsWith('http') ? '&origin=' + encodeURIComponent(location.origin) : '';
             const id = card.dataset.id;
             const f = document.createElement('iframe');
-            f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${id}&controls=0&modestbranding=1&rel=0&fs=0&iv_load_policy=3&enablejsapi=1${origin}`;
-            f.allow = 'autoplay; encrypted-media; picture-in-picture';
+            f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${id}&rel=0&enablejsapi=1${origin}`;
+            f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+            f.allowFullscreen = true;
             f.setAttribute('title', 'Vibe video');
-            f.onload = () => { const sp = card.querySelector('.vibe-spin'); if (sp) sp.remove(); if (!vibeMuted) setTimeout(() => vibeCmd(card, 'unMute'), 600); };
-            card.querySelector('.vibe-stage').insertBefore(f, card.querySelector('.vibe-tap'));
-            card.dataset.playing = '1';
+            f.onload = () => {
+                const sp = card.querySelector('.vibe-spin'); if (sp) sp.remove();
+                if (f.contentWindow) f.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+                vibeSettleAt = Date.now() + 2500;
+                if (!vibeMuted) setTimeout(() => vibeCmd(card, 'unMute'), 700);
+            };
+            card.querySelector('.vibe-stage').appendChild(f);
+            vibeHideSoon(1000);   // a video is playing: tuck the header away
             if (vibeList.length - i <= 3) loadVibe();
         }
         function vibeDeactivate() {
@@ -2651,19 +2679,6 @@
             vibeCur = -1;
         }
         function vibeStop() { vibeDeactivate(); }
-
-        function vibeTap(i) {
-            const card = document.querySelector(`.vibe-card[data-i="${i}"]`);
-            if (!card || !card.querySelector('iframe')) return;
-            const playing = card.dataset.playing === '1';
-            vibeCmd(card, playing ? 'pauseVideo' : 'playVideo');
-            card.dataset.playing = playing ? '0' : '1';
-            const fl = card.querySelector('.vibe-flash');
-            fl.innerHTML = `<i data-lucide="${playing ? 'pause' : 'play'}" style="width:28px;height:28px;"></i>`;
-            lucide.createIcons();
-            fl.classList.add('show');
-            setTimeout(() => fl.classList.remove('show'), 500);
-        }
 
         function vibeObserve() {
             if (vibeObs) vibeObs.disconnect();
@@ -2677,6 +2692,7 @@
         function vibeMessage(title, sub, btn) {
             return `<div class="vibe-empty"><div class="glass-panel" style="text-align:center;width:100%"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:4px">${title}</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:${btn ? 12 : 0}px">${sub}</div>${btn ? `<button class="apply-btn-full" onclick="${btn[1]}">${btn[0]}</button>` : ''}</div></div>`;
         }
+        const vibeSpinner = () => `<div class="vibe-empty" style="background:#000"><div class="vibe-spin" style="position:static;margin:0"></div></div>`;
 
         async function loadVibe(reset) {
             if (vibeLoading) return;
@@ -2693,6 +2709,7 @@
             vibeNext = r && r.next ? r.next : null;
             if (!vibeList.length && !fresh.length) {
                 feed.innerHTML = vibeMessage(r ? 'No videos right now' : "Couldn't load videos", r ? 'Try another topic.' : 'Check your connection and try again.', ['Retry', 'vibeRetry()']);
+                vibeUi(true);
                 return;
             }
             const start = vibeList.length;
@@ -2700,19 +2717,19 @@
             if (!start) feed.innerHTML = '';
             feed.insertAdjacentHTML('beforeend', fresh.map((v, k) => vibeCardHtml(v, start + k)).join(''));
             vibeObserve();
-            lucide.createIcons();
         }
-        function vibeRetry() { byId('vibeFeed').innerHTML = ''; loadVibe(true); }
+        function vibeRetry() { byId('vibeFeed').innerHTML = vibeSpinner(); loadVibe(true); }
 
         function renderVibe() {
-            setVibeHeight();
-            vibeSyncMuteIcon();
+            setVibeVars();
             const feed = byId('vibeFeed');
+            if (!vibeWired) { feed.addEventListener('scroll', () => vibeShowUi(1100), { passive: true }); vibeWired = true; }
+            vibeUi(true);
             if (!CHANIA_API) { feed.innerHTML = vibeMessage('Vibe is not available', 'The video service is not configured yet.'); return; }
-            if (!vibeList.length) { feed.innerHTML = `<div class="vibe-empty" style="background:#000"><div class="vibe-spin" style="position:static;margin:0"></div></div>`; loadVibe(true); }
+            if (!vibeList.length) { feed.innerHTML = vibeSpinner(); loadVibe(true); }
             else {
                 // came back to the tab: resume the card the user was on
-                const cur = Math.max(0, vibeCur);
+                const cur = Math.max(0, vibeResume >= 0 ? vibeResume : vibeCur);
                 vibeObserve();
                 const card = feed.querySelector(`.vibe-card[data-i="${cur}"]`);
                 if (card) { feed.scrollTop = card.offsetTop; vibeActivate(cur); }
@@ -2720,19 +2737,20 @@
         }
         function selectVibeTopic(k) {
             if (k === vibeTopic) return;
-            vibeTopic = k; vibeGen++; vibeLoading = false;
+            vibeTopic = k; vibeGen++; vibeLoading = false; vibeResume = -1;
             vibeDeactivate();
             updateHeaderContext('vibeTab');
+            setVibeVars();
             const feed = byId('vibeFeed');
             feed.scrollTop = 0;
-            feed.innerHTML = `<div class="vibe-empty" style="background:#000"><div class="vibe-spin" style="position:static;margin:0"></div></div>`;
+            feed.innerHTML = vibeSpinner();
+            vibeUi(true);
             loadVibe(true);
         }
         document.addEventListener('visibilitychange', () => {
-            const onVibe = document.getElementById('vibeTab').classList.contains('active');
-            if (!onVibe) return;
-            if (document.hidden) { const c = vibeCur; vibeDeactivate(); vibeCur = -1; window._vibeResume = c; }
-            else if (window._vibeResume >= 0) { vibeActivate(window._vibeResume); }
+            if (!document.getElementById('vibeTab').classList.contains('active')) return;
+            if (document.hidden) { vibeResume = vibeCur; vibeDeactivate(); }
+            else if (vibeResume >= 0) { vibeActivate(vibeResume); }
         });
 
         document.addEventListener('DOMContentLoaded', () => {
