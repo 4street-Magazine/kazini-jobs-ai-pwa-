@@ -313,6 +313,68 @@
             height: 20px;
         }
 
+
+        /* ===== VIBE TAB (YouTube Shorts feed) ===== */
+        #vibeTab { position: relative; margin: -16px -20px -90px -20px; }
+        .vibe-feed {
+            height: var(--vibe-h, 70vh);
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            background: #000;
+            scrollbar-width: none;
+        }
+        .vibe-feed::-webkit-scrollbar { display: none; }
+        .vibe-card {
+            height: var(--vibe-h, 70vh);
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+        .vibe-stage {
+            position: relative;
+            height: 100%;
+            max-width: 100%;
+            aspect-ratio: 9 / 16;
+            background: #000 center / cover no-repeat;
+        }
+        .vibe-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+        .vibe-tap { position: absolute; inset: 0; z-index: 2; }
+        .vibe-info {
+            position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+            padding: 40px 78px 18px 14px;
+            background: linear-gradient(to top, rgba(0,0,0,0.78), transparent);
+            color: #fff; pointer-events: none;
+        }
+        .vibe-info .v-title { font-size: 13px; font-weight: 700; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .vibe-info .v-chan { font-size: 11px; opacity: 0.8; margin-top: 3px; }
+        .vibe-flash {
+            position: absolute; top: 50%; left: 50%; z-index: 4; width: 64px; height: 64px; margin: -32px 0 0 -32px;
+            border-radius: 50%; background: rgba(0,0,0,0.5); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.25s;
+        }
+        .vibe-flash.show { opacity: 1; }
+        .vibe-spin {
+            position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px; z-index: 1;
+            border: 3px solid rgba(255,255,255,0.25); border-top-color: var(--accent-orange); border-radius: 50%;
+            animation: vibeSpin 0.8s linear infinite;
+        }
+        @keyframes vibeSpin { to { transform: rotate(360deg); } }
+        .vibe-mute {
+            position: absolute; top: 12px; right: 14px; z-index: 10; width: 38px; height: 38px; border-radius: 50%;
+            background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.18); color: #fff;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .vibe-mute:active { transform: scale(0.92); }
+        .vibe-empty { height: var(--vibe-h, 70vh); display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg-app); }
+
         /* Tab Views */
         .tab-view {
             display: none;
@@ -1129,9 +1191,12 @@
                 <div class="job-list" id="jobList"></div>
             </div>
 
-            <!-- TAB 2: SAVED JOBS -->
-            <div class="tab-view" id="savedTab">
-                <div class="slim-card-list" id="savedJobList"></div>
+            <!-- TAB 2: VIBE (YouTube Shorts) -->
+            <div class="tab-view" id="vibeTab">
+                <button class="vibe-mute" id="vibeMute" onclick="toggleVibeMute()" aria-label="Toggle sound">
+                    <i data-lucide="volume-x" style="width:18px;height:18px;"></i>
+                </button>
+                <div class="vibe-feed" id="vibeFeed"></div>
             </div>
 
             <!-- TAB 3: APPLIED JOBS -->
@@ -1178,9 +1243,9 @@
                     <i data-lucide="compass" style="width:20px; height:20px;"></i>
                     <span>Discover</span>
                 </div>
-                <div class="nav-item" onclick="switchTab(this, 'savedTab')">
-                    <i data-lucide="heart" style="width:20px; height:20px;"></i>
-                    <span>Saved</span>
+                <div class="nav-item" onclick="switchTab(this, 'vibeTab')">
+                    <i data-lucide="clapperboard" style="width:20px; height:20px;"></i>
+                    <span>Vibe</span>
                 </div>
                 <div class="nav-item" onclick="switchTab(this, 'appliedTab')">
                     <i data-lucide="clipboard-list" style="width:20px; height:20px;"></i>
@@ -1633,7 +1698,6 @@
         const SKEL_LOGO = `<svg class="skel-logo" aria-hidden="true"><use href="#chania-logo"/></svg>`;
         const SKEL_TABS = {
             discoverTab: { box: 'jobList', title: 'Finding jobs for you', kind: 'job' },
-            savedTab: { box: 'savedJobList', title: 'Loading your saved roles', kind: 'slim' },
             appliedTab: { box: 'appliedJobList', title: 'Loading your applications', kind: 'slim' },
             profileTab: { box: 'profileView', title: 'Loading your profile', kind: 'profile' }
         };
@@ -1669,7 +1733,8 @@
             const container = document.getElementById('jobList');
             const visibleJobs = jobData.filter(jobMatchesFilter);
             if (!visibleJobs.length) {
-                container.innerHTML = `<div class="glass-panel" style="text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:4px">No jobs here yet</div><div style="font-size:12px;color:var(--text-secondary)">We will notify you when a matching job is found.</div></div>`;
+                const sv = activeJobFilter === 'saved';
+                container.innerHTML = `<div class="glass-panel" style="text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:4px">${sv ? 'No saved roles yet' : 'No jobs here yet'}</div><div style="font-size:12px;color:var(--text-secondary)">${sv ? 'Tap the heart on any job card to save it here.' : 'We will notify you when a matching job is found.'}</div></div>`;
                 return;
             }
             container.innerHTML = visibleJobs.map(job => `
@@ -1709,37 +1774,6 @@
                     </div>
                 </div>
             `).join('');
-            lucide.createIcons();
-        }
-
-        function renderSavedJobs() {
-            const container = document.getElementById('savedJobList');
-            const savedJobs = jobData.filter(j => j.bookmarked);
-            
-            if (savedJobs.length === 0) {
-                container.innerHTML = `
-                    <div class="glass-panel" style="text-align: center; padding: 36px 16px;">
-                        <i data-lucide="heart" style="width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
-                        <div style="font-weight: 700; color: var(--text-primary); font-size: 14px;">No Saved Roles Yet</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Tap the heart icon on any job card to save it here.</div>
-                    </div>`;
-            } else {
-                container.innerHTML = savedJobs.map(job => `
-                    <div class="slim-card" onclick="openModal(${job.id})">
-                        <div>
-                            <div class="slim-job-title">${job.title}</div>
-                            <div class="slim-company-name">
-                                ${job.company}
-                                ${job.verified ? scallopedBadgeSVG : ''}
-                            </div>
-                            <div class="slim-meta-text">${job.location} • ${job.salary}</div>
-                        </div>
-                        <button class="bookmark-btn" onclick="event.stopPropagation(); toggleBookmark(${job.id})">
-                            <i data-lucide="heart" style="width: 18px; height: 18px; fill: var(--accent-orange); color: var(--accent-orange);"></i>
-                        </button>
-                    </div>
-                `).join('');
-            }
             lucide.createIcons();
         }
 
@@ -1785,12 +1819,6 @@
             if(job) {
                 job.bookmarked = !job.bookmarked;
                 renderJobs();
-                renderSavedJobs();
-                
-                const activeTab = document.querySelector('.tab-view.active').id;
-                if(activeTab === 'savedTab') {
-                    updateHeaderContext('savedTab');
-                }
             }
         }
 
@@ -1800,6 +1828,7 @@
             if (activeJobFilter === 'remote') return !!j.remote;
             if (activeJobFilter === 'fulltime') return j.jobType === 'Full-Time';
             if (activeJobFilter === 'parttime') return j.jobType === 'Part-Time';
+            if (activeJobFilter === 'saved') return !!j.bookmarked;
             return true;
         }
 
@@ -1812,29 +1841,28 @@
 
         function updateHeaderContext(tabId) {
             const container = document.getElementById('headerContextContainer');
-            const savedCount = jobData.filter(j => j.bookmarked).length;
             const appliedCount = jobData.filter(j => j.status !== 'none').length;
 
             if (tabId === 'discoverTab') {
                 container.classList.remove('hidden');
                 container.innerHTML = `
                     <div class="chip-bar">
-                        ${[['all', 'sparkles', 'All'], ['remote', 'wifi', 'Remote'], ['fulltime', 'briefcase', 'Full-time'], ['parttime', 'clock', 'Part-time']].map(([k, ic, label]) => `
+                        ${[['all', 'sparkles', 'All'], ['remote', 'wifi', 'Remote'], ['fulltime', 'briefcase', 'Full-time'], ['parttime', 'clock', 'Part-time'], ['saved', 'heart', 'Saved']].map(([k, ic, label]) => `
                         <div class="filter-chip ${activeJobFilter === k ? 'active' : ''}" onclick="selectChip(this, '${k}')">
                             <i data-lucide="${ic}" style="width: 12px; height: 12px; flex-shrink: 0;"></i>
                             ${label}
                         </div>`).join('')}
                     </div>
                 `;
-            } else if (tabId === 'savedTab') {
+            } else if (tabId === 'vibeTab') {
                 container.classList.remove('hidden');
                 container.innerHTML = `
-                    <div class="summary-banner">
-                        <div class="summary-title">
-                            <i data-lucide="heart" style="width:14px; height:14px; color: var(--accent-orange); fill: var(--accent-orange-light);"></i>
-                            Saved Positions
-                        </div>
-                        <span class="summary-count">${savedCount} BOOKMARKED</span>
+                    <div class="chip-bar">
+                        ${VIBE_TOPICS.map(([k, ic, label]) => `
+                        <div class="filter-chip ${vibeTopic === k ? 'active' : ''}" onclick="selectVibeTopic('${k}')">
+                            <i data-lucide="${ic}" style="width: 12px; height: 12px; flex-shrink: 0;"></i>
+                            ${label}
+                        </div>`).join('')}
                     </div>
                 `;
             } else if (tabId === 'appliedTab') {
@@ -1865,7 +1893,10 @@
 
             updateHeaderContext(tabId);
 
-            const renderers = { discoverTab: renderJobs, savedTab: renderSavedJobs, appliedTab: renderAppliedJobs, profileTab: renderProfile };
+            if (tabId !== 'vibeTab') vibeStop();
+            if (tabId === 'vibeTab') { renderVibe(); return; }
+
+            const renderers = { discoverTab: renderJobs, appliedTab: renderAppliedJobs, profileTab: renderProfile };
             const fn = renderers[tabId];
             if (!fn) return;
             if (wasActive) { fn(); return; }   // re-tapping the open tab: refresh instantly
@@ -2565,6 +2596,144 @@
         function escapeHtml(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
+
+
+        /* ===== VIBE: YouTube Shorts feed (served by the worker's /vibe endpoint; API key stays server-side) ===== */
+        const VIBE_TOPICS = [['foryou', 'sparkles', 'For You'], ['comedy', 'smile', 'Comedy'], ['music', 'music', 'Music'], ['sports', 'trophy', 'Sports'], ['motivation', 'flame', 'Motivation'], ['tech', 'cpu', 'Tech']];
+        let vibeTopic = 'foryou', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false, vibeMuted = true, vibeCur = -1, vibeObs = null, vibeGen = 0;
+
+        function setVibeHeight() {
+            const top = document.querySelector('.sticky-top-section'), nav = document.querySelector('.bottom-nav');
+            const h = window.innerHeight - (top ? top.offsetHeight : 0) - (nav ? nav.offsetHeight : 0);
+            document.documentElement.style.setProperty('--vibe-h', Math.max(300, h) + 'px');
+        }
+        window.addEventListener('resize', () => { setVibeHeight(); });
+
+        function vibeCmd(card, func) {
+            const f = card && card.querySelector('iframe');
+            if (f && f.contentWindow) f.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: [] }), '*');
+        }
+        function vibeSyncMuteIcon() {
+            const b = byId('vibeMute');
+            if (b) { b.innerHTML = `<i data-lucide="${vibeMuted ? 'volume-x' : 'volume-2'}" style="width:18px;height:18px;"></i>`; lucide.createIcons(); }
+        }
+        function toggleVibeMute() {
+            vibeMuted = !vibeMuted;
+            vibeSyncMuteIcon();
+            const card = document.querySelector(`.vibe-card[data-i="${vibeCur}"]`);
+            vibeCmd(card, vibeMuted ? 'mute' : 'unMute');
+        }
+
+        function vibeCardHtml(v, i) {
+            const id = escapeHtml(v.id);
+            return `<div class="vibe-card" data-i="${i}" data-id="${id}"><div class="vibe-stage" style="background-image:url('https://i.ytimg.com/vi/${id}/hqdefault.jpg')"><div class="vibe-spin"></div><div class="vibe-tap" onclick="vibeTap(${i})"></div><div class="vibe-flash"></div><div class="vibe-info"><div class="v-title">${escapeHtml(v.title || '')}</div><div class="v-chan">${escapeHtml(v.channel || '')}</div></div></div></div>`;
+        }
+
+        function vibeActivate(i) {
+            if (i === vibeCur) return;
+            vibeDeactivate();
+            const card = document.querySelector(`.vibe-card[data-i="${i}"]`);
+            if (!card) return;
+            vibeCur = i;
+            const origin = location.protocol.startsWith('http') ? '&origin=' + encodeURIComponent(location.origin) : '';
+            const id = card.dataset.id;
+            const f = document.createElement('iframe');
+            f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${id}&controls=0&modestbranding=1&rel=0&fs=0&iv_load_policy=3&enablejsapi=1${origin}`;
+            f.allow = 'autoplay; encrypted-media; picture-in-picture';
+            f.setAttribute('title', 'Vibe video');
+            f.onload = () => { const sp = card.querySelector('.vibe-spin'); if (sp) sp.remove(); if (!vibeMuted) setTimeout(() => vibeCmd(card, 'unMute'), 600); };
+            card.querySelector('.vibe-stage').insertBefore(f, card.querySelector('.vibe-tap'));
+            card.dataset.playing = '1';
+            if (vibeList.length - i <= 3) loadVibe();
+        }
+        function vibeDeactivate() {
+            document.querySelectorAll('.vibe-card iframe').forEach(f => f.remove());
+            vibeCur = -1;
+        }
+        function vibeStop() { vibeDeactivate(); }
+
+        function vibeTap(i) {
+            const card = document.querySelector(`.vibe-card[data-i="${i}"]`);
+            if (!card || !card.querySelector('iframe')) return;
+            const playing = card.dataset.playing === '1';
+            vibeCmd(card, playing ? 'pauseVideo' : 'playVideo');
+            card.dataset.playing = playing ? '0' : '1';
+            const fl = card.querySelector('.vibe-flash');
+            fl.innerHTML = `<i data-lucide="${playing ? 'pause' : 'play'}" style="width:28px;height:28px;"></i>`;
+            lucide.createIcons();
+            fl.classList.add('show');
+            setTimeout(() => fl.classList.remove('show'), 500);
+        }
+
+        function vibeObserve() {
+            if (vibeObs) vibeObs.disconnect();
+            const feed = byId('vibeFeed');
+            vibeObs = new IntersectionObserver(entries => {
+                entries.forEach(e => { if (e.isIntersecting) vibeActivate(+e.target.dataset.i); });
+            }, { root: feed, threshold: 0.75 });
+            feed.querySelectorAll('.vibe-card').forEach(c => vibeObs.observe(c));
+        }
+
+        function vibeMessage(title, sub, btn) {
+            return `<div class="vibe-empty"><div class="glass-panel" style="text-align:center;width:100%"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:4px">${title}</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:${btn ? 12 : 0}px">${sub}</div>${btn ? `<button class="apply-btn-full" onclick="${btn[1]}">${btn[0]}</button>` : ''}</div></div>`;
+        }
+
+        async function loadVibe(reset) {
+            if (vibeLoading) return;
+            if (reset) { vibeList = []; vibeSeen = new Set(); vibeNext = null; }
+            else if (vibeList.length && !vibeNext) return;   // no more pages
+            vibeLoading = true;
+            const gen = vibeGen, feed = byId('vibeFeed');
+            const r = await api('/vibe', { topic: vibeTopic, pageToken: vibeNext || undefined, deviceId });
+            vibeLoading = false;
+            if (gen !== vibeGen) return;                      // user switched topic meanwhile
+            const fresh = ((r && r.videos) || []).filter(v => v && v.id && !vibeSeen.has(v.id));
+            if (!vibeList.length) fresh.sort(() => Math.random() - 0.5);   // vary the opening order
+            fresh.forEach(v => vibeSeen.add(v.id));
+            vibeNext = r && r.next ? r.next : null;
+            if (!vibeList.length && !fresh.length) {
+                feed.innerHTML = vibeMessage(r ? 'No videos right now' : "Couldn't load videos", r ? 'Try another topic.' : 'Check your connection and try again.', ['Retry', 'vibeRetry()']);
+                return;
+            }
+            const start = vibeList.length;
+            vibeList = vibeList.concat(fresh);
+            if (!start) feed.innerHTML = '';
+            feed.insertAdjacentHTML('beforeend', fresh.map((v, k) => vibeCardHtml(v, start + k)).join(''));
+            vibeObserve();
+            lucide.createIcons();
+        }
+        function vibeRetry() { byId('vibeFeed').innerHTML = ''; loadVibe(true); }
+
+        function renderVibe() {
+            setVibeHeight();
+            vibeSyncMuteIcon();
+            const feed = byId('vibeFeed');
+            if (!CHANIA_API) { feed.innerHTML = vibeMessage('Vibe is not available', 'The video service is not configured yet.'); return; }
+            if (!vibeList.length) { feed.innerHTML = `<div class="vibe-empty" style="background:#000"><div class="vibe-spin" style="position:static;margin:0"></div></div>`; loadVibe(true); }
+            else {
+                // came back to the tab: resume the card the user was on
+                const cur = Math.max(0, vibeCur);
+                vibeObserve();
+                const card = feed.querySelector(`.vibe-card[data-i="${cur}"]`);
+                if (card) { feed.scrollTop = card.offsetTop; vibeActivate(cur); }
+            }
+        }
+        function selectVibeTopic(k) {
+            if (k === vibeTopic) return;
+            vibeTopic = k; vibeGen++; vibeLoading = false;
+            vibeDeactivate();
+            updateHeaderContext('vibeTab');
+            const feed = byId('vibeFeed');
+            feed.scrollTop = 0;
+            feed.innerHTML = `<div class="vibe-empty" style="background:#000"><div class="vibe-spin" style="position:static;margin:0"></div></div>`;
+            loadVibe(true);
+        }
+        document.addEventListener('visibilitychange', () => {
+            const onVibe = document.getElementById('vibeTab').classList.contains('active');
+            if (!onVibe) return;
+            if (document.hidden) { const c = vibeCur; vibeDeactivate(); vibeCur = -1; window._vibeResume = c; }
+            else if (window._vibeResume >= 0) { vibeActivate(window._vibeResume); }
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderContext('discoverTab');
