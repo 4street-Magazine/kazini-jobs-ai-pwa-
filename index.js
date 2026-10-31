@@ -207,12 +207,13 @@ async function notifyPending(env) {
 // Secret: npx wrangler secret put YOUTUBE_API_KEY  (YouTube Data API v3 key, restricted to that API)
 const VIBE_QUERIES = {
   trending: 'shorts',
-  foryou: 'funny shorts',
-  comedy: 'funny comedy shorts',
-  music: 'music shorts',
-  sports: 'football highlights shorts',
-  motivation: 'motivation success shorts',
-  tech: 'tech gadgets shorts',
+  business: 'business entrepreneurship tips shorts',
+  money: 'personal finance money tips shorts',
+  mindset: 'mindset motivation self improvement shorts',
+  career: 'career advice job interview tips shorts',
+  productivity: 'productivity habits study tips shorts',
+  skills: 'learn new skills communication tips shorts',
+  wellness: 'health fitness mental wellness shorts',
 };
 const VIBE_CACHE_SECONDS = 12 * 60 * 60; // search.list costs 100 quota units of the 10,000/day
 
