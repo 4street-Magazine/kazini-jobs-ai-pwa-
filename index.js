@@ -74,6 +74,7 @@ async function saveProfile(env, ctx, body) {
 }
 
 async function embedAndMatchProfile(env, profileId, text, hash) {
+  if (!env.PROFILE_VEC || !env.JOB_VEC) return;   // Vectorize not set up yet: profile stays unembedded and is picked up once it is added
   const [vec] = await embed(env, [text]);
   await env.PROFILE_VEC.upsert([{ id: `p_${profileId}`, values: vec, metadata: { profileId } }]);
   await env.DB.prepare('UPDATE profiles SET profile_text = ?, text_hash = ?, embedded = 1 WHERE id = ?').bind(text, hash, profileId).run();
@@ -149,6 +150,7 @@ const jobToText = j => `${j.title}\n${j.company}\n${j.location}\n${j.description
 
 async function embedAndMatchJobs(env, jobs) {
   if (!jobs.length) return;
+  if (!env.JOB_VEC || !env.PROFILE_VEC) return;   // Vectorize not set up yet: jobs stay embedded = 0 and are retried by the cron later
   const vecs = await embed(env, jobs.map(jobToText));
   await env.JOB_VEC.upsert(jobs.map((j, i) => ({ id: `j_${j.id}`, values: vecs[i], metadata: { title: j.title.slice(0, 100) } })));
   await env.DB.batch(jobs.map(j => env.DB.prepare('UPDATE jobs SET embedded = 1 WHERE id = ?').bind(j.id)));
@@ -204,6 +206,7 @@ async function notifyPending(env) {
 /* ---------- Vibe: YouTube Shorts feed ---------- */
 // Secret: npx wrangler secret put YOUTUBE_API_KEY  (YouTube Data API v3 key, restricted to that API)
 const VIBE_QUERIES = {
+  trending: 'shorts',
   foryou: 'funny shorts',
   comedy: 'Kenyan comedy shorts',
   music: 'afrobeats shorts',
@@ -221,7 +224,7 @@ function isoToSeconds(d) {
 async function handleVibe(req, env, ctx) {
   let body = {};
   try { body = await req.json(); } catch (e) {}
-  const topic = VIBE_QUERIES[body.topic] ? body.topic : 'foryou';
+  const topic = VIBE_QUERIES[body.topic] ? body.topic : 'trending';
   const pageToken = typeof body.pageToken === 'string' ? body.pageToken.slice(0, 200) : '';
 
   const cache = caches.default;
@@ -237,6 +240,11 @@ async function handleVibe(req, env, ctx) {
     maxResults: '25', q: VIBE_QUERIES[topic] + ' #shorts', key: env.YOUTUBE_API_KEY,
   });
   if (pageToken) sp.set('pageToken', pageToken);
+  if (topic === 'trending') {
+    // most-viewed Shorts from the last 7 days
+    sp.set('order', 'viewCount');
+    sp.set('publishedAfter', new Date(Date.now() - 7 * 86400000).toISOString());
+  }
 
   const sr = await fetch('https://www.googleapis.com/youtube/v3/search?' + sp);
   if (!sr.ok) { console.error('youtube search', sr.status); return json(env, { videos: [] }, 502); }
@@ -255,7 +263,7 @@ async function handleVibe(req, env, ctx) {
     .map(v => ({ id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle }));
 
   const payload = JSON.stringify({ videos, next: sd.nextPageToken || null });
-  ctx.waitUntil(cache.put(cacheKey, new Response(payload, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${VIBE_CACHE_SECONDS}` } })));
+  ctx.waitUntil(cache.put(cacheKey, new Response(payload, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${topic === 'trending' ? 6 * 3600 : VIBE_CACHE_SECONDS}` } })));
   return new Response(payload, { headers: { 'Content-Type': 'application/json', ...cors(env) } });
 }
 
@@ -307,7 +315,3 @@ export default {
     ctx.waitUntil((async () => { await retryUnembedded(env); await triggerBrightData(env); })());
   },
 };
-
-
-
-
