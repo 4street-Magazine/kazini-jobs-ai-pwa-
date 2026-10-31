@@ -201,6 +201,64 @@ async function notifyPending(env) {
   }
 }
 
+/* ---------- Vibe: YouTube Shorts feed ---------- */
+// Secret: npx wrangler secret put YOUTUBE_API_KEY  (YouTube Data API v3 key, restricted to that API)
+const VIBE_QUERIES = {
+  foryou: 'funny shorts',
+  comedy: 'Kenyan comedy shorts',
+  music: 'afrobeats shorts',
+  sports: 'football highlights shorts',
+  motivation: 'motivation success shorts',
+  tech: 'tech gadgets shorts',
+};
+const VIBE_CACHE_SECONDS = 12 * 60 * 60; // search.list costs 100 quota units of the 10,000/day
+
+function isoToSeconds(d) {
+  const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(d || '') || [];
+  return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+}
+
+async function handleVibe(req, env, ctx) {
+  let body = {};
+  try { body = await req.json(); } catch (e) {}
+  const topic = VIBE_QUERIES[body.topic] ? body.topic : 'foryou';
+  const pageToken = typeof body.pageToken === 'string' ? body.pageToken.slice(0, 200) : '';
+
+  const cache = caches.default;
+  const cacheKey = new Request(`https://vibe.cache.internal/${topic}/${encodeURIComponent(pageToken) || 'first'}`);
+  const hit = await cache.match(cacheKey);
+  if (hit) return new Response(hit.body, { headers: { 'Content-Type': 'application/json', ...cors(env) } });
+
+  if (!env.YOUTUBE_API_KEY) return json(env, { videos: [], error: 'not_configured' }, 500);
+
+  const sp = new URLSearchParams({
+    part: 'snippet', type: 'video', videoDuration: 'short', videoEmbeddable: 'true',
+    videoSyndicated: 'true', safeSearch: 'strict', regionCode: 'KE', relevanceLanguage: 'en',
+    maxResults: '25', q: VIBE_QUERIES[topic] + ' #shorts', key: env.YOUTUBE_API_KEY,
+  });
+  if (pageToken) sp.set('pageToken', pageToken);
+
+  const sr = await fetch('https://www.googleapis.com/youtube/v3/search?' + sp);
+  if (!sr.ok) { console.error('youtube search', sr.status); return json(env, { videos: [] }, 502); }
+  const sd = await sr.json();
+  const ids = (sd.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
+  if (!ids.length) return json(env, { videos: [], next: sd.nextPageToken || null });
+
+  // keep only embeddable clips of 90s or less (1 quota unit)
+  const vr = await fetch('https://www.googleapis.com/youtube/v3/videos?' + new URLSearchParams({
+    part: 'contentDetails,status,snippet', id: ids.join(','), key: env.YOUTUBE_API_KEY,
+  }));
+  if (!vr.ok) { console.error('youtube videos', vr.status); return json(env, { videos: [] }, 502); }
+  const vd = await vr.json();
+  const videos = (vd.items || [])
+    .filter(v => v.status && v.status.embeddable && isoToSeconds(v.contentDetails && v.contentDetails.duration) <= 90)
+    .map(v => ({ id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle }));
+
+  const payload = JSON.stringify({ videos, next: sd.nextPageToken || null });
+  ctx.waitUntil(cache.put(cacheKey, new Response(payload, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${VIBE_CACHE_SECONDS}` } })));
+  return new Response(payload, { headers: { 'Content-Type': 'application/json', ...cors(env) } });
+}
+
 /* ---------- entry points ---------- */
 export default {
   async fetch(req, env, ctx) {
@@ -208,6 +266,8 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
     try {
       if (url.pathname === '/health') return json(env, { ok: true });
+
+      if (url.pathname === '/vibe' && req.method === 'POST') return handleVibe(req, env, ctx);
 
       if (url.pathname === '/profile' && req.method === 'POST') {
         const r = await saveProfile(env, ctx, await req.json());
