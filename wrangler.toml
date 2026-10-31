@@ -1,6 +1,9 @@
 name = "chaniajobsai"
 main = "index.js"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-10-25"
+
+[observability]
+enabled = true
 
 [ai]
 binding = "AI"
@@ -9,14 +12,6 @@ binding = "AI"
 binding = "DB"
 database_name = "chania-db"
 database_id = "a831a7e7-5aa0-4b9a-a49f-512d3cfe6dc5"
-
-[[vectorize]]
-binding = "PROFILE_VEC"
-index_name = "chania-profiles"
-
-[[vectorize]]
-binding = "JOB_VEC"
-index_name = "chania-jobs"
 
 [triggers]
 crons = ["0 */6 * * *"]
