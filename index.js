@@ -208,8 +208,8 @@ async function notifyPending(env) {
 const VIBE_QUERIES = {
   trending: 'shorts',
   foryou: 'funny shorts',
-  comedy: 'Kenyan comedy shorts',
-  music: 'afrobeats shorts',
+  comedy: 'funny comedy shorts',
+  music: 'music shorts',
   sports: 'football highlights shorts',
   motivation: 'motivation success shorts',
   tech: 'tech gadgets shorts',
@@ -228,7 +228,7 @@ async function handleVibe(req, env, ctx) {
   const pageToken = typeof body.pageToken === 'string' ? body.pageToken.slice(0, 200) : '';
 
   const cache = caches.default;
-  const cacheKey = new Request(`https://vibe.cache.internal/${topic}/${encodeURIComponent(pageToken) || 'first'}`);
+  const cacheKey = new Request(`https://vibe.cache.internal/global-en/${topic}/${encodeURIComponent(pageToken) || 'first'}`);
   const hit = await cache.match(cacheKey);
   if (hit) return new Response(hit.body, { headers: { 'Content-Type': 'application/json', ...cors(env) } });
 
@@ -236,7 +236,7 @@ async function handleVibe(req, env, ctx) {
 
   const sp = new URLSearchParams({
     part: 'snippet', type: 'video', videoDuration: 'short', videoEmbeddable: 'true',
-    videoSyndicated: 'true', safeSearch: 'strict', regionCode: 'KE', relevanceLanguage: 'en',
+    videoSyndicated: 'true', safeSearch: 'strict', relevanceLanguage: 'en',
     maxResults: '25', q: VIBE_QUERIES[topic] + ' #shorts', key: env.YOUTUBE_API_KEY,
   });
   if (pageToken) sp.set('pageToken', pageToken);
@@ -260,6 +260,8 @@ async function handleVibe(req, env, ctx) {
   const vd = await vr.json();
   const videos = (vd.items || [])
     .filter(v => v.status && v.status.embeddable && isoToSeconds(v.contentDetails && v.contentDetails.duration) <= 90)
+    // English only: drop videos whose declared language is something else (videos with no declared language are kept)
+    .filter(v => { const l = ((v.snippet.defaultAudioLanguage || v.snippet.defaultLanguage) || '').toLowerCase(); return !l || l.startsWith('en'); })
     .map(v => ({ id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle }));
 
   const payload = JSON.stringify({ videos, next: sd.nextPageToken || null });
