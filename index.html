@@ -158,6 +158,10 @@
             color: var(--accent-orange);
         }
 
+        .install-btn {
+            background: var(--accent-orange); color: #fff; border: 0; border-radius: 20px;
+            font: 700 11px 'Plus Jakarta Sans', sans-serif; padding: 8px 12px; cursor: pointer; white-space: nowrap;
+        }
         .theme-toggle {
             width: 38px;
             height: 38px;
@@ -1183,9 +1187,12 @@
                     </div>
                     <div class="brand-text">Chania <span>AI</span></div>
                 </div>
-                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
-                    <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
-                </button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="install-btn" id="installBtn" onclick="installApp()" style="display:none">Install app</button>
+                    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
+                        <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Header Filter Bar -->
@@ -2637,6 +2644,12 @@
             }
         }
         window.addEventListener('resize', setVibeVars);
+        // Header/nav can change height after load (fonts, chips, install button): re-measure so the video never sits under them
+        if (window.ResizeObserver) {
+            const ro = new ResizeObserver(() => setVibeVars());
+            const t = document.querySelector('.sticky-top-section'), n = document.querySelector('.bottom-nav');
+            if (t) ro.observe(t); if (n) ro.observe(n);
+        }
 
         // Header: hidden while a video plays, back while the user swipes
         function vibeUi(show) { document.body.classList.toggle('vibe-ui', !!show); }   // no visible effect while pinned
@@ -2788,6 +2801,23 @@
             }
             lucide.createIcons();
         });
+    </script>
+    <script>
+        /* ===== Install prompt: Chrome fires beforeinstallprompt when the app is installable; show our own button ===== */
+        let deferredInstall = null;
+        const installBtn = () => document.getElementById('installBtn');
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            deferredInstall = e;
+            const b = installBtn(); if (b) b.style.display = '';
+            if (typeof setVibeVars === 'function') setVibeVars();
+        });
+        function installApp() {
+            if (!deferredInstall) return;
+            deferredInstall.prompt();
+            deferredInstall.userChoice.finally(() => { deferredInstall = null; const b = installBtn(); if (b) b.style.display = 'none'; });
+        }
+        window.addEventListener('appinstalled', () => { deferredInstall = null; const b = installBtn(); if (b) b.style.display = 'none'; });
     </script>
     <script>
         /* ===== Auto-update: register service worker and refresh when a new version is live ===== */
