@@ -201,7 +201,7 @@ async function ingestJobs(env, records) {
   await embedAndMatchJobs(env, fresh);
 }
 
-const jobToText = j => `${j.title}\n${j.company}\n${j.location}\n${j.description || ''}`.slice(0, 2000);
+const jobToText = j => `${j.title}\n${j.description || ''}`.slice(0, 2000);   // title + description only
 
 async function embedAndMatchJobs(env, jobs) {
   if (!jobs.length) return;
@@ -209,6 +209,10 @@ async function embedAndMatchJobs(env, jobs) {
   const vecs = await embed(env, jobs.map(jobToText));
   await env.JOB_VEC.upsert(jobs.map((j, i) => ({ id: `j_${j.id}`, values: vecs[i], metadata: { title: j.title.slice(0, 100) } })));
   await env.DB.batch(jobs.map(j => env.DB.prepare('UPDATE jobs SET embedded = 1 WHERE id = ?').bind(j.id)));
+
+  // Nothing to match against until at least one profile has been embedded
+  const pc = await env.DB.prepare('SELECT COUNT(*) AS n FROM profiles WHERE embedded = 1').first();
+  if (!pc || !pc.n) return;
 
   // Match every new job against all embedded profiles
   const min = parseFloat(env.MATCH_THRESHOLD || '0.62');
@@ -261,73 +265,27 @@ async function notifyPending(env) {
 /* ---------- Vibe: YouTube Shorts feed ---------- */
 // Secret: npx wrangler secret put YOUTUBE_API_KEY  (YouTube Data API v3 key, restricted to that API)
 const VIBE_QUERIES = {
-  success: 'success mindset motivation winning mentality',
-  discipline: 'discipline consistency self control habits',
-  confidence: 'confidence self belief overcome self doubt',
-  resilience: 'resilience mental toughness bounce back from failure',
-  career: 'career advice job interview tips',
-  business: 'business entrepreneurship tips',
-  money: 'personal finance money tips',
-  productivity: 'productivity habits study tips',
-  skills: 'learn new skills communication tips',
-  wellness: 'health fitness mental wellness',
+  trending: 'shorts',
+  business: 'business entrepreneurship tips shorts',
+  money: 'personal finance money tips shorts',
+  mindset: 'mindset motivation self improvement shorts',
+  career: 'career advice job interview tips shorts',
+  productivity: 'productivity habits study tips shorts',
+  skills: 'learn new skills communication tips shorts',
+  wellness: 'health fitness mental wellness shorts',
 };
-// Fun Toons: 3D and 2D animated story shorts only. Add more channel names here (or pin ids in FUN_CHANNEL_IDS).
-const FUN_CHANNELS = ['Zack D. Films', 'Rico Animations'];
-const FUN_CHANNEL_IDS = {};                            // optional: { 'Rico Animations': 'UCxxxxxxxx' } skips the lookup
-const FUN_QUERY = '3D animation 2D animation funny story';   // fills the gaps with similar animated shorts
-const VIBE_CACHE_SECONDS = 12 * 60 * 60;               // search.list costs 100 quota units of the 10,000/day
+const VIBE_CACHE_SECONDS = 12 * 60 * 60; // search.list costs 100 quota units of the 10,000/day
 
 function isoToSeconds(d) {
   const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(d || '') || [];
   return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
 }
 
-// Finds a channel id by name once, then remembers it for 30 days
-async function channelIdByName(env, name) {
-  if (FUN_CHANNEL_IDS[name]) return FUN_CHANNEL_IDS[name];
-  const key = new Request('https://vibe.cache.internal/channel-id/' + encodeURIComponent(name));
-  const hit = await caches.default.match(key);
-  if (hit) return hit.text();
-  const r = await fetch('https://www.googleapis.com/youtube/v3/search?' + new URLSearchParams({
-    part: 'snippet', type: 'channel', maxResults: '1', q: name, key: env.YOUTUBE_API_KEY }));
-  if (!r.ok) return '';
-  const id = (await r.json()).items?.[0]?.snippet?.channelId || '';
-  if (id) await caches.default.put(key, new Response(id, { headers: { 'Cache-Control': 'public, max-age=2592000' } }));
-  return id;
-}
-
-// One search + one details call -> embeddable clips of 90s or less
-async function searchShorts(env, extra, pageToken) {
-  const sp = new URLSearchParams({
-    part: 'snippet', type: 'video', videoDuration: 'short', videoEmbeddable: 'true',
-    videoSyndicated: 'true', safeSearch: 'strict', maxResults: '25', key: env.YOUTUBE_API_KEY, ...extra,
-  });
-  if (pageToken) sp.set('pageToken', pageToken);
-  const sr = await fetch('https://www.googleapis.com/youtube/v3/search?' + sp);
-  if (!sr.ok) { console.error('youtube search', sr.status); return null; }
-  const sd = await sr.json();
-  const ids = (sd.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
-  if (!ids.length) return { videos: [], next: sd.nextPageToken || '' };
-
-  const vr = await fetch('https://www.googleapis.com/youtube/v3/videos?' + new URLSearchParams({
-    part: 'contentDetails,status,snippet', id: ids.join(','), key: env.YOUTUBE_API_KEY }));
-  if (!vr.ok) { console.error('youtube videos', vr.status); return null; }
-  const vd = await vr.json();
-  const videos = (vd.items || [])
-    .filter(v => v.status && v.status.embeddable && isoToSeconds(v.contentDetails && v.contentDetails.duration) <= 90)
-    // English only: drop videos whose declared language is something else (undeclared are kept)
-    .filter(v => { const l = ((v.snippet.defaultAudioLanguage || v.snippet.defaultLanguage) || '').toLowerCase(); return !l || l.startsWith('en'); })
-    .map(v => ({ id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle }));
-  return { videos, next: sd.nextPageToken || '' };
-}
-
 async function handleVibe(req, env, ctx) {
   let body = {};
   try { body = await req.json(); } catch (e) {}
-  const isFun = body.topic === 'funtoons';
-  const topic = isFun ? 'funtoons' : (VIBE_QUERIES[body.topic] ? body.topic : 'success');
-  const pageToken = typeof body.pageToken === 'string' ? body.pageToken.slice(0, 600) : '';
+  const topic = VIBE_QUERIES[body.topic] ? body.topic : 'trending';
+  const pageToken = typeof body.pageToken === 'string' ? body.pageToken.slice(0, 200) : '';
 
   const cache = caches.default;
   const cacheKey = new Request(`https://vibe.cache.internal/global-en/${topic}/${encodeURIComponent(pageToken) || 'first'}`);
@@ -336,31 +294,38 @@ async function handleVibe(req, env, ctx) {
 
   if (!env.YOUTUBE_API_KEY) return json(env, { videos: [], error: 'not_configured' }, 500);
 
-  let videos, next;
-  if (isFun) {
-    // pageToken is "tok1|tok2|tok3": one token per source (each channel, then the keyword search); sources are interleaved
-    const toks = pageToken.split('|');
-    const first = pageToken === '';
-    const ids = await Promise.all(FUN_CHANNELS.map(n => channelIdByName(env, n)));
-    const jobs = [
-      ...FUN_CHANNELS.map((_, i) => ids[i] && (first || toks[i]) ? searchShorts(env, { channelId: ids[i], order: 'date' }, toks[i] || '') : null),
-      first || toks[FUN_CHANNELS.length] ? searchShorts(env, { q: FUN_QUERY + ' #shorts', relevanceLanguage: 'en' }, toks[FUN_CHANNELS.length] || '') : null,
-    ];
-    const res = await Promise.all(jobs);
-    if (res.every(r => !r)) return json(env, { videos: [] }, 502);
-    const lists = res.map(r => (r ? r.videos : []));
-    videos = [];
-    for (let i = 0; i < Math.max(...lists.map(l => l.length)); i++) for (const l of lists) if (l[i]) videos.push(l[i]);
-    const nexts = res.map(r => (r ? r.next : ''));
-    next = nexts.some(Boolean) ? nexts.join('|') : null;
-  } else {
-    const r = await searchShorts(env, { q: VIBE_QUERIES[topic] + ' #shorts', relevanceLanguage: 'en' }, pageToken);
-    if (!r) return json(env, { videos: [] }, 502);
-    videos = r.videos; next = r.next || null;
+  const sp = new URLSearchParams({
+    part: 'snippet', type: 'video', videoDuration: 'short', videoEmbeddable: 'true',
+    videoSyndicated: 'true', safeSearch: 'strict', relevanceLanguage: 'en',
+    maxResults: '25', q: VIBE_QUERIES[topic] + ' #shorts', key: env.YOUTUBE_API_KEY,
+  });
+  if (pageToken) sp.set('pageToken', pageToken);
+  if (topic === 'trending') {
+    // most-viewed Shorts from the last 7 days
+    sp.set('order', 'viewCount');
+    sp.set('publishedAfter', new Date(Date.now() - 7 * 86400000).toISOString());
   }
 
-  const payload = JSON.stringify({ videos, next });
-  ctx.waitUntil(cache.put(cacheKey, new Response(payload, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${VIBE_CACHE_SECONDS}` } })));
+  const sr = await fetch('https://www.googleapis.com/youtube/v3/search?' + sp);
+  if (!sr.ok) { console.error('youtube search', sr.status); return json(env, { videos: [] }, 502); }
+  const sd = await sr.json();
+  const ids = (sd.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
+  if (!ids.length) return json(env, { videos: [], next: sd.nextPageToken || null });
+
+  // keep only embeddable clips of 90s or less (1 quota unit)
+  const vr = await fetch('https://www.googleapis.com/youtube/v3/videos?' + new URLSearchParams({
+    part: 'contentDetails,status,snippet', id: ids.join(','), key: env.YOUTUBE_API_KEY,
+  }));
+  if (!vr.ok) { console.error('youtube videos', vr.status); return json(env, { videos: [] }, 502); }
+  const vd = await vr.json();
+  const videos = (vd.items || [])
+    .filter(v => v.status && v.status.embeddable && isoToSeconds(v.contentDetails && v.contentDetails.duration) <= 90)
+    // English only: drop videos whose declared language is something else (videos with no declared language are kept)
+    .filter(v => { const l = ((v.snippet.defaultAudioLanguage || v.snippet.defaultLanguage) || '').toLowerCase(); return !l || l.startsWith('en'); })
+    .map(v => ({ id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle }));
+
+  const payload = JSON.stringify({ videos, next: sd.nextPageToken || null });
+  ctx.waitUntil(cache.put(cacheKey, new Response(payload, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${topic === 'trending' ? 6 * 3600 : VIBE_CACHE_SECONDS}` } })));
   return new Response(payload, { headers: { 'Content-Type': 'application/json', ...cors(env) } });
 }
 
@@ -400,6 +365,15 @@ export default {
       if (url.pathname === '/admin/trigger' && req.method === 'POST') {
         if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
         return json(env, await triggerBrightData(env));
+      }
+      if (url.pathname === '/admin/embed' && req.method === 'POST') {
+        if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
+        if (!env.JOB_VEC || !env.PROFILE_VEC) return json(env, { skipped: 'Vectorize not connected' });
+        const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 1), 50);
+        const { results } = await env.DB.prepare('SELECT * FROM jobs WHERE embedded = 0 LIMIT ?').bind(limit).all();
+        await embedAndMatchJobs(env, results);
+        const left = await env.DB.prepare('SELECT COUNT(*) AS n FROM jobs WHERE embedded = 0').first();
+        return json(env, { processed: results.length, remaining: left ? left.n : null });
       }
       return json(env, { error: 'not found' }, 404);
     } catch (e) {
