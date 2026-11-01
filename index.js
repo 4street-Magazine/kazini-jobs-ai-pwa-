@@ -140,7 +140,9 @@ async function buildSearches(env) {
 
 /* ---------- Bright Data: trigger + webhook ---------- */
 async function triggerBrightData(env) {
-  if (!env.BRIGHTDATA_API_KEY || !env.BRIGHTDATA_DATASET_ID) return { skipped: 'Bright Data not configured' };
+  // tolerate a pasted "Bearer " prefix or stray spaces/line breaks in the secret
+  const apiKey = String(env.BRIGHTDATA_API_KEY || '').replace(/^\s*Bearer\s+/i, '').replace(/\s+/g, '');
+  if (!apiKey || !env.BRIGHTDATA_DATASET_ID) return { skipped: 'Bright Data not configured' };
   const inputs = await buildSearches(env);
   if (!inputs.length) return { skipped: 'no searches to run' };
   const params = new URLSearchParams({
@@ -155,7 +157,7 @@ async function triggerBrightData(env) {
   });
   const res = await fetch(`https://api.brightdata.com/datasets/v3/trigger?${params}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${env.BRIGHTDATA_API_KEY}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(inputs),
   });
   return { status: res.status, body: await res.text(), searches: inputs };
