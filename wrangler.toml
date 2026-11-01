@@ -20,5 +20,5 @@ crons = ["0 */6 * * *"]
 ALLOWED_ORIGIN = "*"
 WORKER_URL = "https://chaniajobsai.muchirirobinson49.workers.dev"
 MATCH_THRESHOLD = "0.62"
-BRIGHTDATA_DATASET_ID = ""
+BRIGHTDATA_DATASET_ID = "041dddb9-925e-4cd0-b167-95696900c15b"
 BRIGHTDATA_INPUTS = '[{"location":"Nairobi","keyword":"data analyst","country":"KE"},{"location":"Kenya","keyword":"software developer","country":"KE"}]'
