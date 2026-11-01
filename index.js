@@ -88,9 +88,61 @@ async function embedAndMatchProfile(env, profileId, text, hash) {
   await notifyPending(env);
 }
 
+/* ---------- Automatic Bright Data searches, built from saved profiles ---------- */
+const MAX_SEARCHES = 10;                       // cost control: at most 10 searches per run (x 25 jobs each)
+const TITLE_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const cleanTitle = t => clean(t).replace(/["{}\[\]\\]/g, '').slice(0, 60);
+
+async function buildSearches(env) {
+  let fixed = [];
+  try { fixed = JSON.parse(env.BRIGHTDATA_INPUTS || '[]'); } catch (e) {}
+
+  let rows = [];
+  try {
+    rows = (await env.DB.prepare("SELECT data FROM profiles WHERE status = 'submitted' ORDER BY updated_at DESC LIMIT 1000").all()).results || [];
+  } catch (e) { console.error('profiles read', e); }
+
+  const titles = new Map(), courses = new Map();
+  for (const r of rows) {
+    let p; try { p = JSON.parse(r.data); } catch (e) { continue; }
+    const t = cleanTitle(p.job_title).toLowerCase();
+    if (t.length >= 3) { titles.set(t, (titles.get(t) || 0) + 1); continue; }
+    // no job title yet: fall back to the course (and a few skills)
+    const course = clean(p.course);
+    const skills = clean(Array.isArray(p.skills) ? p.skills.slice(0, 5).join(', ') : p.skills).slice(0, 60);
+    const c = [course, skills].filter(Boolean).join(' | ').replace(/["{}\[\]\\]/g, '').toLowerCase().slice(0, 120);
+    if (c.length >= 3) courses.set(c, (courses.get(c) || 0) + 1);
+  }
+
+  let keywords = [...titles.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]).slice(0, MAX_SEARCHES);
+
+  const room = MAX_SEARCHES - keywords.length;
+  if (room > 0 && courses.size) {
+    const list = [...courses.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(e => e[0]);
+    try {
+      const res = await env.AI.run(TITLE_MODEL, { messages: [
+        { role: 'system', content: 'You suggest job titles. Reply with only a JSON array of strings, no other text.' },
+        { role: 'user', content: `Job seekers in Kenya studied these (course | skills):\n${list.join('\n')}\n\nGive up to ${room} common job titles, 1 to 3 words each, that these people could apply for. JSON array only.` },
+      ] });
+      const m = String(res.response || '').match(/\[[\s\S]*\]/);
+      const arr = m ? JSON.parse(m[0]) : [];
+      for (const t of arr) {
+        const c = cleanTitle(t).toLowerCase();
+        if (c.length >= 3 && !keywords.includes(c)) keywords.push(c);
+      }
+    } catch (e) { console.error('title suggestion', e); }
+    keywords = keywords.slice(0, MAX_SEARCHES);
+  }
+
+  if (!keywords.length) return fixed;           // no finished profiles yet: use the fixed list from wrangler.toml
+  return keywords.map(k => ({ location: 'Kenya', keyword: k, country: 'KE' }));
+}
+
 /* ---------- Bright Data: trigger + webhook ---------- */
 async function triggerBrightData(env) {
   if (!env.BRIGHTDATA_API_KEY || !env.BRIGHTDATA_DATASET_ID) return { skipped: 'Bright Data not configured' };
+  const inputs = await buildSearches(env);
+  if (!inputs.length) return { skipped: 'no searches to run' };
   const params = new URLSearchParams({
     dataset_id: env.BRIGHTDATA_DATASET_ID,
     format: 'json',
@@ -98,14 +150,15 @@ async function triggerBrightData(env) {
     discover_by: 'keyword',
     endpoint: `${env.WORKER_URL}/webhook/brightdata`,
     uncompressed_webhook: 'true',
-    webhook_header_Authorization: `Bearer ${env.WEBHOOK_SECRET}`,
+    limit_per_input: '25',   // cap results per search (cost control while testing)
+    auth_header: `Bearer ${env.WEBHOOK_SECRET}`,   // sent by Bright Data as the Authorization header on the webhook
   });
   const res = await fetch(`https://api.brightdata.com/datasets/v3/trigger?${params}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${env.BRIGHTDATA_API_KEY}`, 'Content-Type': 'application/json' },
-    body: env.BRIGHTDATA_INPUTS || '[]',
+    body: JSON.stringify(inputs),
   });
-  return { status: res.status, body: await res.text() };
+  return { status: res.status, body: await res.text(), searches: inputs };
 }
 
 const pick = (o, ...keys) => { for (const k of keys) { const v = o?.[k]; if (v) return clean(v); } return ''; };
