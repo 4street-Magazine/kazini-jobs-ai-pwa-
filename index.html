@@ -2627,6 +2627,23 @@
            playback starts only once a card is mostly on screen, and only one player runs at a time. */
         const VIBE_TOPICS = [['success', 'brain', 'Success Mindset'], ['discipline', 'target', 'Discipline'], ['confidence', 'flame', 'Confidence'], ['resilience', 'shield', 'Resilience'], ['funtoons', 'smile', 'Fun Toons'], ['career', 'rocket', 'Career'], ['business', 'briefcase', 'Business'], ['money', 'wallet', 'Money'], ['productivity', 'timer', 'Productivity'], ['skills', 'lightbulb', 'Skills'], ['wellness', 'heart-pulse', 'Wellness']];
         let vibeTopic = 'success', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false;
+        /* Remember where the viewer stopped: per topic, the video list, the position and the next-page token (kept 7 days) */
+        const VIBE_KEY = 'chania_vibe_v1', VIBE_KEEP_MS = 7 * 86400000;
+        function vibeStore() { try { return JSON.parse(localStorage.getItem(VIBE_KEY)) || { topic: null, states: {} }; } catch (e) { return { topic: null, states: {} }; } }
+        function vibeSave() {
+            try {
+                if (vibeCur < 0 || !vibeList.length) return;
+                const st = vibeStore();
+                st.topic = vibeTopic;
+                st.states[vibeTopic] = { list: vibeList.slice(0, 200), next: vibeNext, idx: Math.min(vibeCur, 199), ts: Date.now() };
+                localStorage.setItem(VIBE_KEY, JSON.stringify(st));
+            } catch (e) {}
+        }
+        function vibeSavedFor(topic) {
+            const x = vibeStore().states[topic];
+            return x && Array.isArray(x.list) && x.list.length && Date.now() - x.ts < VIBE_KEEP_MS ? x : null;
+        }
+        (function () { const t = vibeStore().topic; if (t && VIBE_TOPICS.some(v => v[0] === t)) vibeTopic = t; })();
         let vibeMuted = false, vibeCur = -1, vibeObs = null, vibeGen = 0, vibeSettleAt = 0, vibeUiTimer = null, vibeWired = false, vibeResume = -1;
 
         function setVibeVars() {
@@ -2689,6 +2706,7 @@
             const card = document.querySelector(`.vibe-card[data-i="${i}"]`);
             if (!card) return;
             vibeCur = i;
+            vibeSave();
             const origin = location.protocol.startsWith('http') ? '&origin=' + encodeURIComponent(location.origin) : '';
             const id = card.dataset.id;
             const f = document.createElement('iframe');
@@ -2749,6 +2767,20 @@
             if (!start) feed.innerHTML = '';
             feed.insertAdjacentHTML('beforeend', fresh.map((v, k) => vibeCardHtml(v, start + k)).join(''));
             vibeObserve();
+            vibeSave();
+        }
+        // Open the feed where the viewer left off, or load fresh videos if nothing is saved
+        function vibeStart() {
+            const feed = byId('vibeFeed'), sv = vibeSavedFor(vibeTopic);
+            if (!sv) { feed.innerHTML = vibeSpinner(); loadVibe(true); return; }
+            vibeList = sv.list.slice(); vibeSeen = new Set(vibeList.map(v => v.id)); vibeNext = sv.next || null;
+            feed.innerHTML = vibeList.map((v, k) => vibeCardHtml(v, k)).join('');
+            vibeObserve();
+            const idx = Math.min(Math.max(0, sv.idx || 0), vibeList.length - 1);
+            requestAnimationFrame(() => {
+                const card = feed.querySelector(`.vibe-card[data-i="${idx}"]`);
+                if (card) { feed.scrollTop = card.offsetTop; vibeActivate(idx); }
+            });
         }
         function vibeRetry() { byId('vibeFeed').innerHTML = vibeSpinner(); loadVibe(true); }
 
@@ -2758,7 +2790,7 @@
             if (!vibeWired) { feed.addEventListener('scroll', () => vibeShowUi(1100), { passive: true }); vibeWired = true; }
             vibeUi(true);
             if (!CHANIA_API) { feed.innerHTML = vibeMessage('Vibe is not available', 'The video service is not configured yet.'); return; }
-            if (!vibeList.length) { feed.innerHTML = vibeSpinner(); loadVibe(true); }
+            if (!vibeList.length) vibeStart();
             else {
                 // came back to the tab: resume the card the user was on
                 const cur = Math.max(0, vibeResume >= 0 ? vibeResume : vibeCur);
@@ -2775,9 +2807,9 @@
             setVibeVars();
             const feed = byId('vibeFeed');
             feed.scrollTop = 0;
-            feed.innerHTML = vibeSpinner();
+            vibeList = []; vibeSeen = new Set(); vibeNext = null;
             vibeUi(true);
-            loadVibe(true);
+            vibeStart();
         }
         document.addEventListener('visibilitychange', () => {
             if (!document.getElementById('vibeTab').classList.contains('active')) return;
