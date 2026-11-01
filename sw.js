@@ -1,9 +1,16 @@
-
 // Chania AI service worker: always fetch the latest page when online, cache for offline use.
 // Bump VERSION when you want to clear all old cached assets (icons, images).
-const VERSION = 'chania-v1';
+const VERSION = 'chania-v2';
+const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', e => {
+  // Pre-cache the core files so the app opens offline; one missing file must not block installation
+  e.waitUntil((async () => {
+    const c = await caches.open(VERSION);
+    await Promise.all(CORE.map(u => c.add(u).catch(() => {})));
+    await self.skipWaiting();
+  })());
+});
 
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
@@ -22,7 +29,7 @@ self.addEventListener('fetch', e => {
   if (req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html') || url.pathname.endsWith('manifest.json')) {
     e.respondWith(
       fetch(req, { cache: 'no-store' })
-        .then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res; })
+        .then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; })
         .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
     );
     return;
@@ -39,4 +46,3 @@ self.addEventListener('fetch', e => {
     })
   );
 });
-
