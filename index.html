@@ -2598,8 +2598,8 @@
         /* ===== VIBE: YouTube Shorts feed (served by the worker's /vibe endpoint; API key stays server-side) =====
            YouTube embed rules followed: nothing is drawn over the player, it is never cropped or restyled,
            playback starts only once a card is mostly on screen, and only one player runs at a time. */
-        const VIBE_TOPICS = [['trending', 'trending-up', 'Trending'], ['business', 'briefcase', 'Business'], ['money', 'wallet', 'Money'], ['mindset', 'brain', 'Mindset'], ['career', 'rocket', 'Career'], ['productivity', 'timer', 'Productivity'], ['skills', 'lightbulb', 'Skills'], ['wellness', 'heart-pulse', 'Wellness']];
-        let vibeTopic = 'trending', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false;
+        const VIBE_TOPICS = [['success', 'brain', 'Success Mindset'], ['discipline', 'target', 'Discipline'], ['confidence', 'flame', 'Confidence'], ['resilience', 'shield', 'Resilience'], ['funtoons', 'smile', 'Fun Toons'], ['career', 'rocket', 'Career'], ['business', 'briefcase', 'Business'], ['money', 'wallet', 'Money'], ['productivity', 'timer', 'Productivity'], ['skills', 'lightbulb', 'Skills'], ['wellness', 'heart-pulse', 'Wellness']];
+        let vibeTopic = 'success', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false;
         let vibeMuted = false, vibeCur = -1, vibeObs = null, vibeGen = 0, vibeSettleAt = 0, vibeUiTimer = null, vibeWired = false, vibeResume = -1;
 
         function setVibeVars() {
@@ -2608,9 +2608,8 @@
             if (nav) r.setProperty('--nav-h', nav.offsetHeight + 'px');
             if (top) r.setProperty('--head-h', top.offsetHeight + 'px');
             if (!document.body.classList.contains('vibe-on')) return;
-            // Keep the header if the video loses under ~8% of its width by sharing the screen with it
-            const free = window.innerHeight - (nav ? nav.offsetHeight : 0) - (top ? top.offsetHeight : 0);
-            const pin = free * 9 / 16 >= 0.92 * window.innerWidth;
+            // Header + chips are always pinned on the Vibe tab: the video sits below them and never covers them
+            const pin = true;
             if (pin !== document.body.classList.contains('vibe-pin')) {
                 document.body.classList.toggle('vibe-pin', pin);
                 const card = document.querySelector(`.vibe-card[data-i="${vibeCur}"]`), feed = byId('vibeFeed');
@@ -2620,7 +2619,7 @@
         window.addEventListener('resize', setVibeVars);
 
         // Header: hidden while a video plays, back while the user swipes
-        function vibeUi(show) { document.body.classList.toggle('vibe-ui', !!show); }
+        function vibeUi(show) { document.body.classList.toggle('vibe-ui', !!show); }   // no visible effect while pinned
         function vibeHideSoon(ms) {
             clearTimeout(vibeUiTimer);
             vibeUiTimer = setTimeout(() => { if (vibeCur >= 0) vibeUi(false); }, ms);
