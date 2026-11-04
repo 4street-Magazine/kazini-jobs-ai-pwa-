@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chania AI</title>
+    <title>CHANIA AI - Smart Job Matching</title>
 
     <!-- PWA Metadata Tags -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#000000">
+    <meta name="theme-color" content="#FF5500">
     <link rel="apple-touch-icon" href="icon-192.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -158,10 +158,6 @@
             color: var(--accent-orange);
         }
 
-        .install-btn {
-            background: var(--accent-orange); color: #fff; border: 0; border-radius: 20px;
-            font: 700 11px 'Plus Jakarta Sans', sans-serif; padding: 8px 12px; cursor: pointer; white-space: nowrap;
-        }
         .theme-toggle {
             width: 38px;
             height: 38px;
@@ -366,16 +362,6 @@
             background: #000 center / cover no-repeat;
         }
         .vibe-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-        /* Phones: the player fills the whole feed area (no cropping), so YouTube's own title and logo stay visible.
-           The Vibe header is slimmed down so the video gets as much height, and therefore width, as possible. */
-        @media (max-width: 600px) {
-            .vibe-stage { width: 100%; max-width: none; aspect-ratio: auto; }
-            body.vibe-on .app-header { padding: 6px 16px 2px; }
-            body.vibe-on .svg-logo-icon { width: 26px; height: 26px; }
-            body.vibe-on .svg-logo-icon svg { width: 26px; height: 26px; }
-            body.vibe-on .brand-text { font-size: 17px; }
-            body.vibe-on .theme-toggle { width: 30px; height: 30px; }
-        }
         .vibe-spin {
             position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px; z-index: 0;
             border: 3px solid rgba(255,255,255,0.25); border-top-color: var(--accent-orange); border-radius: 50%;
@@ -744,6 +730,14 @@
             box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
             animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
+        .job-sec + .job-sec { margin-top: 14px; }
+        .job-sec-title { font-size: 11.5px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
+        .job-sec p { margin: 0 0 6px 0; }
+        .job-sec ul { margin: 0; padding-left: 16px; }
+        .job-sec li { margin-bottom: 4px; }
+        .desc-skel span { display: block; height: 9px; border-radius: 5px; background: var(--border-subtle); margin-bottom: 8px; animation: descPulse 1.2s ease-in-out infinite; }
+        @keyframes descPulse { 50% { opacity: 0.4; } }
 
         .job-modal-sticky-header {
             padding: 16px 20px 12px 20px;
@@ -1187,12 +1181,9 @@
                     </div>
                     <div class="brand-text">Chania <span>AI</span></div>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <button class="install-btn" id="installBtn" onclick="installApp()" style="display:none">Install app</button>
-                    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
-                        <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
-                    </button>
-                </div>
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
+                </button>
             </div>
 
             <!-- Header Filter Bar -->
@@ -1295,7 +1286,7 @@
                 <div class="job-modal-scroll-body">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
                         <div class="detail-block" style="margin-bottom:0;">
-                            <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Est. Salary</div>
+                            <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;" id="modalSalaryLabel">Salary</div>
                             <div id="modalSalary" style="font-size: 12.5px; font-weight: 700; color: var(--emerald-green); margin-top: 3px;"></div>
                         </div>
                         <div class="detail-block" style="margin-bottom:0;">
@@ -1309,9 +1300,10 @@
                         <i data-lucide="align-left" style="width: 12px; height: 12px;"></i> About the job
                     </div>
                     <div class="detail-block">
-                        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;" id="modalDesc"></p>
+                        <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.55;" id="modalDesc"></div>
                     </div>
 
+                    <div id="modalStatic">
                     <!-- About Company Section -->
                     <div class="section-label-modal">
                         <i data-lucide="building-2" style="width: 12px; height: 12px;"></i> About Company
@@ -1330,6 +1322,7 @@
                     </div>
                     <div class="detail-block" style="margin-bottom: 10px;"><ul id="modalReq" style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5;"></ul></div>
                     <div id="modalSkills" class="skills-row" style="margin-bottom: 14px;"></div>
+                    </div>
 
                     <div class="section-label-modal">
                         <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why it matches you
@@ -1731,6 +1724,7 @@
             el.setAttribute('aria-busy', 'true');
             el.innerHTML = skeletonHtml(tabId);
         }
+        const SKELETON_MS = 4000;   // how long loading skeletons stay on screen
         const skelTimers = {};
         function withSkeleton(tabId, renderFn, ms) {
             clearTimeout(skelTimers[tabId]);
@@ -1739,7 +1733,7 @@
                 const el = byId(SKEL_TABS[tabId].box);
                 if (el) el.removeAttribute('aria-busy');
                 renderFn();
-            }, ms || 700);
+            }, ms || SKELETON_MS);
         }
 
         function renderJobs() {
@@ -1917,18 +1911,8 @@
             withSkeleton(tabId, fn);
         }
 
-        // Phone status bar follows the header color: black in dark mode, white in light mode
-        function syncThemeColor() {
-            const dark = document.body.classList.contains('dark-theme');
-            let m = document.querySelector('meta[name="theme-color"]');
-            if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
-            m.setAttribute('content', dark ? '#000000' : '#ffffff');
-        }
-        syncThemeColor();
-
         function toggleTheme() {
             document.body.classList.toggle('dark-theme');
-            syncThemeColor();
             const icon = document.getElementById('themeIcon');
             if(document.body.classList.contains('dark-theme')) {
                 icon.setAttribute('data-lucide', 'sun');
@@ -1936,6 +1920,67 @@
                 icon.setAttribute('data-lucide', 'moon');
             }
             lucide.createIcons();
+        }
+
+        /* ===== Job description layout + salary (arranged by the worker once, then saved) ===== */
+        function fmtMoney(n) {
+            if (n >= 1e6) return (+(n / 1e6).toFixed(2)) + 'M';
+            if (n >= 1000) return (+(n / 1000).toFixed(1)) + 'k';
+            return String(n);
+        }
+        function salaryText(ins) {
+            if (!ins) return null;
+            if (ins.listed_salary) return { text: ins.listed_salary, est: false };
+            const s = ins.salary;
+            if (!s) return null;
+            return { text: `${s.currency} ${fmtMoney(s.min)}\u2013${fmtMoney(s.max)} / ${s.period}`, est: true };
+        }
+        function renderModalDesc(job) {
+            const box = document.getElementById('modalDesc');
+            if (!box) return;
+            const ins = job.insight;
+            if (ins && Array.isArray(ins.sections) && ins.sections.length) {
+                box.innerHTML = ins.sections.map(sec => {
+                    const head = sec.title ? `<div class="job-sec-title">${escapeHtml(sec.title)}</div>` : '';
+                    const body = sec.items
+                        ? `<ul>${sec.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`
+                        : (sec.paragraphs || []).map(p => `<p>${escapeHtml(p)}</p>`).join('');
+                    return `<div class="job-sec">${head}${body}</div>`;
+                }).join('');
+            } else if (job.insightState === 'loading') {
+                box.innerHTML = '<div class="desc-skel"><span style="width:92%"></span><span style="width:100%"></span><span style="width:78%"></span><span style="width:96%"></span><span style="width:60%"></span></div>';
+            } else {
+                box.innerHTML = `<div style="white-space:pre-line">${escapeHtml(job.desc || 'No description provided.')}</div>`;
+            }
+        }
+        function renderModalInsight(job) {
+            if (job.id !== activeJobId) return;
+            renderModalDesc(job);
+            const sal = salaryText(job.insight);
+            if (sal) {
+                document.getElementById('modalSalary').innerText = sal.text;
+                document.getElementById('modalSalaryLabel').innerText = sal.est ? 'Est. Salary' : 'Salary';
+            }
+        }
+        async function loadJobInsight(job) {
+            if (job.insight || job.insightState === 'loading' || !CHANIA_API || !job.serverId) return;
+            job.insightState = 'loading';
+            renderModalDesc(job);
+            const ctl = new AbortController();
+            const timer = setTimeout(() => ctl.abort(), 30000);
+            try {
+                const r = await fetch(`${CHANIA_API}/job-insight`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId: job.serverId }), signal: ctl.signal
+                });
+                const d = r.ok ? await r.json() : null;
+                job.insight = d && d.insight ? d.insight : null;
+            } catch (e) { job.insight = null; }
+            clearTimeout(timer);
+            job.insightState = job.insight ? 'done' : 'failed';
+            const sal = salaryText(job.insight);
+            if (sal) { job.salary = sal.est ? 'Est. ' + sal.text : sal.text; renderJobs(); }
+            renderModalInsight(job);
         }
 
         function openModal(id) {
@@ -1947,7 +1992,9 @@
             document.getElementById('modalCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${job.location}`;
             document.getElementById('modalSalary').innerText = job.salary;
             document.getElementById('modalMatch').innerText = job.matchScore;
-            document.getElementById('modalDesc').innerText = job.desc;
+            document.getElementById('modalStatic').style.display = job.serverId ? 'none' : '';
+            document.getElementById('modalSalaryLabel').innerText = 'Salary';
+            renderModalDesc(job);
             document.getElementById('modalCompanyAbout').innerText = job.companyAbout;
             document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
             document.getElementById('modalReq').innerHTML = (JOB_REQ[job.id] || []).map(r => `<li>${r}</li>`).join('');
@@ -1979,6 +2026,7 @@
 
             document.getElementById('jobModal').style.display = 'flex';
             lucide.createIcons();
+            if (job.insight) renderModalInsight(job); else if (job.serverId) loadJobInsight(job);
         }
 
         function closeModal() {
@@ -2268,8 +2316,8 @@
             const pct = Math.round(Math.min(1, Math.max(0, m.score)) * 100);
             return {
                 id: 1000 + i, serverId: m.id,
-                title: m.title, company: m.company || 'Employer', verified: false,
-                location: m.location || '',
+                title: m.title, company: m.company || 'Employer', verified: true,   // every employer shows the blue tick
+                location: String(m.location || '').split(',')[0].trim(),   // first part only, e.g. "Nairobi"
                 jobType: m.employment_type || '', remote: !!m.remote,
                 skills: [], moreSkills: 0,
                 salary: 'Salary not listed',
@@ -2625,25 +2673,8 @@
         /* ===== VIBE: YouTube Shorts feed (served by the worker's /vibe endpoint; API key stays server-side) =====
            YouTube embed rules followed: nothing is drawn over the player, it is never cropped or restyled,
            playback starts only once a card is mostly on screen, and only one player runs at a time. */
-        const VIBE_TOPICS = [['success', 'brain', 'Success Mindset'], ['discipline', 'target', 'Discipline'], ['confidence', 'flame', 'Confidence'], ['resilience', 'shield', 'Resilience'], ['funtoons', 'smile', 'Fun Toons'], ['career', 'rocket', 'Career'], ['business', 'briefcase', 'Business'], ['money', 'wallet', 'Money'], ['productivity', 'timer', 'Productivity'], ['skills', 'lightbulb', 'Skills'], ['wellness', 'heart-pulse', 'Wellness']];
-        let vibeTopic = 'success', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false;
-        /* Remember where the viewer stopped: per topic, the video list, the position and the next-page token (kept 7 days) */
-        const VIBE_KEY = 'chania_vibe_v1', VIBE_KEEP_MS = 7 * 86400000;
-        function vibeStore() { try { return JSON.parse(localStorage.getItem(VIBE_KEY)) || { topic: null, states: {} }; } catch (e) { return { topic: null, states: {} }; } }
-        function vibeSave() {
-            try {
-                if (vibeCur < 0 || !vibeList.length) return;
-                const st = vibeStore();
-                st.topic = vibeTopic;
-                st.states[vibeTopic] = { list: vibeList.slice(0, 200), next: vibeNext, idx: Math.min(vibeCur, 199), ts: Date.now() };
-                localStorage.setItem(VIBE_KEY, JSON.stringify(st));
-            } catch (e) {}
-        }
-        function vibeSavedFor(topic) {
-            const x = vibeStore().states[topic];
-            return x && Array.isArray(x.list) && x.list.length && Date.now() - x.ts < VIBE_KEEP_MS ? x : null;
-        }
-        (function () { const t = vibeStore().topic; if (t && VIBE_TOPICS.some(v => v[0] === t)) vibeTopic = t; })();
+        const VIBE_TOPICS = [['trending', 'trending-up', 'Trending'], ['business', 'briefcase', 'Business'], ['money', 'wallet', 'Money'], ['mindset', 'brain', 'Mindset'], ['career', 'rocket', 'Career'], ['productivity', 'timer', 'Productivity'], ['skills', 'lightbulb', 'Skills'], ['wellness', 'heart-pulse', 'Wellness']];
+        let vibeTopic = 'trending', vibeList = [], vibeSeen = new Set(), vibeNext = null, vibeLoading = false;
         let vibeMuted = false, vibeCur = -1, vibeObs = null, vibeGen = 0, vibeSettleAt = 0, vibeUiTimer = null, vibeWired = false, vibeResume = -1;
 
         function setVibeVars() {
@@ -2652,8 +2683,9 @@
             if (nav) r.setProperty('--nav-h', nav.offsetHeight + 'px');
             if (top) r.setProperty('--head-h', top.offsetHeight + 'px');
             if (!document.body.classList.contains('vibe-on')) return;
-            // Header + chips are always pinned on the Vibe tab: the video sits below them and never covers them
-            const pin = true;
+            // Keep the header if the video loses under ~8% of its width by sharing the screen with it
+            const free = window.innerHeight - (nav ? nav.offsetHeight : 0) - (top ? top.offsetHeight : 0);
+            const pin = free * 9 / 16 >= 0.92 * window.innerWidth;
             if (pin !== document.body.classList.contains('vibe-pin')) {
                 document.body.classList.toggle('vibe-pin', pin);
                 const card = document.querySelector(`.vibe-card[data-i="${vibeCur}"]`), feed = byId('vibeFeed');
@@ -2661,15 +2693,9 @@
             }
         }
         window.addEventListener('resize', setVibeVars);
-        // Header/nav can change height after load (fonts, chips, install button): re-measure so the video never sits under them
-        if (window.ResizeObserver) {
-            const ro = new ResizeObserver(() => setVibeVars());
-            const t = document.querySelector('.sticky-top-section'), n = document.querySelector('.bottom-nav');
-            if (t) ro.observe(t); if (n) ro.observe(n);
-        }
 
         // Header: hidden while a video plays, back while the user swipes
-        function vibeUi(show) { document.body.classList.toggle('vibe-ui', !!show); }   // no visible effect while pinned
+        function vibeUi(show) { document.body.classList.toggle('vibe-ui', !!show); }
         function vibeHideSoon(ms) {
             clearTimeout(vibeUiTimer);
             vibeUiTimer = setTimeout(() => { if (vibeCur >= 0) vibeUi(false); }, ms);
@@ -2706,7 +2732,6 @@
             const card = document.querySelector(`.vibe-card[data-i="${i}"]`);
             if (!card) return;
             vibeCur = i;
-            vibeSave();
             const origin = location.protocol.startsWith('http') ? '&origin=' + encodeURIComponent(location.origin) : '';
             const id = card.dataset.id;
             const f = document.createElement('iframe');
@@ -2767,20 +2792,6 @@
             if (!start) feed.innerHTML = '';
             feed.insertAdjacentHTML('beforeend', fresh.map((v, k) => vibeCardHtml(v, start + k)).join(''));
             vibeObserve();
-            vibeSave();
-        }
-        // Open the feed where the viewer left off, or load fresh videos if nothing is saved
-        function vibeStart() {
-            const feed = byId('vibeFeed'), sv = vibeSavedFor(vibeTopic);
-            if (!sv) { feed.innerHTML = vibeSpinner(); loadVibe(true); return; }
-            vibeList = sv.list.slice(); vibeSeen = new Set(vibeList.map(v => v.id)); vibeNext = sv.next || null;
-            feed.innerHTML = vibeList.map((v, k) => vibeCardHtml(v, k)).join('');
-            vibeObserve();
-            const idx = Math.min(Math.max(0, sv.idx || 0), vibeList.length - 1);
-            requestAnimationFrame(() => {
-                const card = feed.querySelector(`.vibe-card[data-i="${idx}"]`);
-                if (card) { feed.scrollTop = card.offsetTop; vibeActivate(idx); }
-            });
         }
         function vibeRetry() { byId('vibeFeed').innerHTML = vibeSpinner(); loadVibe(true); }
 
@@ -2790,7 +2801,7 @@
             if (!vibeWired) { feed.addEventListener('scroll', () => vibeShowUi(1100), { passive: true }); vibeWired = true; }
             vibeUi(true);
             if (!CHANIA_API) { feed.innerHTML = vibeMessage('Vibe is not available', 'The video service is not configured yet.'); return; }
-            if (!vibeList.length) vibeStart();
+            if (!vibeList.length) { feed.innerHTML = vibeSpinner(); loadVibe(true); }
             else {
                 // came back to the tab: resume the card the user was on
                 const cur = Math.max(0, vibeResume >= 0 ? vibeResume : vibeCur);
@@ -2807,9 +2818,9 @@
             setVibeVars();
             const feed = byId('vibeFeed');
             feed.scrollTop = 0;
-            vibeList = []; vibeSeen = new Set(); vibeNext = null;
+            feed.innerHTML = vibeSpinner();
             vibeUi(true);
-            vibeStart();
+            loadVibe(true);
         }
         document.addEventListener('visibilitychange', () => {
             if (!document.getElementById('vibeTab').classList.contains('active')) return;
@@ -2820,36 +2831,22 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderContext('discoverTab');
             const live = !!(CHANIA_API && localStorage.getItem('chania_profile'));
+            showSkeleton('discoverTab');
+            const splashDone = window.splashDone || Promise.resolve();
             if (live) {
-                // real matches are being fetched: hold the skeleton until they arrive (8s cap)
-                showSkeleton('discoverTab');
-                Promise.race([loadMyMatches(), new Promise(r => setTimeout(r, 8000))]).then(() => {
+                // real matches are fetched in the background (8s cap); the skeleton shows for at least SKELETON_MS after the splash
+                const data = Promise.race([loadMyMatches(), new Promise(r => setTimeout(r, 8000))]);
+                const minShow = splashDone.then(() => new Promise(r => setTimeout(r, SKELETON_MS)));
+                Promise.all([data, minShow]).then(() => {
                     byId('jobList').removeAttribute('aria-busy');
                     renderJobs();
                     lucide.createIcons();
                 });
             } else {
-                withSkeleton('discoverTab', () => { renderJobs(); lucide.createIcons(); }, 800);
+                splashDone.then(() => withSkeleton('discoverTab', () => { renderJobs(); lucide.createIcons(); }));
             }
             lucide.createIcons();
         });
-    </script>
-    <script>
-        /* ===== Install prompt: Chrome fires beforeinstallprompt when the app is installable; show our own button ===== */
-        let deferredInstall = null;
-        const installBtn = () => document.getElementById('installBtn');
-        window.addEventListener('beforeinstallprompt', e => {
-            e.preventDefault();
-            deferredInstall = e;
-            const b = installBtn(); if (b) b.style.display = '';
-            if (typeof setVibeVars === 'function') setVibeVars();
-        });
-        function installApp() {
-            if (!deferredInstall) return;
-            deferredInstall.prompt();
-            deferredInstall.userChoice.finally(() => { deferredInstall = null; const b = installBtn(); if (b) b.style.display = 'none'; });
-        }
-        window.addEventListener('appinstalled', () => { deferredInstall = null; const b = installBtn(); if (b) b.style.display = 'none'; });
     </script>
     <script>
         /* ===== Auto-update: register service worker and refresh when a new version is live ===== */
@@ -2877,17 +2874,21 @@
         }
     </script>
     <script>
-        /* ===== Splash screen: hide after the page is ready (min 1.6s, max 4s) ===== */
+        /* ===== Splash screen: stays for at least 4 seconds (counted from page start), and until the page has loaded (10s safety cap) ===== */
         (function () {
-            const sp = document.getElementById('splash'), t0 = Date.now();
-            let done = false;
+            const sp = document.getElementById('splash');
+            const t0 = Date.now() - performance.now();      // moment the page started loading
+            const MIN = 4000, MAX = 10000;
+            let done = false, resolveDone;
+            window.splashDone = new Promise(r => { resolveDone = r; });
             const hide = () => {
-                if (done || !sp) return; done = true;
-                sp.classList.add('hide');
-                setTimeout(() => sp.remove(), 600);
+                if (done) return; done = true;
+                if (sp) { sp.classList.add('hide'); setTimeout(() => sp.remove(), 600); }
+                resolveDone();
             };
-            window.addEventListener('load', () => setTimeout(hide, Math.max(0, 1600 - (Date.now() - t0))));
-            setTimeout(hide, 4000);
+            const afterLoad = () => setTimeout(hide, Math.max(0, MIN - (Date.now() - t0)));
+            if (document.readyState === 'complete') afterLoad(); else window.addEventListener('load', afterLoad);
+            setTimeout(hide, MAX);
         })();
     </script>
 </body>
