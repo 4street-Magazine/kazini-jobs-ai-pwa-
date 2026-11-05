@@ -377,7 +377,7 @@ Reply as {"about":"","responsibilities":[],"requirements":[],"benefits":[],"comp
         r = a >= 0 && b > a ? JSON.parse(r.slice(a, b + 1)) : null;
       }
       if (r && typeof r === 'object') data = r;
-    } catch (e) { console.error('job insight', e); }
+    } catch (e) { console.error('job insight:', String((e && e.message) || e)); }
   }
   const pay = normalizePay(data);
   const sections = [];
@@ -432,7 +432,7 @@ Reply as {"points":["","",""]}` },
     let r = res && res.response;
     if (typeof r === 'string') { const a = r.indexOf('{'), b = r.lastIndexOf('}'); r = a >= 0 && b > a ? JSON.parse(r.slice(a, b + 1)) : null; }
     points = cleanBullets(r && r.points, 3, 160, allowedLow);
-  } catch (e) { console.error('job match', e); }
+  } catch (e) { console.error('job match:', String((e && e.message) || e)); }
   return { ai: points.length > 0, at: Date.now(), points };
 }
 
@@ -463,12 +463,14 @@ function dropUnverifiedNumbers(text, allowedLow) {
 
 async function aiJson(env, max_tokens, system, user) {
   for (let attempt = 0; attempt < 2; attempt++) {
+    let res;
+    try { res = await env.AI.run(INSIGHT_MODEL, { max_tokens, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }); }
+    catch (e) { console.error('workers ai error:', String((e && e.message) || e)); return null; }   // API-level error (quota, model): retrying would only burn more allowance
     try {
-      const res = await env.AI.run(INSIGHT_MODEL, { max_tokens, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
       let r = res && res.response;
       if (typeof r === 'string') { const a = r.indexOf('{'), b = r.lastIndexOf('}'); r = a >= 0 && b > a ? JSON.parse(r.slice(a, b + 1)) : null; }
       if (r && typeof r === 'object') return r;
-    } catch (e) { console.error('generate docs', attempt, e); }
+    } catch (e) { console.error('bad JSON from model, retrying once'); }
   }
   return null;
 }
@@ -619,6 +621,16 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
     try {
       if (url.pathname === '/health') return json(env, { ok: true });
+
+      // Temporary diagnostic: open /ai-test in a browser to see the real Workers AI error. Remove once AI works.
+      if (url.pathname === '/ai-test') {
+        const out = {};
+        for (const [name, model] of [['insight', INSIGHT_MODEL], ['title', TITLE_MODEL]]) {
+          try { const r = await env.AI.run(model, { max_tokens: 20, messages: [{ role: 'user', content: 'Say OK' }] }); out[name] = { model, ok: true, reply: String((r && r.response) || '').slice(0, 40) }; }
+          catch (e) { out[name] = { model, ok: false, error: String((e && e.message) || e).slice(0, 400) }; }
+        }
+        return json(env, out);
+      }
 
       if (url.pathname === '/vibe' && req.method === 'POST') return handleVibe(req, env, ctx);
 
