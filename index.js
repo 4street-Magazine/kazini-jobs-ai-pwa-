@@ -90,7 +90,7 @@ async function embedAndMatchProfile(env, profileId, text, hash) {
 
 /* ---------- Automatic Bright Data searches, built from saved profiles ---------- */
 const MAX_SEARCHES = 10;                       // cost control: at most 10 searches per run (x 25 jobs each)
-const TITLE_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const TITLE_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 const cleanTitle = t => clean(t).replace(/["{}\[\]\\]/g, '').slice(0, 60);
 
 async function buildSearches(env) {
@@ -267,7 +267,11 @@ async function notifyPending(env) {
    Embeddings always stay on Workers AI so job and profile vectors remain comparable. ---------- */
 const GEMINI_DEFAULT_MODEL = 'gemini-3.5-flash';   // override with the GEMINI_MODEL variable, e.g. gemini-3.8-flash
 async function runLLM(env, { max_tokens = 800, messages }) {
-  if (!env.GEMINI_API_KEY) return env.AI.run(INSIGHT_MODEL, { max_tokens, messages });
+  if (!env.GEMINI_API_KEY) {
+    const r = await env.AI.run(env.WORKERS_AI_MODEL || INSIGHT_MODEL, { max_tokens, messages });
+    const text = (r && r.response) || (r && r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content) || '';
+    return { response: typeof text === 'string' ? text : JSON.stringify(text) };   // some newer models return an already-parsed object or OpenAI-style choices
+  }
   const sys = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
   const model = env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
   const body = {
@@ -284,7 +288,7 @@ async function runLLM(env, { max_tokens = 800, messages }) {
   return { response: parts.map(p => p.text || '').join('') };
 }
 
-const INSIGHT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const INSIGHT_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';   // fallback only; llama-3.1-8b-instruct was deprecated by Cloudflare on 2026-05-30 (error 5028)
 const INSIGHT_RETRY_MS = 60 * 60 * 1000;        // after a failed AI attempt, wait an hour before spending on another
 let insightColumnReady = false;
 
