@@ -1300,12 +1300,7 @@
                     </div>
 
                     <!-- Provided by Chania AI Section -->
-                    <div class="section-label-modal" id="modalDescLabel">
-                        <i data-lucide="align-left" style="width: 12px; height: 12px;"></i> About the job
-                    </div>
-                    <div class="detail-block">
-                        <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.55;" id="modalDesc"></div>
-                    </div>
+                    <div id="modalDesc"></div>
 
                     <div id="modalStatic">
                     <!-- About Company Section -->
@@ -1942,26 +1937,31 @@
             if (!s) return null;
             return { text: `${s.currency} ${fmtMoney(s.min)}\u2013${fmtMoney(s.max)} / ${s.period}`, est: true };
         }
+        const DESC_ICONS = [[/compan|employer|organi[sz]ation/i, 'building-2'], [/respons|dut/i, 'check-circle-2'], [/requir|qualif|skill|experience/i, 'layers'], [/benefit|perk|offer|salary|pay/i, 'gift'], [/location|contract|type/i, 'map-pin']];
+        function descIcon(t) { const m = DESC_ICONS.find(x => x[0].test(t || '')); return m ? m[1] : 'align-left'; }
+        function descBlock(title, inner) {
+            return `<div class="section-label-modal"><i data-lucide="${descIcon(title)}" style="width: 12px; height: 12px;"></i> ${escapeHtml(title)}</div>` +
+                   `<div class="detail-block" style="margin-bottom: 14px;">${inner}</div>`;
+        }
         function renderModalDesc(job) {
             const box = document.getElementById('modalDesc');
             if (!box) return;
             const ins = job.insight;
-            const lbl = document.getElementById('modalDescLabel');
-            const structured = !!(ins && Array.isArray(ins.sections) && ins.sections.length && ins.sections.some(s => s.title));
-            if (lbl) lbl.style.display = structured ? 'none' : '';
+            const para = 'font-size: 12px; color: var(--text-secondary); line-height: 1.55;';
             if (ins && Array.isArray(ins.sections) && ins.sections.length) {
                 box.innerHTML = ins.sections.map(sec => {
-                    const head = sec.title ? `<div class="job-sec-title">${escapeHtml(sec.title)}</div>` : '';
-                    const body = sec.items
-                        ? `<ul>${sec.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`
-                        : (sec.paragraphs || []).map(p => `<p>${escapeHtml(p)}</p>`).join('');
-                    return `<div class="job-sec">${head}${body}</div>`;
+                    const title = sec.title || 'About the job';
+                    const inner = sec.items
+                        ? `<ul style="font-size: 11.5px; color: var(--text-secondary); padding-left: 16px; line-height: 1.5; margin: 0;">${sec.items.map(i => `<li style="margin-bottom: 4px;">${escapeHtml(i)}</li>`).join('')}</ul>`
+                        : (sec.paragraphs || []).map(p => `<p style="${para} margin: 0 0 6px 0;">${escapeHtml(p)}</p>`).join('');
+                    return descBlock(title, inner);
                 }).join('');
             } else if (job.insightState === 'loading') {
-                box.innerHTML = '<div class="desc-skel"><span style="width:92%"></span><span style="width:100%"></span><span style="width:78%"></span><span style="width:96%"></span><span style="width:60%"></span></div>';
+                box.innerHTML = descBlock('About the job', '<div class="desc-skel"><span style="width:92%"></span><span style="width:100%"></span><span style="width:78%"></span><span style="width:96%"></span><span style="width:60%"></span></div>');
             } else {
-                box.innerHTML = `<div style="white-space:pre-line">${escapeHtml(job.desc || 'No description provided.')}</div>`;
+                box.innerHTML = descBlock('About the job', `<div style="${para} white-space:pre-line">${escapeHtml(job.desc || 'No description provided.')}</div>`);
             }
+            lucide.createIcons();
         }
         function renderModalInsight(job) {
             if (job.id !== activeJobId) return;
