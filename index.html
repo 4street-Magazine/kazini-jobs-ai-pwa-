@@ -736,6 +736,10 @@
         .job-sec p { margin: 0 0 6px 0; }
         .job-sec ul { margin: 0; padding-left: 16px; }
         .job-sec li { margin-bottom: 4px; }
+        .why-list { list-style: none; margin: 0; padding: 0; }
+        .why-list li { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+        .why-list li:last-child { margin-bottom: 0; }
+        .why-list .why-dot { flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--status-applied-bg); color: var(--emerald-green); display: flex; align-items: center; justify-content: center; margin-top: 1px; }
         .desc-skel span { display: block; height: 9px; border-radius: 5px; background: var(--border-subtle); margin-bottom: 8px; animation: descPulse 1.2s ease-in-out infinite; }
         @keyframes descPulse { 50% { opacity: 0.4; } }
 
@@ -1296,7 +1300,7 @@
                     </div>
 
                     <!-- Provided by Chania AI Section -->
-                    <div class="section-label-modal">
+                    <div class="section-label-modal" id="modalDescLabel">
                         <i data-lucide="align-left" style="width: 12px; height: 12px;"></i> About the job
                     </div>
                     <div class="detail-block">
@@ -1324,12 +1328,15 @@
                     <div id="modalSkills" class="skills-row" style="margin-bottom: 14px;"></div>
                     </div>
 
-                    <div class="section-label-modal">
-                        <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why it matches you
+                    <div class="section-label-modal" id="modalWhyLabel">
+                        <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Why this job matches you
                     </div>
                     <div class="detail-block" style="margin-bottom: 14px;">
-                        <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 10px;">Your verified profile skills align strongly with this role:</p>
-                        <div id="modalMatchingSkills" class="skills-row" style="margin-bottom: 0;"></div>
+                        <div id="modalWhy" style="font-size: 12px; color: var(--text-secondary); line-height: 1.55;"></div>
+                        <div id="modalWhyStatic">
+                            <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 10px;">Your verified profile skills align strongly with this role:</p>
+                            <div id="modalMatchingSkills" class="skills-row" style="margin-bottom: 0;"></div>
+                        </div>
                     </div>
 
                     <div class="section-label-modal">
@@ -1939,6 +1946,9 @@
             const box = document.getElementById('modalDesc');
             if (!box) return;
             const ins = job.insight;
+            const lbl = document.getElementById('modalDescLabel');
+            const structured = !!(ins && Array.isArray(ins.sections) && ins.sections.length && ins.sections.some(s => s.title));
+            if (lbl) lbl.style.display = structured ? 'none' : '';
             if (ins && Array.isArray(ins.sections) && ins.sections.length) {
                 box.innerHTML = ins.sections.map(sec => {
                     const head = sec.title ? `<div class="job-sec-title">${escapeHtml(sec.title)}</div>` : '';
@@ -1983,6 +1993,45 @@
             renderModalInsight(job);
         }
 
+        /* ===== Why this job matches you (3 short points from the career profile, saved by the worker) ===== */
+        function renderModalWhy(job) {
+            const box = document.getElementById('modalWhy');
+            const stat = document.getElementById('modalWhyStatic');
+            const lbl = document.getElementById('modalWhyLabel');
+            if (!box) return;
+            const pts = job.match && Array.isArray(job.match.points) ? job.match.points : [];
+            if (!job.serverId) { box.innerHTML = ''; stat.style.display = ''; lbl.style.display = ''; return; }   // demo jobs keep the skills view
+            stat.style.display = 'none';
+            if (pts.length) {
+                lbl.style.display = '';
+                box.innerHTML = `<ul class="why-list">${pts.map(p => `<li><span class="why-dot"><i data-lucide="check" style="width:10px;height:10px;"></i></span><span>${escapeHtml(p)}</span></li>`).join('')}</ul>`;
+                lucide.createIcons();
+            } else if (job.matchState === 'loading') {
+                lbl.style.display = '';
+                box.innerHTML = '<div class="desc-skel"><span style="width:94%"></span><span style="width:82%"></span><span style="width:88%"></span></div>';
+            } else {
+                lbl.style.display = 'none'; box.innerHTML = '';   // nothing to show: hide the section instead of an empty box
+            }
+        }
+        async function loadJobMatch(job) {
+            if (job.match || job.matchState === 'loading' || !CHANIA_API || !job.serverId || !localStorage.getItem('chania_profile')) return;
+            job.matchState = 'loading';
+            renderModalWhy(job);
+            const ctl = new AbortController();
+            const timer = setTimeout(() => ctl.abort(), 30000);
+            try {
+                const r = await fetch(`${CHANIA_API}/job-match`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceId, jobId: job.serverId }), signal: ctl.signal
+                });
+                const d = r.ok ? await r.json() : null;
+                job.match = d && d.match && d.match.points && d.match.points.length ? d.match : null;
+            } catch (e) { job.match = null; }
+            clearTimeout(timer);
+            job.matchState = job.match ? 'done' : 'failed';
+            if (job.id === activeJobId) renderModalWhy(job);
+        }
+
         function openModal(id) {
             activeJobId = id;
             const job = jobData.find(j => j.id === id);
@@ -1995,6 +2044,7 @@
             document.getElementById('modalStatic').style.display = job.serverId ? 'none' : '';
             document.getElementById('modalSalaryLabel').innerText = 'Salary';
             renderModalDesc(job);
+            renderModalWhy(job);
             document.getElementById('modalCompanyAbout').innerText = job.companyAbout;
             document.getElementById('modalResp').innerHTML = job.resp.map(r => `<li>${r}</li>`).join('');
             document.getElementById('modalReq').innerHTML = (JOB_REQ[job.id] || []).map(r => `<li>${r}</li>`).join('');
@@ -2027,6 +2077,7 @@
             document.getElementById('jobModal').style.display = 'flex';
             lucide.createIcons();
             if (job.insight) renderModalInsight(job); else if (job.serverId) loadJobInsight(job);
+            loadJobMatch(job);
         }
 
         function closeModal() {
@@ -2094,6 +2145,8 @@
 
         let studioTimer = null;
         let studioDlTimer = null;
+        let studioDocsFor = null;   // id of the job whose documents are currently shown in the studio
+        let studioRun = 0;   // bumps when the studio is closed or reopened, so a late response is ignored
 
         function setStudioLoading(on) {
             document.getElementById('studioSkeleton').style.display = on ? 'block' : 'none';
@@ -2105,12 +2158,87 @@
             });
         }
 
+        /* ===== CV + cover letter built from the career profile and the job ===== */
+        async function fetchStudioDocs(job) {
+            const ctl = new AbortController();
+            const timer = setTimeout(() => ctl.abort(), 40000);
+            try {
+                const r = await fetch(`${CHANIA_API}/generate-docs`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceId, jobId: job.serverId }), signal: ctl.signal
+                });
+                const d = r.ok ? await r.json() : null;
+                return d && d.docs ? d.docs : null;
+            } catch (e) { return null; } finally { clearTimeout(timer); }
+        }
+
+        function localDocs(p, job) {
+            const list = t => String(Array.isArray(t) ? t.join(', ') : t || '').split(/[;,\n]+/).map(x => x.trim()).filter(Boolean);
+            const sents = t => String(t || '').split(/(?<=[.!?;])\s+/).map(x => x.trim()).filter(x => x.length > 2);
+            const experience = [];
+            if (p.job_title || p.workplace) experience.push({ role: p.job_title || '', company: p.workplace || '', period: p.work_period || '', points: sents(p.responsibilities).slice(0, 4) });
+            (p.past_jobs || []).forEach(j => { if (j && (j.title || j.company)) experience.push({ role: j.title || '', company: j.company || '', period: j.period || '', points: sents(j.resp).slice(0, 4) }); });
+            const education = (p.education || p.institution || p.course)
+                ? [{ qualification: [p.education, p.course].filter(Boolean).join(' in '), institution: p.institution || '', period: p.education_period || '' }] : [];
+            const skills = list(p.skills).slice(0, 14);
+            const company = job && job.company ? job.company : '', title = job && job.title ? job.title : 'this position';
+            const lead = p.job_title || p.course || 'Motivated professional';
+            const paras = [
+                `I am writing to apply for the ${title} position${company ? ' at ' + company : ''}.${p.job_title ? ` I currently work as ${p.job_title}${p.workplace ? ' at ' + p.workplace : ''}.` : ''}`,
+                `${education.length ? `My background includes ${education[0].qualification}${education[0].institution ? ' from ' + education[0].institution : ''}. ` : ''}${skills.length ? `My skills include ${skills.slice(0, 5).join(', ')}, which I believe fit what this role requires.` : ''}`.trim(),
+                `I would welcome the opportunity to discuss how I can contribute${company ? ' to ' + company : ''}. Thank you for your time and consideration.`
+            ].filter(x => x.length > 20);
+            return {
+                name: p.full_name || '', headline: lead, contact: p.phone || '',
+                summary: `${lead}${p.years_experience ? ` with ${p.years_experience} years of experience` : ''}${skills.length ? `, skilled in ${skills.slice(0, 4).join(', ')}` : ''}.`,
+                skills, experience, education, certifications: list(p.certifications).slice(0, 10),
+                projects: p.project_details || '', achievements: sents(p.achievements).slice(0, 8), languages: list(p.languages).slice(0, 8),
+                cover: { greeting: company ? `Dear ${company} Hiring Team,` : 'Dear Hiring Manager,', paragraphs: paras, closing: 'Sincerely,', name: p.full_name || '' }
+            };
+        }
+
+        function cvHtml(d) {
+            const E = escapeHtml;
+            const H = t => `<p style="font-weight:700;color:var(--text-primary);margin-bottom:4px;">${t}:</p>`;
+            const ul = a => `<ul style="padding-left:16px;margin-bottom:8px;">${a.map(x => `<li>${E(x)}</li>`).join('')}</ul>`;
+            let h = `<p style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:2px;">${E(d.name || 'Your Name')}</p>`;
+            const sub = [d.headline, d.contact].filter(Boolean).map(E).join(' \u2022 ');
+            if (sub) h += `<p style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">${sub}</p>`;
+            h += '<div style="font-size:11.5px;color:var(--text-secondary);line-height:1.6;">';
+            if (d.summary) h += H('Summary') + `<p style="margin-bottom:8px;">${E(d.summary)}</p>`;
+            if ((d.skills || []).length) h += H('Skills') + `<p style="margin-bottom:8px;">${d.skills.map(E).join(', ')}</p>`;
+            if ((d.experience || []).length) {
+                h += H('Key Professional Experience') + d.experience.map(e => {
+                    const head = [[e.role, e.company].filter(Boolean).join(', '), e.period ? `(${e.period})` : ''].filter(Boolean).join(' ');
+                    return `<p style="margin-bottom:2px;"><strong>${E(head)}</strong></p>` + ((e.points || []).length ? ul(e.points) : '<div style="margin-bottom:6px;"></div>');
+                }).join('');
+            }
+            const cred = (d.education || []).map(x => [x.qualification, x.institution, x.period].filter(Boolean).join(', ')).concat(d.certifications || []);
+            if (cred.length) h += H('Education &amp; Credentials') + ul(cred);
+            if (d.projects) h += H('Projects') + `<p style="margin-bottom:8px;">${E(d.projects)}</p>`;
+            if ((d.achievements || []).length) h += H('Achievements') + ul(d.achievements);
+            if ((d.languages || []).length) h += H('Languages') + `<p>${d.languages.map(E).join(', ')}</p>`;
+            return h + '</div>';
+        }
+
+        function coverHtml(d) {
+            const E = escapeHtml, c = d.cover || {};
+            return `<p style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;">${E(c.greeting || 'Dear Hiring Manager,')}</p>`
+                + (c.paragraphs || []).map(p => `<div style="font-size:11.5px;color:var(--text-secondary);line-height:1.6;margin-bottom:8px;">${E(p)}</div>`).join('')
+                + `<p style="font-size:11.5px;color:var(--text-secondary);">${E(c.closing || 'Sincerely,')}<br>${E(c.name || d.name || '')}</p>`;
+        }
+
+        function renderStudioDocs(d) {
+            document.querySelector('#content-cv .studio-editable').innerHTML = cvHtml(d);
+            document.querySelector('#content-cover .studio-editable').innerHTML = coverHtml(d);
+        }
+
         function openApplicationStudio(generate) {
             const job = jobData.find(j => j.id === activeJobId);
             if (job) {
                 document.getElementById('studioJobTitle').innerText = job.title;
                 document.getElementById('studioJobCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''}`;
-                document.getElementById('emailPreviewSubject').innerText = `Application: ${job.title} – Robin Muchiri`;
+                document.getElementById('emailPreviewSubject').innerText = `Application: ${job.title} – ${(profile && profile.full_name) || 'Applicant'}`;
             }
             const isRedirect = !!(job && job.applyUrl);
             ['attachments', 'email'].forEach(t => document.getElementById(`tab-${t}`).style.display = isRedirect ? 'none' : '');
@@ -2125,17 +2253,34 @@
             document.getElementById('applicationStudioModal').style.display = 'flex';
             lucide.createIcons();
             if (generate) {
-                studioTimer = setTimeout(() => {
-                    setStudioLoading(false);
-                    switchStudioTab('cv');
-                    // Auto-download both documents (staggered so the browser accepts both)
-                    downloadStudioPdf('cv');
-                    studioDlTimer = setTimeout(() => downloadStudioPdf('cover'), 700);
-                }, 3000);
+                const run = ++studioRun, started = Date.now();
+                (async () => {
+                    let docs = null;
+                    const hasProfile = !!localStorage.getItem('chania_profile');
+                    if (hasProfile && job && job.serverId && CHANIA_API) docs = await fetchStudioDocs(job);
+                    if (!docs && hasProfile) docs = localDocs(profile, job);       // worker unreachable: build from the profile on the device
+                    if (run !== studioRun) return;                                  // studio was closed or reopened meanwhile
+                    if (docs) { renderStudioDocs(docs); studioDocsFor = job ? job.id : null; }
+                    studioTimer = setTimeout(() => {
+                        setStudioLoading(false);
+                        switchStudioTab('cv');
+                        // Auto-download both documents (staggered so the browser accepts both)
+                        downloadStudioPdf('cv');
+                        studioDlTimer = setTimeout(() => downloadStudioPdf('cover'), 700);
+                    }, Math.max(0, SKELETON_MS - (Date.now() - started)));
+                })();
+            } else if (localStorage.getItem('chania_profile') && job && studioDocsFor !== job.id) {
+                const run = ++studioRun;
+                (async () => {
+                    let docs = job.serverId && CHANIA_API ? await fetchStudioDocs(job) : null;
+                    if (!docs) docs = localDocs(profile, job);
+                    if (run === studioRun) { renderStudioDocs(docs); studioDocsFor = job.id; }
+                })();
             }
         }
 
         function closeApplicationStudio() {
+            studioRun++;
             clearTimeout(studioTimer); clearTimeout(studioDlTimer);
             document.getElementById('applicationStudioModal').style.display = 'none';
             renderJobs();
