@@ -1368,7 +1368,7 @@
                 <!-- Sticky Footer Section -->
                 <div class="job-modal-sticky-footer">
                     <button class="apply-btn-full" id="applyActionBtn" onclick="handleApplyButtonClick()">
-                        <i data-lucide="plus" style="width: 15px; height: 15px;"></i> Generate CV
+                        <i data-lucide="plus" style="width: 15px; height: 15px;"></i> Apply Job
                     </button>
                 </div>
             </div>
@@ -1528,6 +1528,19 @@
             </div>
         </div>
 
+        <!-- APPLY JOB: what the KSh 35 covers -->
+        <div class="modal-overlay" id="payInfoModal" style="z-index: 1050; justify-content: center; padding: 20px;" onclick="closePayInfo()">
+            <div role="dialog" aria-modal="true" aria-labelledby="payInfoTitle" onclick="event.stopPropagation()" style="background: var(--bg-card); width: 100%; max-width: 340px; border-radius: 18px; padding: 18px; border: 1px solid var(--border-subtle); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeIn 0.2s ease;">
+                <div id="payInfoTitle" style="font-size: 18px; font-weight: 800; color: var(--text-primary);">Apply Job</div>
+                <div id="payInfoJob" style="font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 10px;"></div>
+                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 4px;">Chania AI matches you to this job and prepares your application. Your <b id="payInfoAmt" style="color: var(--text-primary);"></b> covers:</p>
+                <div id="payInfoRows" style="color: var(--text-primary);"></div>
+                <div style="display: flex; justify-content: space-between; padding: 12px 0 14px; font-size: 15px; font-weight: 800; color: var(--text-primary);"><span>Total</span><span id="payInfoTotal"></span></div>
+                <button id="payInfoBtn" onclick="payInfoContinue()" style="width: 100%; min-height: 48px; border-radius: 12px; border: none; background: #00A651; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;"></button>
+                <button onclick="closePayInfo()" style="width: 100%; min-height: 40px; margin-top: 6px; border: none; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer;">Not now</button>
+            </div>
+        </div>
+
         <!-- M-PESA STK PUSH (green branded) -->
         <div class="modal-overlay" id="mpesaModal" style="z-index: 1100; justify-content: center; padding: 20px;">
             <div role="dialog" aria-modal="true" aria-labelledby="mpesaTitle" style="background: var(--bg-card); width: 100%; max-width: 340px; border-radius: 18px; overflow: hidden; border: 1px solid var(--border-subtle); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeIn 0.2s ease;">
@@ -1537,7 +1550,7 @@
                 </div>
 
                 <div id="mpesaStepPin" style="padding: 18px;">
-                    <p style="font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.5; margin-bottom: 14px;">Do you want to pay KSH 30 to CHANIA AI for Job application services ?</p>
+                    <p style="font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.5; margin-bottom: 14px;">Do you want to pay KSH 35 to CHANIA AI for Job application services ?</p>
                     <label for="mpesaPin" style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">Enter M-PESA PIN</label>
                     <input id="mpesaPin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="••••" oninput="this.value = this.value.replace(/\D/g, ''); document.getElementById('mpesaSendBtn').disabled = this.value.length !== 4;" style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 20px; letter-spacing: 0.5em; text-align: center; border: 2px solid #00A651; border-radius: 12px; background: var(--bg-surface); color: var(--text-primary); outline: none; margin-bottom: 16px;">
                     <div style="display: flex; gap: 10px;">
@@ -1738,6 +1751,45 @@
             }, ms || SKELETON_MS);
         }
 
+        /* ===== Pay-to-apply: the first job is free, every other job costs KSh 35 (stars hide company and location until paid) ===== */
+        const FEES = [['Job matching', 15], ['Application CV', 10], ['Application cover letter', 10]];
+        const UNLOCK_KEY = 'chania_unlocked';
+        const jobKey = j => String(j.serverId || j.id);
+        const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+        const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+        function unlockedKeys() { try { return JSON.parse(lsGet(UNLOCK_KEY)) || []; } catch (e) { return []; } }
+        function freeJobKey() {
+            if (lsGet('chania_free_used')) return null;
+            let k = lsGet('chania_free_job');
+            if (!k || !jobData.some(j => jobKey(j) === k)) { k = jobData.length ? jobKey(jobData[0]) : null; if (k) lsSet('chania_free_job', k); }
+            return k;
+        }
+        const isFreeJob = job => jobKey(job) === freeJobKey();
+        const isUnlocked = job => job.status !== 'none' || isFreeJob(job) || unlockedKeys().includes(jobKey(job));
+        const maskText = s => String(s || '').replace(/[^\s,.\-&()/]/g, '*');
+        function unlockJob(job) { const k = unlockedKeys(); if (!k.includes(jobKey(job))) { k.push(jobKey(job)); lsSet(UNLOCK_KEY, JSON.stringify(k)); } }
+
+        function startApply(id) {
+            const job = jobData.find(j => j.id === id);
+            if (!job) return;
+            if (isUnlocked(job)) openModal(id); else openPayInfo(id);
+        }
+
+        function openPayInfo(id) {
+            const job = jobData.find(j => j.id === id);
+            if (!job) return;
+            activeJobId = id;
+            const total = FEES.reduce((s, f) => s + f[1], 0);
+            document.getElementById('payInfoJob').innerText = `${job.title} · ${job.matchScore} match`;
+            document.getElementById('payInfoRows').innerHTML = FEES.map(f => `<div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-subtle); font-size:13.5px;"><span>${f[0]}</span><span style="font-weight:700;">KSh ${f[1]}</span></div>`).join('');
+            document.getElementById('payInfoTotal').innerText = `KSh ${total}`;
+            document.getElementById('payInfoBtn').innerText = `Pay KSh ${total} with M-Pesa`;
+            document.getElementById('payInfoAmt').innerText = `KSh ${total} Payment`;
+            document.getElementById('payInfoModal').style.display = 'flex';
+        }
+        function closePayInfo() { document.getElementById('payInfoModal').style.display = 'none'; }
+        function payInfoContinue() { closePayInfo(); openMpesaPrompt(); }
+
         function renderJobs() {
             const container = document.getElementById('jobList');
             const visibleJobs = jobData.filter(jobMatchesFilter);
@@ -1746,16 +1798,16 @@
                 container.innerHTML = `<div class="glass-panel" style="text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:4px">${sv ? 'No saved roles yet' : 'No jobs here yet'}</div><div style="font-size:12px;color:var(--text-secondary)">${sv ? 'Tap the heart on any job card to save it here.' : 'We will notify you when a matching job is found.'}</div></div>`;
                 return;
             }
-            container.innerHTML = visibleJobs.map(job => `
+            container.innerHTML = visibleJobs.map(job => { const open = isUnlocked(job); return `
                 <div class="job-card">
                     <div class="card-header-row">
                         <div>
                             <div class="job-title">${job.title}</div>
                             <div class="company-info">
-                                <span>${job.company}</span>
+                                <span>${open ? job.company : maskText(job.company)}</span>
                                 ${job.verified ? scallopedBadgeSVG : ''}
                                 <span class="location-dot">•</span>
-                                <span>${job.location}</span>
+                                <span>${open ? job.location : maskText(job.location)}</span>
                             </div>
                         </div>
                         <button class="bookmark-btn" onclick="toggleBookmark(${job.id})">
@@ -1773,16 +1825,16 @@
                         ${job.skills.length > 2 ? `<div class="skill-badge more">+${job.skills.length - 2}</div>` : ''}
                     </div>
 
-                    <div class="salary-text">${job.salary}</div>
+                    <div class="salary-text">${job.salary}${isFreeJob(job) ? ' <span style="margin-left:8px; font-size:11px; font-weight:800; padding:3px 8px; border-radius:99px; background:var(--status-applied-bg); color:var(--status-applied-text);">Your free job</span>' : ''}</div>
 
                     <div class="card-footer">
                         <span class="match-score">Match Score: ${job.matchScore}</span>
-                        <button class="view-btn" onclick="openModal(${job.id})">
-                            View Job <i data-lucide="chevron-right" style="width:12px; height:12px;"></i>
+                        <button class="view-btn" onclick="startApply(${job.id})">
+                            ${open ? '' : '<i data-lucide="lock" style="width:12px; height:12px;"></i>'} Apply Job <i data-lucide="chevron-right" style="width:12px; height:12px;"></i>
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `; }).join('');
             lucide.createIcons();
         }
 
@@ -2038,7 +2090,8 @@
             if(!job) return;
 
             document.getElementById('modalTitle').innerText = job.title;
-            document.getElementById('modalCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${job.location}`;
+            const openJob = isUnlocked(job);
+            document.getElementById('modalCompany').innerHTML = `${openJob ? job.company : maskText(job.company)} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${openJob ? job.location : maskText(job.location)}`;
             document.getElementById('modalSalary').innerText = job.salary;
             document.getElementById('modalMatch').innerText = job.matchScore;
             document.getElementById('modalStatic').style.display = job.serverId ? 'none' : '';
@@ -2070,7 +2123,7 @@
                 applyBtn.disabled = false;
             } else {
                 applyBtn.style.background = 'var(--premium-orange-gradient)';
-                applyBtn.innerHTML = `<i data-lucide="file-plus-2" style="width:14px; height:14px;"></i> Generate CV`;
+                applyBtn.innerHTML = `<i data-lucide="file-plus-2" style="width:14px; height:14px;"></i> Apply Job`;
                 applyBtn.disabled = false;
             }
 
@@ -2086,17 +2139,20 @@
 
         function handleApplyButtonClick() {
             const job = jobData.find(j => j.id === activeJobId);
-            const isFresh = !!(job && job.status === 'none');
+            if (!job) return;
             closeModal();
-            if (isFresh) {
-                openMpesaPrompt();          // pay KSH 30 first, then generate
-            } else {
-                openApplicationStudio(false); // resuming: already paid
-            }
+            if (job.status !== 'none') { openApplicationStudio(false); return; }   // resuming: already paid
+            if (!isUnlocked(job)) { openPayInfo(job.id); return; }                 // safety net: never open the studio unpaid
+            if (isFreeJob(job)) lsSet('chania_free_used', '1');                    // the free job is used up once applied
+            job.paid = true;
+            job.status = 'pending';
+            job.appliedDate = 'Pending';
+            renderJobs();
+            openApplicationStudio(true);
         }
 
         /* ===== M-PESA STK PUSH ===== */
-        const MPESA_AMOUNT = 30;
+        const MPESA_AMOUNT = FEES.reduce((s, f) => s + f[1], 0);   // KSh 35
         const MPESA_SIMULATE = true; // set to false once your backend exposes POST /mpesa/stk (Daraja)
 
         function mpesaStep(step) {
@@ -2137,10 +2193,9 @@
             try { ok = await requestMpesaPayment(job); } catch (e) { ok = false; }
             if (!ok) { mpesaStep('Fail'); return; }
             document.getElementById('mpesaModal').style.display = 'none';
-            job.paid = true;
-            job.status = 'pending';
-            job.appliedDate = 'Pending';
-            openApplicationStudio(true);
+            unlockJob(job);          // company, location and apply link are now visible
+            renderJobs();
+            openModal(job.id);
         }
 
         let studioTimer = null;
@@ -2998,7 +3053,7 @@
         if ('serviceWorker' in navigator) {
             const hadController = !!navigator.serviceWorker.controller;
             let reloading = false;
-            const busy = () => ['applicationStudioModal', 'chatModal', 'mpesaModal', 'jobModal']
+            const busy = () => ['applicationStudioModal', 'chatModal', 'mpesaModal', 'payInfoModal', 'jobModal']
                 .some(id => { const el = document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; });
 
             navigator.serviceWorker.addEventListener('controllerchange', () => {
