@@ -997,6 +997,12 @@
         .pc-e{outline:none;border-radius:5px;min-height:1.2em;font-size:inherit}
         .pc-e:focus{background:var(--accent-orange-light)}
         .pc-e:empty::before{content:attr(data-ph);opacity:.45}
+        /* Profile tab: one standard text size for all details (names and section headings only slightly different) */
+        #profileView .pc-name{font-size:15px}
+        #profileView .pc-pill{font-size:11px}
+        #profileView .pc-h{font-size:10.5px}
+        #profileView .pc-sec,#profileView .pc-tl,#profileView .pc-t,#profileView .pc-chips,#profileView .pc-e{font-size:11px}
+        #profileView .pc-t{font-weight:700}
         .ai-mode{display:inline-flex;align-items:center;gap:7px;background:var(--emerald-green-light);color:var(--emerald-green);border:1px solid var(--emerald-green);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800}
         .live-dot{width:8px;height:8px;border-radius:50%;background:var(--emerald-green);animation:livePulse 1.3s infinite}
         @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(0,200,83,.6);opacity:1}70%{box-shadow:0 0 0 8px rgba(0,200,83,0);opacity:.5}100%{box-shadow:0 0 0 0 rgba(0,200,83,0);opacity:1}}
@@ -1531,11 +1537,14 @@
         <!-- APPLY JOB: what the KSh 35 covers -->
         <div class="modal-overlay" id="payInfoModal" style="z-index: 1050; justify-content: center; padding: 20px;" onclick="closePayInfo()">
             <div role="dialog" aria-modal="true" aria-labelledby="payInfoTitle" onclick="event.stopPropagation()" style="background: var(--bg-card); width: 100%; max-width: 340px; border-radius: 18px; padding: 18px; border: 1px solid var(--border-subtle); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeIn 0.2s ease;">
-                <div id="payInfoTitle" style="font-size: 18px; font-weight: 800; color: var(--text-primary);">Apply Job</div>
-                <div id="payInfoJob" style="font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 10px;"></div>
-                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 4px;">Chania AI matches you to this job and prepares your application. Your <b id="payInfoAmt" style="color: var(--text-primary);"></b> covers:</p>
-                <div id="payInfoRows" style="color: var(--text-primary);"></div>
-                <div style="display: flex; justify-content: space-between; padding: 12px 0 14px; font-size: 15px; font-weight: 800; color: var(--text-primary);"><span>Total</span><span id="payInfoTotal"></span></div>
+                <div id="payInfoTitle" style="font-size: 18px; font-weight: 800; color: var(--text-primary);">Apply to This Job</div>
+                <div id="payInfoJob" style="font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 12px;"></div>
+                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">We charge a contribution of <b id="payInfoAmt" style="color: var(--text-primary);"></b> to support the continued operation of Chania AI's job-hunting service.</p>
+                <div style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Your contribution includes:</div>
+                <ul style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; padding-left: 18px; margin: 0 0 16px 0;">
+                    <li style="margin-bottom: 4px;">A CV tailored for this job.</li>
+                    <li>A cover letter tailored for this job.</li>
+                </ul>
                 <button id="payInfoBtn" onclick="payInfoContinue()" style="width: 100%; min-height: 48px; border-radius: 12px; border: none; background: #00A651; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;"></button>
                 <button onclick="closePayInfo()" style="width: 100%; min-height: 40px; margin-top: 6px; border: none; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer;">Not now</button>
             </div>
@@ -1779,12 +1788,9 @@
             const job = jobData.find(j => j.id === id);
             if (!job) return;
             activeJobId = id;
-            const total = FEES.reduce((s, f) => s + f[1], 0);
             document.getElementById('payInfoJob').innerText = `${job.title} · ${job.matchScore} match`;
-            document.getElementById('payInfoRows').innerHTML = FEES.map(f => `<div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-subtle); font-size:13.5px;"><span>${f[0]}</span><span style="font-weight:700;">KSh ${f[1]}</span></div>`).join('');
-            document.getElementById('payInfoTotal').innerText = `KSh ${total}`;
-            document.getElementById('payInfoBtn').innerText = `Pay KSh ${total} with M-Pesa`;
-            document.getElementById('payInfoAmt').innerText = `KSh ${total} Payment`;
+            document.getElementById('payInfoBtn').innerText = `Pay Contribution · KSh ${MPESA_AMOUNT}`;
+            document.getElementById('payInfoAmt').innerText = `KSh ${MPESA_AMOUNT}`;
             document.getElementById('payInfoModal').style.display = 'flex';
         }
         function closePayInfo() { document.getElementById('payInfoModal').style.display = 'none'; }
