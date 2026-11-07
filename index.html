@@ -1534,19 +1534,19 @@
             </div>
         </div>
 
-        <!-- APPLY JOB: what the KSh 35 covers -->
+        <!-- APPLY JOB: what the contribution covers -->
         <div class="modal-overlay" id="payInfoModal" style="z-index: 1050; justify-content: center; padding: 20px;" onclick="closePayInfo()">
-            <div role="dialog" aria-modal="true" aria-labelledby="payInfoTitle" onclick="event.stopPropagation()" style="background: var(--bg-card); width: 100%; max-width: 340px; border-radius: 18px; padding: 18px; border: 1px solid var(--border-subtle); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeIn 0.2s ease;">
-                <div id="payInfoTitle" style="font-size: 18px; font-weight: 800; color: var(--text-primary);">Apply to This Job</div>
-                <div id="payInfoJob" style="font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 12px;"></div>
-                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">We charge a contribution of <b id="payInfoAmt" style="color: var(--text-primary);"></b> to support the continued operation of Chania AI's job-hunting service.</p>
-                <div style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Your contribution includes:</div>
-                <ul style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; padding-left: 18px; margin: 0 0 16px 0;">
-                    <li style="margin-bottom: 4px;">A CV tailored for this job.</li>
-                    <li>A cover letter tailored for this job.</li>
-                </ul>
-                <button id="payInfoBtn" onclick="payInfoContinue()" style="width: 100%; min-height: 48px; border-radius: 12px; border: none; background: #00A651; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;"></button>
-                <button onclick="closePayInfo()" style="width: 100%; min-height: 40px; margin-top: 6px; border: none; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer;">Not now</button>
+            <div role="dialog" aria-modal="true" aria-labelledby="payInfoTitle" onclick="event.stopPropagation()" style="background: var(--bg-card); width: 100%; max-width: 350px; border-radius: 22px; padding: 26px 22px 18px; border: 1px solid var(--border-subtle); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeIn 0.2s ease;">
+                <div id="payInfoTitle" style="font-size: 19px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.2px;">Apply to This Job</div>
+                <div id="payInfoJob" style="font-size: 12.5px; color: var(--text-secondary); margin-top: 6px;"></div>
+                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.65; margin: 18px 0 20px;">To support the continued operation of Chania AI's job-hunting service, we charge a contribution of <b id="payInfoAmt" style="color: var(--text-primary);"></b> per matched opportunity.</p>
+                <div style="background: var(--bg-surface); border-radius: 14px; padding: 16px;">
+                    <div style="font-size: 12px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.3px; margin-bottom: 14px;">Your contribution includes:</div>
+                    <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-primary); line-height: 1.4; margin-bottom: 12px;"><span style="flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--status-applied-bg); color: var(--emerald-green); display: flex; align-items: center; justify-content: center;"><i data-lucide="check" style="width: 13px; height: 13px;"></i></span><span>A CV tailored for this job.</span></div>
+                    <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-primary); line-height: 1.4;"><span style="flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--status-applied-bg); color: var(--emerald-green); display: flex; align-items: center; justify-content: center;"><i data-lucide="check" style="width: 13px; height: 13px;"></i></span><span>A cover letter tailored for this job.</span></div>
+                </div>
+                <button id="payInfoBtn" onclick="payInfoContinue()" style="width: 100%; min-height: 50px; margin-top: 22px; border-radius: 14px; border: none; background: #00A651; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;"></button>
+                <button onclick="closePayInfo()" style="width: 100%; min-height: 44px; margin-top: 8px; border: none; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer;">Not now</button>
             </div>
         </div>
 
@@ -1790,8 +1790,9 @@
             activeJobId = id;
             document.getElementById('payInfoJob').innerText = `${job.title} · ${job.matchScore} match`;
             document.getElementById('payInfoBtn').innerText = `Pay Contribution · KSh ${MPESA_AMOUNT}`;
-            document.getElementById('payInfoAmt').innerText = `KSh ${MPESA_AMOUNT}`;
+            document.getElementById('payInfoAmt').innerText = `KSH ${MPESA_AMOUNT}`;
             document.getElementById('payInfoModal').style.display = 'flex';
+            lucide.createIcons();
         }
         function closePayInfo() { document.getElementById('payInfoModal').style.display = 'none'; }
         function payInfoContinue() { closePayInfo(); openMpesaPrompt(); }
@@ -2797,11 +2798,12 @@
                 ? `<button class="pf-btn" onclick="doneProfile()" style="border-color:var(--accent-orange);color:var(--accent-orange)"><i data-lucide="check" style="width:13px;height:13px"></i> Done</button>`
                 : `<button class="pf-btn" onclick="editProfile()" aria-label="Edit profile"><i data-lucide="pencil" style="width:13px;height:13px"></i> Edit</button>`;
             const stat = (n, t) => `<div class="stat-card"><div class="stat-value">${n}</div><div class="stat-label">${t}</div></div>`;
-            v.innerHTML = `<div class="pc" style="position:relative;margin-bottom:12px"><div style="position:absolute;top:14px;right:14px;z-index:1">${ctl}</div>${cardHtml(pEdit, 'top')}`
+            v.innerHTML = `<div id="profileSticky" style="position:sticky;top:var(--head-h,0px);z-index:40;background:var(--bg-app);padding-top:2px"><div class="pc" style="position:relative;margin-bottom:12px"><div style="position:absolute;top:14px;right:14px;z-index:1">${ctl}</div>${cardHtml(pEdit, 'top')}`
                 + `<div style="padding:0 16px 14px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px"><span style="font-weight:700;color:var(--text-primary)">Profile strength</span><span style="font-weight:800;color:var(--emerald-green)">${strength}%</span></div><div style="height:8px;border-radius:4px;background:var(--border-subtle)"><div style="width:${strength}%;height:8px;border-radius:4px;background:var(--emerald-green)"></div></div></div></div>`
-                + `<div class="stat-grid" style="margin-bottom:12px">${stat(jobData.length, 'Matches')}${stat(apps, 'Applied')}${stat(unlocked, 'Unlocked')}</div>`
+                + `<div class="stat-grid" style="margin-bottom:12px">${stat(jobData.length, 'Matches')}${stat(apps, 'Applied')}${stat(unlocked, 'Unlocked')}</div></div>`
                 + cardHtml(pEdit, 'body');
             lucide.createIcons();
+            setVibeVars();   // keeps --head-h current so the identity card sticks right under the app header
         }
         function editProfile() { pEdit = true; renderProfile(); }
         function doneProfile() { pEdit = false; renderProfile(); }
