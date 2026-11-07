@@ -289,7 +289,7 @@ async function runLLM(env, { max_tokens = 800, messages }) {
 }
 
 const INSIGHT_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';   // fallback only; llama-3.1-8b-instruct was deprecated by Cloudflare on 2026-05-30 (error 5028)
-const INSIGHT_RETRY_MS = 60 * 60 * 1000;        // after a failed AI attempt, wait an hour before spending on another
+const INSIGHT_RETRY_MS = 5 * 60 * 1000;        // after a failed AI attempt, wait an hour before spending on another
 let insightColumnReady = false;
 
 async function ensureInsightColumn(env) {
@@ -348,13 +348,15 @@ function splitByPlan(text, plan) {
 }
 
 function normalizePay(o) {
-  const out = { listed_salary: clean(o && o.listed_salary).slice(0, 80) || null, salary: null };
+  const rawListed = clean(o && o.listed_salary).slice(0, 80);
+  const out = { listed_salary: /\d/.test(rawListed) ? rawListed : null, salary: null };   // "Competitive" or "Not specified" is not a listed salary
   const s = o && o.salary;
   if (!out.listed_salary && s && typeof s === 'object') {
-    const period = s.period === 'year' ? 'year' : 'month';
+    const period = /year|annum/i.test(String(s.period || '')) ? 'year' : 'month';
     const step = period === 'year' ? 100000 : 5000;
     const round = v => Math.max(step, Math.round(v / step) * step);
-    const min = Number(s.min), max = Number(s.max);
+    const num = v => Number(String(v == null ? '' : v).replace(/[^\d.]/g, ''));   // accepts 40000, "40,000" or "KES 40000"
+    const min = num(s.min), max = num(s.max);
     const cap = period === 'year' ? 60000000 : 5000000;      // sanity ceiling
     if (isFinite(min) && isFinite(max) && min > 0 && max >= min && max <= cap) {
       out.salary = {
@@ -367,7 +369,7 @@ function normalizePay(o) {
   return out;
 }
 
-const INSIGHT_VERSION = 2;   // bump to re-arrange saved descriptions in the new layout
+const INSIGHT_VERSION = 4;   // bump to re-arrange saved descriptions in the new layout
 const cleanBullets = (a, n, max, srcLow) => (Array.isArray(a) ? a : []).map(x => clean(x).replace(/^[-\u2013\u2022]\s*/, '').slice(0, max))
   .filter(x => x.length > 3 && (x.match(/\d[\d,.%]*/g) || []).every(d => srcLow.includes(d.replace(/[.,]+$/, '')))).slice(0, n);
 
@@ -392,8 +394,8 @@ Task 1: rewrite the posting into these fields, in plain simple English:
 "requirements": 3 to 8 short bullet strings (max 20 words each) of qualifications, skills and experience needed,
 "benefits": up to 6 short bullet strings of pay, perks or conditions the posting mentions, or [] if none,
 "company": one sentence about the employer if the posting says anything about it, otherwise "".
-Task 2: "listed_salary": the pay exactly as the posting states it, otherwise "".
-Task 3: "salary": if listed_salary is empty, your best estimate of typical pay for this role in ${loc} as {"min":number,"max":number,"currency":"KES","period":"month"}, or null if the role is unclear. Use KES per month for jobs in Kenya.
+Task 2: "listed_salary": the pay exactly as the posting states it, only if it contains an amount in numbers, otherwise "" (words like competitive or negotiable do not count).
+Task 3: "salary": if listed_salary is empty, your best estimate of typical pay for this role in ${loc} as {"min":number,"max":number,"currency":"KES","period":"month"}, or null only if the job title is completely unclear. Always give an estimate when you can. Use KES per month for jobs in Kenya.
 Reply as {"about":"","responsibilities":[],"requirements":[],"benefits":[],"company":"","listed_salary":"","salary":null}` },
       ] });
       let r = res && res.response;
