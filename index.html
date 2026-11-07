@@ -2739,18 +2739,21 @@
             const tl = (src, kt, ko, kd, kr, i) => `<div class="pc-tl">${edit && i !== undefined ? `<span class="pc-x" onclick="removePastJob(${i})">✕</span>` : ''}${ed(kt, src[kt], 'Job title', i, 'pc-t')}${ed(ko, src[ko], 'Company', i)}${ed(kd, src[kd], 'When', i)}${ed(kr, src[kr], 'Responsibilities', i)}</div>`;
             const ini = E((p.full_name || 'K').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase());
             const img = p.gender ? `<img src="${p.gender === 'Female' ? 'female%20avatar.png' : 'male%20avatar.png'}" alt="" onerror="this.remove()">` : '';
-            const sec = (h, body) => !edit && !body.trim() ? '' : `<div class="pc-sec"><div class="pc-h">${h}</div>${body}</div>`;
-            return `<div class="pc-top"><div class="pc-av">${ini}${img}</div><div style="min-width:0;flex:1"><div style="display:flex;align-items:center;gap:6px">${ed('full_name', p.full_name, 'Full name', undefined, 'pc-name')}${tab ? scallopedBadgeSVG.replace('Verified Employer', 'Verified Professional') : ''}</div>${ed('headline', p.headline, 'Job title', undefined, 'pc-pill')}</div></div>`
-                + sec('Education', `<div class="pc-tl">${ed('course', p.course, 'Course', undefined, 'pc-t')}${ed('education', p.education, 'Education level')}${ed('institution', p.institution, 'Institution')}${ed('education_period', p.education_period, 'Period')}</div>`)
-                + (we(p) ? sec('<span>Work Experience</span>' + (edit ? '<span class="pc-add" onclick="addPastJob()">+ Add past job</span>' : ''),
+            const sec = (h, body) => !edit && !body.trim() ? '' : tab === 'body' ? `<div class="pc" style="margin-bottom:12px"><div class="pc-sec" style="border-top:0"><div class="pc-h">${h}</div>${body}</div></div>` : `<div class="pc-sec"><div class="pc-h">${h}</div>${body}</div>`;
+            const top = `<div class="pc-top"${tab === 'top' ? ' style="background:none;padding-right:100px"' : ''}><div class="pc-av">${ini}${img}</div><div style="min-width:0;flex:1"><div style="display:flex;align-items:center;gap:6px">${ed('full_name', p.full_name, 'Full name', undefined, 'pc-name')}${tab ? scallopedBadgeSVG.replace('Verified Employer', 'Verified Professional') : ''}</div>${ed('headline', p.headline, 'Job title', undefined, 'pc-pill')}</div></div>`;
+            const education = sec('Education', `<div class="pc-tl">${ed('course', p.course, 'Course', undefined, 'pc-t')}${ed('education', p.education, 'Education level')}${ed('institution', p.institution, 'Institution')}${ed('education_period', p.education_period, 'Period')}</div>`);
+            const work = we(p) ? sec('<span>Work Experience</span>' + (edit ? '<span class="pc-add" onclick="addPastJob()">+ Add past job</span>' : ''),
                     (cw(p) ? tl(p, 'job_title', 'workplace', 'work_period', 'responsibilities') : '') + p.past_jobs.map((j, i) => tl(j, 'title', 'company', 'period', 'resp', i)).join('')
-                    + `<div style="font-size:11px;color:var(--text-muted)">Years of experience</div>${ed('years_experience', p.years_experience, 'e.g. 3')}`) : '')
-                + sec('Skills', ed('skills', p.skills, 'Skills', undefined, 'pc-chips'))
-                + sec('Certifications', ed('certifications', p.certifications, 'Certifications', undefined, 'pc-chips'))
+                    + `<div style="font-size:11px;color:var(--text-muted)">Years of experience</div>${ed('years_experience', p.years_experience, 'e.g. 3')}`) : '';
+            const skills = sec('Skills', ed('skills', p.skills, 'Skills', undefined, 'pc-chips'));
+            const rest = sec('Certifications', ed('certifications', p.certifications, 'Certifications', undefined, 'pc-chips'))
                 + sec('Languages', ed('languages', p.languages, 'Languages', undefined, 'pc-chips'))
                 + (p.projects === 'Yes' ? sec('Projects', ed('project_details', p.project_details, 'Project details')) : '')
                 + sec('Achievements', ed('achievements', p.achievements, 'Achievements'))
                 + sec('Contact', ed('phone', p.phone, 'Phone number'));
+            if (tab === 'top') return top;
+            if (tab === 'body') return skills + work + education + rest;   // Profile tab order: skills, experience, education
+            return top + education + work + skills + rest;                  // chat review keeps its original order
         }
         document.addEventListener('input', e => {
             const t = e.target, f = t.dataset && t.dataset.f;
@@ -2780,13 +2783,18 @@
                 v.innerHTML = `<div class="glass-panel" style="text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Your career profile is empty</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Chat with Chania to build it in a few minutes.</div><button class="apply-btn-full" onclick="openChatModal()">Create Profile</button></div>`;
                 return;
             }
-            const apps = jobData.filter(j => j.status === 'completed').length, saved = jobData.filter(j => j.bookmarked).length;
+            const apps = jobData.filter(j => j.status === 'completed').length;
+            const unlocked = new Set([...unlockedKeys(), ...jobData.filter(j => j.status !== 'none').map(jobKey)]).size;
+            const checks = [profile.full_name, profile.headline || profile.job_title, profile.course, profile.institution, profile.skills, profile.certifications, profile.languages, profile.achievements, profile.phone, we(profile)];
+            const strength = Math.round(checks.filter(Boolean).length / checks.length * 100);
             const ctl = pEdit
                 ? `<button class="pf-btn" onclick="doneProfile()" style="border-color:var(--accent-orange);color:var(--accent-orange)"><i data-lucide="check" style="width:13px;height:13px"></i> Done</button>`
                 : `<button class="pf-btn" onclick="editProfile()" aria-label="Edit profile"><i data-lucide="pencil" style="width:13px;height:13px"></i> Edit</button>`;
-            v.innerHTML = `<div class="glass-panel" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="ai-mode"><span class="live-dot"></span>AI Matching Mode</div><div style="display:flex;gap:6px">${ctl}</div></div>`
-                + `<div class="pc" style="margin-bottom:14px">${cardHtml(pEdit, true)}</div>`
-                + `<div class="stat-grid" style="grid-template-columns:1fr 1fr"><div class="stat-card"><div class="stat-value">${apps}</div><div class="stat-label">Applications</div></div><div class="stat-card"><div class="stat-value">${saved}</div><div class="stat-label">Saved Roles</div></div></div>`;
+            const stat = (n, t) => `<div class="stat-card"><div class="stat-value">${n}</div><div class="stat-label">${t}</div></div>`;
+            v.innerHTML = `<div class="pc" style="position:relative;margin-bottom:12px"><div style="position:absolute;top:14px;right:14px;z-index:1">${ctl}</div>${cardHtml(pEdit, 'top')}`
+                + `<div style="padding:0 16px 14px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px"><span style="font-weight:700;color:var(--text-primary)">Profile strength</span><span style="font-weight:800;color:var(--emerald-green)">${strength}%</span></div><div style="height:8px;border-radius:4px;background:var(--border-subtle)"><div style="width:${strength}%;height:8px;border-radius:4px;background:var(--emerald-green)"></div></div></div></div>`
+                + `<div class="stat-grid" style="margin-bottom:12px">${stat(jobData.length, 'Matches')}${stat(apps, 'Applied')}${stat(unlocked, 'Unlocked')}</div>`
+                + cardHtml(pEdit, 'body');
             lucide.createIcons();
         }
         function editProfile() { pEdit = true; renderProfile(); }
