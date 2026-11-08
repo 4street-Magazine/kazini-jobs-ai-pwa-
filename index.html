@@ -7,7 +7,7 @@
 
     <!-- PWA Metadata Tags -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#FF5500">
+    <meta name="theme-color" content="#000000">
     <link rel="apple-touch-icon" href="icon-192.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -393,7 +393,7 @@
         .job-list {
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 16px;
         }
 
         .job-card {
@@ -431,12 +431,13 @@
             margin-bottom: 12px;
         }
 
-        #jobList .job-title { font-size: 14px; }
+        #jobList .job-card { padding: 20px; }
+        #jobList .job-title { font-size: 14px; line-height: 1.45; }
         #jobList .company-info, #jobList .company-info span { font-size: 11.5px; font-weight: 600; }
-        #jobList .company-info { margin-bottom: 0; margin-top: 6px; flex-wrap: wrap; row-gap: 2px; }
+        #jobList .company-info { margin-bottom: 0; margin-top: 8px; flex-wrap: wrap; row-gap: 4px; }
         #jobList .salary-text { font-size: 11.5px; }
         .match-pill { background: var(--status-applied-bg); color: var(--status-applied-text); font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 99px; white-space: nowrap; }
-        .free-pill { margin-left: 8px; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 99px; background: var(--status-applied-bg); color: var(--status-applied-text); }
+        .free-pill { margin-left: 0; font-size: 10px; white-space: nowrap; font-weight: 800; padding: 3px 8px; border-radius: 99px; background: var(--status-applied-bg); color: var(--status-applied-text); }
         .apply-cta { width: 100%; min-height: 44px; border-radius: 999px; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-family: inherit; }
         .apply-cta.free { border: none; background: var(--premium-orange-gradient); color: #fff; box-shadow: 0 2px 8px var(--accent-orange-glow); }
         .apply-cta.locked { border: 1.5px solid transparent; background: linear-gradient(var(--bg-card), var(--bg-card)) padding-box, var(--premium-orange-gradient) border-box; color: var(--accent-orange); }
@@ -1851,7 +1852,7 @@
             }
             container.innerHTML = visibleJobs.map(job => { const open = isUnlocked(job); return `
                 <div class="job-card">
-                    <div class="card-header-row" style="gap:8px; margin-bottom:0;">
+                    <div class="card-header-row" style="gap:12px; margin-bottom:0;">
                         <div style="min-width:0; flex:1;">
                             <div class="job-title">${displayTitle(job)}</div>
                             <div class="company-info">
@@ -1864,7 +1865,7 @@
                         <span class="match-pill" style="flex:none;">${job.matchScore} match</span>
                     </div>
 
-                    <div class="salary-text" style="margin:10px 0 14px;">${job.salary}${isFreeJob(job) ? ' <span class="free-pill">Your free job</span>' : ''}</div>
+                    <div class="salary-text" style="margin:14px 0 18px; display:flex; align-items:center; justify-content:space-between; gap:8px;"><span>${job.salary}</span>${isFreeJob(job) ? '<span class="free-pill">Your free job</span>' : ''}</div>
 
                     <button class="apply-cta ${open ? 'free' : 'locked'}" onclick="startApply(${job.id})">
                         ${open ? '' : '<i data-lucide="lock" style="width:13px; height:13px;"></i>'}
@@ -1977,7 +1978,7 @@
                     </div>
                 `;
             } else if (tabId === 'profileTab') {
-                container.classList.add('hidden');
+                container.innerHTML = '';   // renderProfile fills it with the pinned identity card and stats
                 renderProfile();
             }
             lucide.createIcons();
@@ -2004,8 +2005,14 @@
             withSkeleton(tabId, fn);
         }
 
+        function applyThemeColor() {   // phone status bar takes the app's current header colour
+            const m = document.querySelector('meta[name="theme-color"]');
+            if (m) m.setAttribute('content', document.body.classList.contains('dark-theme') ? '#000000' : '#ffffff');
+        }
+        applyThemeColor();
         function toggleTheme() {
             document.body.classList.toggle('dark-theme');
+            applyThemeColor();
             const icon = document.getElementById('themeIcon');
             if(document.body.classList.contains('dark-theme')) {
                 icon.setAttribute('data-lucide', 'sun');
@@ -2831,10 +2838,12 @@
                 ? `<button class="pf-btn" onclick="doneProfile()" style="border-color:var(--accent-orange);color:var(--accent-orange)"><i data-lucide="check" style="width:13px;height:13px"></i> Done</button>`
                 : `<button class="pf-btn" onclick="editProfile()" aria-label="Edit profile"><i data-lucide="pencil" style="width:13px;height:13px"></i> Edit</button>`;
             const stat = (n, t) => `<div class="stat-card"><div class="stat-value">${n}</div><div class="stat-label">${t}</div></div>`;
-            v.innerHTML = `<div id="profileSticky" style="position:sticky;top:var(--head-h,0px);z-index:40;background:var(--bg-app);padding-top:2px"><div class="pc" style="position:relative;margin-bottom:12px"><div style="position:absolute;top:14px;right:14px;z-index:1">${ctl}</div>${cardHtml(pEdit, 'top')}`
+            const pinned = `<div class="pc" style="position:relative;margin-bottom:10px"><div style="position:absolute;top:14px;right:14px;z-index:1">${ctl}</div>${cardHtml(pEdit, 'top')}`
                 + `<div style="padding:0 16px 14px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px"><span style="font-weight:700;color:var(--text-primary)">Profile strength</span><span style="font-weight:800;color:var(--emerald-green)">${strength}%</span></div><div style="height:8px;border-radius:4px;background:var(--border-subtle)"><div style="width:${strength}%;height:8px;border-radius:4px;background:var(--emerald-green)"></div></div></div></div>`
-                + `<div class="stat-grid" style="margin-bottom:12px">${stat(jobData.length, 'Matches')}${stat(apps, 'Applied')}${stat(unlocked, 'Unlocked')}</div></div>`
-                + cardHtml(pEdit, 'body');
+                + `<div class="stat-grid">${stat(jobData.length, 'Matches')}${stat(apps, 'Applied')}${stat(unlocked, 'Unlocked')}</div>`;
+            const hdr = document.getElementById('headerContextContainer');
+            if (hdr && document.getElementById('profileTab').classList.contains('active')) { hdr.classList.remove('hidden'); hdr.innerHTML = pinned; }
+            v.innerHTML = `<div style="height:12px"></div>` + cardHtml(pEdit, 'body');
             lucide.createIcons();
             setVibeVars();   // keeps --head-h current so the identity card sticks right under the app header
         }
