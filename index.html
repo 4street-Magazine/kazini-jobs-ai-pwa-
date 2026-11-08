@@ -12,6 +12,11 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // If unpkg is slow or blocked, try a second CDN, and if both fail run without icons instead of a blank app
+        window.lucide || document.write('<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"><\/script>');
+    </script>
+    <script>window.lucide = window.lucide || { createIcons: function () {} };</script>
     <style>
         :root {
             /* Vivid Orange Premium Accent Color & Gradient */
@@ -1833,7 +1838,7 @@
             const job = jobData.find(j => j.id === id);
             if (!job) return;
             activeJobId = id;
-            document.getElementById('payInfoJob').innerText = `${displayTitle(job)} · ${job.matchScore} match`;
+            document.getElementById('payInfoJob').innerText = `${displayTitle(job)} · ${job.openEntry ? 'Open - Entry' : job.matchScore + ' match'}`;
             document.getElementById('payInfoBtn').innerText = `Pay Contribution · KSh ${MPESA_AMOUNT}`;
             document.getElementById('payInfoAmt').innerText = `KSH ${MPESA_AMOUNT}`;
             document.getElementById('payInfoModal').style.display = 'flex';
@@ -1862,7 +1867,7 @@
                                 <span>${cleanLoc(job.location)}</span>
                             </div>
                         </div>
-                        <span class="match-pill" style="flex:none;">${job.matchScore} match</span>
+                        <span class="match-pill${job.openEntry ? ' open-pill' : ''}" style="flex:none;">${job.openEntry ? 'Open - Entry' : job.matchScore + ' match'}</span>
                     </div>
 
                     <div class="salary-text" style="margin:14px 0 18px; display:flex; align-items:center; justify-content:space-between; gap:8px;"><span>${job.salary}</span>${isFreeJob(job) ? '<span class="free-pill">Your free job</span>' : ''}</div>
@@ -2150,7 +2155,9 @@
             const openJob = isUnlocked(job);
             document.getElementById('modalCompany').innerHTML = `${openJob ? job.company : maskCompany()} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${cleanLoc(job.location)}`;
             document.getElementById('modalSalary').innerText = job.salary;
-            document.getElementById('modalMatch').innerText = job.matchScore;
+            const mm = document.getElementById('modalMatch');
+            mm.innerText = job.openEntry ? 'Open - Entry' : job.matchScore;
+                        if (mm.previousElementSibling) mm.previousElementSibling.innerText = job.openEntry ? 'Job type' : 'AI Match Score';
             document.getElementById('modalStatic').style.display = job.serverId ? 'none' : '';
             document.getElementById('modalSalaryLabel').innerText = 'Salary';
             renderModalDesc(job);
@@ -2579,7 +2586,7 @@
                 hybrid: /\bhybrid\b/i.test([m.title, m.location, m.description].join(' ')),
                 skills: [], moreSkills: 0,
                 salary: 'Salary not listed',
-                matchScore: pct + '%',
+                matchScore: pct + '%', openEntry: !!m.open_entry,
                 bookmarked: false, status: 'none', appliedDate: '',
                 desc: m.description || '', companyAbout: '', resp: [],
                 applyUrl: m.apply_url || undefined
