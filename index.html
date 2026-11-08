@@ -432,10 +432,12 @@
         }
 
         #jobList .job-title { font-size: 15px; }
-        #jobList .company-info { font-size: 12.5px; margin-bottom: 0; margin-top: 6px; }
+        #jobList .company-info, #jobList .company-info span { font-size: 12.5px; font-weight: 600; }
+        #jobList .company-info { margin-bottom: 0; margin-top: 6px; flex-wrap: wrap; row-gap: 2px; }
+        #jobList .salary-text { font-size: 12.5px; }
         .match-pill { background: var(--status-applied-bg); color: var(--status-applied-text); font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 99px; white-space: nowrap; }
         .free-pill { margin-left: 8px; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 99px; background: var(--status-applied-bg); color: var(--status-applied-text); }
-        .apply-cta { width: 100%; min-height: 44px; border-radius: 12px; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-family: inherit; }
+        .apply-cta { width: 100%; min-height: 46px; border-radius: 999px; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-family: inherit; }
         .apply-cta.free { border: none; background: var(--premium-orange-gradient); color: #fff; box-shadow: 0 2px 8px var(--accent-orange-glow); }
         .apply-cta.locked { border: 1.5px solid transparent; background: linear-gradient(var(--bg-card), var(--bg-card)) padding-box, var(--premium-orange-gradient) border-box; color: var(--accent-orange); }
         .apply-cta.locked .cta-text { background: var(--premium-orange-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -1784,6 +1786,8 @@
         const isFreeJob = job => jobKey(job) === freeJobKey();
         const isUnlocked = job => job.status !== 'none' || isFreeJob(job) || unlockedKeys().includes(jobKey(job));
         const maskText = s => String(s || '').replace(/[^\s,.\-&()/]/g, '*');
+        const maskCompany = () => '*****';                       // short and fixed, so it doesn't reveal the name's length
+        const cleanLoc = s => String(s || '').replace(/\s*County\b/i, '').trim();
         /* Locked jobs show a generic title (seniority + field + "Role") so the exact wording can't be searched elsewhere */
         const TITLE_FIELDS = [
             [/artificial intelligence|\bai\b|machine learning|\bml\b|\bnlp\b|deep learning|computer vision/, 'Artificial Intelligence'],
@@ -1851,18 +1855,13 @@
                         <div style="min-width:0; flex:1;">
                             <div class="job-title">${displayTitle(job)}</div>
                             <div class="company-info">
-                                <span${open ? '' : ' style="letter-spacing:1px"'}>${open ? job.company : maskText(job.company)}</span>
+                                <span${open ? '' : ' style="letter-spacing:2px"'}>${open ? job.company : maskCompany()}</span>
                                 ${job.verified ? scallopedBadgeSVG : ''}
                                 <span class="location-dot">•</span>
-                                <span>${job.location}</span>
+                                <span>${cleanLoc(job.location)}</span>
                             </div>
                         </div>
-                        <div style="display:flex; align-items:center; gap:2px; flex:none;">
-                            <span class="match-pill">${job.matchScore} match</span>
-                            <button class="bookmark-btn" aria-label="Save job" onclick="toggleBookmark(${job.id})">
-                                <i data-lucide="heart" style="width: 18px; height: 18px; ${job.bookmarked ? 'fill: var(--accent-orange); color: var(--accent-orange);' : 'color: var(--text-muted);'}"></i>
-                            </button>
-                        </div>
+                        <span class="match-pill" style="flex:none;">${job.matchScore} match</span>
                     </div>
 
                     <div class="salary-text" style="margin:10px 0 14px;">${job.salary}${isFreeJob(job) ? ' <span class="free-pill">Your free job</span>' : ''}</div>
@@ -1928,6 +1927,7 @@
             if (activeJobFilter === 'remote') return !!j.remote;
             if (activeJobFilter === 'fulltime') return j.jobType === 'Full-Time';
             if (activeJobFilter === 'parttime') return j.jobType === 'Part-Time';
+            if (activeJobFilter === 'hybrid') return !!j.hybrid;
             if (activeJobFilter === 'saved') return !!j.bookmarked;
             return true;
         }
@@ -1947,7 +1947,7 @@
                 container.classList.remove('hidden');
                 container.innerHTML = `
                     <div class="chip-bar">
-                        ${[['all', 'sparkles', 'All'], ['remote', 'wifi', 'Remote'], ['fulltime', 'briefcase', 'Full-time'], ['parttime', 'clock', 'Part-time'], ['saved', 'heart', 'Saved']].map(([k, ic, label]) => `
+                        ${[['all', 'sparkles', 'All'], ['remote', 'wifi', 'Remote'], ['fulltime', 'briefcase', 'Full-time'], ['parttime', 'clock', 'Part-time'], ['hybrid', 'shuffle', 'Hybrid']].map(([k, ic, label]) => `
                         <div class="filter-chip ${activeJobFilter === k ? 'active' : ''}" onclick="selectChip(this, '${k}')">
                             <i data-lucide="${ic}" style="width: 12px; height: 12px; flex-shrink: 0;"></i>
                             ${label}
@@ -2141,7 +2141,7 @@
 
             document.getElementById('modalTitle').innerText = job.title;
             const openJob = isUnlocked(job);
-            document.getElementById('modalCompany').innerHTML = `${openJob ? job.company : maskText(job.company)} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${job.location}`;
+            document.getElementById('modalCompany').innerHTML = `${openJob ? job.company : maskCompany()} ${job.verified ? scallopedBadgeSVG : ''} <span class="location-dot">•</span> ${cleanLoc(job.location)}`;
             document.getElementById('modalSalary').innerText = job.salary;
             document.getElementById('modalMatch').innerText = job.matchScore;
             document.getElementById('modalStatic').style.display = job.serverId ? 'none' : '';
@@ -2567,8 +2567,9 @@
             return {
                 id: 1000 + i, serverId: m.id,
                 title: m.title, company: m.company || 'Employer', verified: true,   // every employer shows the blue tick
-                location: String(m.location || '').split(',')[0].trim(),   // first part only, e.g. "Nairobi"
+                location: String(m.location || '').split(',')[0].replace(/\s*County\b/i, '').trim(),   // first part only, e.g. "Nairobi"
                 jobType: m.employment_type || '', remote: !!m.remote,
+                hybrid: /\bhybrid\b/i.test([m.title, m.location, m.description].join(' ')),
                 skills: [], moreSkills: 0,
                 salary: 'Salary not listed',
                 matchScore: pct + '%',
