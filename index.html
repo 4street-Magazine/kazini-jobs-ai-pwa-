@@ -431,13 +431,13 @@
             margin-bottom: 12px;
         }
 
-        #jobList .job-title { font-size: 15px; }
-        #jobList .company-info, #jobList .company-info span { font-size: 12.5px; font-weight: 600; }
+        #jobList .job-title { font-size: 14px; }
+        #jobList .company-info, #jobList .company-info span { font-size: 11.5px; font-weight: 600; }
         #jobList .company-info { margin-bottom: 0; margin-top: 6px; flex-wrap: wrap; row-gap: 2px; }
-        #jobList .salary-text { font-size: 12.5px; }
-        .match-pill { background: var(--status-applied-bg); color: var(--status-applied-text); font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 99px; white-space: nowrap; }
-        .free-pill { margin-left: 8px; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 99px; background: var(--status-applied-bg); color: var(--status-applied-text); }
-        .apply-cta { width: 100%; min-height: 46px; border-radius: 999px; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-family: inherit; }
+        #jobList .salary-text { font-size: 11.5px; }
+        .match-pill { background: var(--status-applied-bg); color: var(--status-applied-text); font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 99px; white-space: nowrap; }
+        .free-pill { margin-left: 8px; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 99px; background: var(--status-applied-bg); color: var(--status-applied-text); }
+        .apply-cta { width: 100%; min-height: 44px; border-radius: 999px; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-family: inherit; }
         .apply-cta.free { border: none; background: var(--premium-orange-gradient); color: #fff; box-shadow: 0 2px 8px var(--accent-orange-glow); }
         .apply-cta.locked { border: 1.5px solid transparent; background: linear-gradient(var(--bg-card), var(--bg-card)) padding-box, var(--premium-orange-gradient) border-box; color: var(--accent-orange); }
         .apply-cta.locked .cta-text { background: var(--premium-orange-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -1947,7 +1947,7 @@
                 container.classList.remove('hidden');
                 container.innerHTML = `
                     <div class="chip-bar">
-                        ${[['all', 'sparkles', 'All'], ['remote', 'wifi', 'Remote'], ['fulltime', 'briefcase', 'Full-time'], ['parttime', 'clock', 'Part-time'], ['hybrid', 'shuffle', 'Hybrid']].map(([k, ic, label]) => `
+                        ${[['all', 'sparkles', 'All'], ['remote', 'wifi', 'Remote'], ['fulltime', 'briefcase', 'Full-time'], ['parttime', 'clock', 'Part-time']].map(([k, ic, label]) => `
                         <div class="filter-chip ${activeJobFilter === k ? 'active' : ''}" onclick="selectChip(this, '${k}')">
                             <i data-lucide="${ic}" style="width: 12px; height: 12px; flex-shrink: 0;"></i>
                             ${label}
