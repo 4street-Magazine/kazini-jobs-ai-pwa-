@@ -40,6 +40,44 @@ function profileToText(p) {
   return parts.join('\n').slice(0, 2500);
 }
 
+/* ---------- Cleaner text for embeddings: role, level, field and skills only, so noise (company names, benefits, long duty lists) doesn't dilute the match ---------- */
+const levelFromYears = y => !(y >= 0) ? '' : y < 2 ? 'entry-level' : y <= 4 ? 'mid-level' : 'senior';
+function profileToEmbedText(p) {
+  const years = parseFloat(p.years_experience);
+  const past = (Array.isArray(p.past_jobs) ? p.past_jobs : (Array.isArray(p.pastJobs) ? p.pastJobs : [])).map(j => clean(j && (j.title || j.role))).filter(Boolean);
+  const role = clean(p.job_title || p.headline);
+  const lines = [];
+  if (role) lines.push(`Role: ${role}`);
+  const lvl = levelFromYears(years);
+  if (lvl) lines.push(`Level: ${lvl}, ${years} years of experience`);
+  if (clean(p.course)) lines.push(`Field of study: ${clean(p.course)}`);
+  if (clean(p.education)) lines.push(`Education level: ${clean(p.education)}`);
+  const skills = clean(Array.isArray(p.skills) ? p.skills.join(', ') : p.skills);
+  if (skills) lines.push(`Skills: ${skills.slice(0, 400)}`);
+  if (past.length) lines.push(`Previous roles: ${past.slice(0, 5).join(', ')}`);
+  if (clean(p.certifications)) lines.push(`Certifications: ${clean(Array.isArray(p.certifications) ? p.certifications.join(', ') : p.certifications).slice(0, 200)}`);
+  if (clean(p.responsibilities)) lines.push(`Work done: ${clean(p.responsibilities).slice(0, 250)}`);
+  return lines.join('\n').slice(0, 1500);
+}
+function condenseDescription(d, max = 900) {
+  let t = clean(d);
+  const marks = [...t.matchAll(/\b(equal opportunity|we are an equal|benefits include|what we offer|why join|about (us|the company)|who we are)\b/gi)].map(m => m.index);
+  const cut = marks.find(i => i > 60);   // first boilerplate heading after the opening lines
+  if (cut !== undefined) t = t.slice(0, cut);
+  const m = t.search(/\b(requirements|qualifications|what you.ll (need|bring)|responsibilities|key duties|skills (and|&) experience)\b/i);
+  if (m >= 0) t = t.slice(m);
+  return t.slice(0, max);
+}
+function jobToEmbedText(j) {
+  const req = requiredYears(j);
+  const lvl = req === null ? '' : req <= 1 ? 'entry-level' : req <= 3 ? 'mid-level' : 'senior';
+  const lines = [`Role: ${clean(j.title)}`];
+  if (lvl) lines.push(`Level: ${lvl}${req > 1 ? `, ${req}+ years of experience required` : ''}`);
+  const body = condenseDescription(j.description);
+  if (body) lines.push(body);
+  return lines.join('\n').slice(0, 1500);
+}
+
 function normalisePhone(raw) {
   const d = String(raw || '').replace(/\D/g, '');
   if (d.startsWith('254') && d.length === 12) return '+' + d;
@@ -53,7 +91,7 @@ async function saveProfile(env, ctx, body) {
   const { deviceId, status, profile } = body || {};
   if (!deviceId || !profile || typeof profile !== 'object') return { error: 'deviceId and profile required', code: 400 };
 
-  const text = profileToText(profile);
+  const text = profileToEmbedText(profile);
   const hash = await sha(text);
   const phone = normalisePhone(profile.phone);
 
@@ -73,7 +111,7 @@ async function saveProfile(env, ctx, body) {
   return { ok: true, profileId: row.id };
 }
 
-async function embedAndMatchProfile(env, profileId, text, hash) {
+async function embedAndMatchProfile(env, profileId, text, hash, quiet) {
   if (!env.PROFILE_VEC || !env.JOB_VEC) return;   // Vectorize not set up yet: profile stays unembedded and is picked up once it is added
   const [vec] = await embed(env, [text]);
   await env.PROFILE_VEC.upsert([{ id: `p_${profileId}`, values: vec, metadata: { profileId } }]);
@@ -85,7 +123,7 @@ async function embedAndMatchProfile(env, profileId, text, hash) {
   const stmts = res.matches.filter(m => m.score >= min).map(m =>
     env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score) VALUES (?, ?, ?)').bind(profileId, m.id.replace(/^j_/, ''), m.score));
   if (stmts.length) await env.DB.batch(stmts);
-  await notifyPending(env);
+  if (quiet) await env.DB.prepare('UPDATE matches SET notified = 1 WHERE profile_id = ? AND notified = 0').bind(profileId).run(); else await notifyPending(env);
 }
 
 /* ---------- Automatic Bright Data searches, built from saved profiles ---------- */
@@ -201,9 +239,9 @@ async function ingestJobs(env, records) {
   await embedAndMatchJobs(env, fresh);
 }
 
-const jobToText = j => `${j.title}\n${j.description || ''}`.slice(0, 2000);   // title + description only
+const jobToText = jobToEmbedText;
 
-async function embedAndMatchJobs(env, jobs) {
+async function embedAndMatchJobs(env, jobs, quiet) {
   if (!jobs.length) return;
   if (!env.JOB_VEC || !env.PROFILE_VEC) return;   // Vectorize not set up yet: jobs stay embedded = 0 and are retried by the cron later
   const vecs = await embed(env, jobs.map(jobToText));
@@ -225,7 +263,7 @@ async function embedAndMatchJobs(env, jobs) {
     }
   }
   for (let i = 0; i < stmts.length; i += 90) await env.DB.batch(stmts.slice(i, i + 90));
-  await notifyPending(env);
+  if (quiet) await env.DB.prepare('UPDATE matches SET notified = 1 WHERE notified = 0').run(); else await notifyPending(env);
 }
 
 // Retry jobs whose embedding failed earlier
@@ -461,6 +499,35 @@ Reply as {"points":["","",""]}` },
     points = cleanBullets(r && r.points, 3, 160, allowedLow);
   } catch (e) { console.error('job match:', String((e && e.message) || e)); }
   return { ai: points.length > 0, at: Date.now(), points };
+}
+
+/* ---------- Experience fit: embeddings can't tell "1.5 years" from "4+ years", so this is a plain rule applied when matches are read ---------- */
+function requiredYears(job) {
+  const text = `${clean(job.title)}\n${clean(job.description)}`.slice(0, 6000);
+  const low = text.toLowerCase();
+  let best = null;
+  const re = /(\d{1,2})(?:\.\d)?\s*(?:\+|plus)?\s*(?:(?:-|–|to)\s*(\d{1,2})\s*\+?\s*)?(?:years?|yrs?)\b/g;
+  let m;
+  while ((m = re.exec(low))) {
+    const around = low.slice(Math.max(0, m.index - 70), m.index + m[0].length + 70);
+    if (!/experience|\bexp\b|background|worked|working|hands-on|track record/.test(around)) continue;   // skip "founded 10 years ago" and similar
+    const n = parseInt(m[1], 10);
+    if (n > 0 && n <= 20) best = Math.max(best || 0, n);
+  }
+  if (best !== null) return best;
+  const t = clean(job.title).toLowerCase();
+  if (/\b(intern|internship|attach[eé]|trainee|graduate|junior|jr\.?|entry)\b/.test(t)) return 0;
+  if (/\b(senior|sr\.?|lead|principal|staff|head|director|chief|vp)\b/.test(t)) return 5;   // seniority in the title implies about 5 years
+  return null;
+}
+// Returns the adjusted score, or null to hide the job when the candidate is 2+ years short
+function experienceAdjust(score, have, job) {
+  const req = requiredYears(job);
+  if (req === null || !(have >= 0)) return score;
+  const gap = req - have;
+  if (gap >= 2) return null;
+  if (gap > 1) return Math.max(0, score - 0.05);
+  return score;
 }
 
 /* ---------- CV + cover letter per job: facts come from the career profile, the AI only words and tailors them ---------- */
@@ -735,7 +802,11 @@ export default {
           SELECT j.id, j.title, j.company, j.location, j.description, j.apply_url, j.posted_at, j.employment_type, j.remote, m.score
           FROM matches m JOIN profiles p ON p.id = m.profile_id JOIN jobs j ON j.id = m.job_id
           WHERE p.device_id = ? ORDER BY m.score DESC LIMIT 100`).bind(deviceId).all();
-        return json(env, { matches: results });
+        const prow = await env.DB.prepare('SELECT data FROM profiles WHERE device_id = ?').bind(deviceId).first();
+        let have = NaN; try { have = parseFloat(JSON.parse((prow && prow.data) || '{}').years_experience); } catch (e) {}
+        const fitted = results.map(r => ({ r, s: experienceAdjust(r.score, have, r) })).filter(x => x.s !== null)
+          .map(x => Object.assign({}, x.r, { score: x.s })).sort((a, b) => b.score - a.score);
+        return json(env, { matches: fitted });
       }
 
       if (url.pathname === '/webhook/brightdata' && req.method === 'POST') {
@@ -748,6 +819,33 @@ export default {
       if (url.pathname === '/admin/trigger' && req.method === 'POST') {
         if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
         return json(env, await triggerBrightData(env));
+      }
+      // One-off: rebuild every vector from the cleaner text. Run stage=profiles until remaining is 0, then stage=jobs (first with reset=1) until remaining is 0. No SMS is sent.
+      if (url.pathname === '/admin/reembed' && req.method === 'POST') {
+        if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
+        if (!env.JOB_VEC || !env.PROFILE_VEC) return json(env, { skipped: 'Vectorize not connected' });
+        const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 1), 50);
+        if (url.searchParams.get('stage') === 'profiles') {
+          const { results } = await env.DB.prepare("SELECT id, data, text_hash FROM profiles WHERE status = 'submitted'").all();
+          const todo = [];
+          for (const r of results) {
+            let p = {}; try { p = JSON.parse(r.data || '{}'); } catch (e) {}
+            const text = profileToEmbedText(p);
+            if (!text) continue;
+            const hash = await sha(text);
+            if (hash !== r.text_hash) todo.push({ id: r.id, text, hash });
+          }
+          for (const t of todo.slice(0, limit)) await embedAndMatchProfile(env, t.id, t.text, t.hash, true);
+          return json(env, { stage: 'profiles', processed: Math.min(todo.length, limit), remaining: Math.max(todo.length - limit, 0) });
+        }
+        if (url.searchParams.get('stage') === 'jobs') {
+          if (url.searchParams.get('reset') === '1') await env.DB.prepare('UPDATE jobs SET embedded = 0').run();
+          const { results } = await env.DB.prepare('SELECT * FROM jobs WHERE embedded = 0 LIMIT ?').bind(limit).all();
+          await embedAndMatchJobs(env, results, true);
+          const left = await env.DB.prepare('SELECT COUNT(*) AS n FROM jobs WHERE embedded = 0').first();
+          return json(env, { stage: 'jobs', processed: results.length, remaining: left ? left.n : null });
+        }
+        return json(env, { error: 'stage must be profiles or jobs' }, 400);
       }
       if (url.pathname === '/admin/embed' && req.method === 'POST') {
         if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
