@@ -530,6 +530,25 @@ function experienceAdjust(score, have, job) {
   return score;
 }
 
+/* ---------- Open entry jobs: a job seeker is usually ready for entry-level or no-degree work too, so these count as normal matches for every profile ---------- */
+function isOpenEntry(job) {
+  const t = clean(job.title).toLowerCase(), d = clean(job.description).toLowerCase().slice(0, 4000);
+  if (/\b(junior|jr\.?|intern|internship|attach[eé]|trainee|graduate|entry)\b/.test(t)) return true;
+  if (/\bno (formal )?(degree|diploma|experience|qualifications?)\b[^.]{0,30}\b(required|needed|necessary)\b/.test(d)) return true;
+  if (/\b(entry[- ]level|without (a )?(degree|experience)|no prior experience|fresh graduates? (are )?(welcome|encouraged))\b/.test(d)) return true;
+  return false;
+}
+let entryPool = { at: 0, rows: [] };   // shared for 10 minutes so every /matches call doesn't rescan the jobs table
+async function openEntryPool(env) {
+  if (Date.now() - entryPool.at < 10 * 60 * 1000 && entryPool.rows.length) return entryPool.rows;
+  const { results } = await env.DB.prepare(`SELECT id, title, company, location, description, apply_url, posted_at, employment_type, remote FROM jobs
+    WHERE lower(title) LIKE '%junior%' OR lower(title) LIKE '%intern%' OR lower(title) LIKE '%entry%' OR lower(title) LIKE '%graduate%' OR lower(title) LIKE '%trainee%' OR lower(title) LIKE '%attach%'
+       OR lower(description) LIKE '%no experience%' OR lower(description) LIKE '%entry level%' OR lower(description) LIKE '%entry-level%' OR lower(description) LIKE '%no degree%' OR lower(description) LIKE '%no diploma%'
+    ORDER BY posted_at DESC LIMIT 200`).all();
+  entryPool = { at: Date.now(), rows: results.filter(isOpenEntry) };
+  return entryPool.rows;
+}
+
 /* ---------- CV + cover letter per job: facts come from the career profile, the AI only words and tailors them ---------- */
 const DOCS_RETRY_MS = 5 * 60 * 1000;           // after a failed AI attempt, wait an hour before paying for another
 let docsTableReady = false;
@@ -806,7 +825,26 @@ export default {
         let have = NaN; try { have = parseFloat(JSON.parse((prow && prow.data) || '{}').years_experience); } catch (e) {}
         const fitted = results.map(r => ({ r, s: experienceAdjust(r.score, have, r) })).filter(x => x.s !== null)
           .map(x => Object.assign({}, x.r, { score: x.s })).sort((a, b) => b.score - a.score);
-        return json(env, { matches: fitted });
+        const hiddenCount = results.length - fitted.length;   // before the open entry jobs are added
+        const max = parseInt(env.OPEN_ENTRY_MAX || '10', 10);
+        if (prow && max > 0) {   // entry-level / no-degree jobs join the list as normal matches, at a standard score
+          const floor = parseFloat(env.OPEN_ENTRY_SCORE || '0.70');
+          const seen = new Set(results.map(r => r.id));
+          let added = 0;
+          for (const j of await openEntryPool(env)) {
+            if (added >= max) break;
+            if (seen.has(j.id)) continue;
+            fitted.push(Object.assign({}, j, { score: floor, open_entry: true }));
+            added++;
+          }
+          fitted.sort((a, b) => b.score - a.score);
+        }
+        const out = { matches: fitted, hidden: hiddenCount };
+        if (url.searchParams.get('debug') === '1') {   // which jobs the experience rule removed, and why
+          out.profile_years = Number.isNaN(have) ? null : have;
+          out.hidden_jobs = results.filter(r => experienceAdjust(r.score, have, r) === null).map(r => ({ title: r.title, required_years: requiredYears(r), score: r.score }));
+        }
+        return json(env, out);
       }
 
       if (url.pathname === '/webhook/brightdata' && req.method === 'POST') {
