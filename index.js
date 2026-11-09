@@ -111,6 +111,20 @@ async function saveProfile(env, ctx, body) {
   return { ok: true, profileId: row.id };
 }
 
+/* ---------- Match limits: minimum score 0.68 and at most 20 matches kept per profile (MATCH_THRESHOLD, MATCH_CAP) ---------- */
+const matchMin = env => parseFloat(env.MATCH_THRESHOLD || '0.68');
+const matchCap = env => { const n = parseInt(env.MATCH_CAP, 10); return n > 0 ? n : 20; };
+async function trimMatches(env, profileIds) {   // keeps each profile's top-scoring matches, deletes the rest
+  const cap = matchCap(env);
+  const ids = [...new Set(profileIds)].filter(Number.isFinite);
+  for (let i = 0; i < ids.length; i += 90) {
+    const part = ids.slice(i, i + 90);
+    await env.DB.prepare(`DELETE FROM matches WHERE rowid IN (
+      SELECT rowid FROM (SELECT rowid, ROW_NUMBER() OVER (PARTITION BY profile_id ORDER BY score DESC) AS rn
+        FROM matches WHERE profile_id IN (${part.map(() => '?').join(',')})) WHERE rn > ?)`).bind(...part, cap).run();
+  }
+}
+
 async function embedAndMatchProfile(env, profileId, text, hash, quiet) {
   if (!env.PROFILE_VEC || !env.JOB_VEC) return;   // Vectorize not set up yet: profile stays unembedded and is picked up once it is added
   const [vec] = await embed(env, [text]);
@@ -119,10 +133,11 @@ async function embedAndMatchProfile(env, profileId, text, hash, quiet) {
 
   // Backfill: match this profile against jobs already in the database
   const res = await env.JOB_VEC.query(vec, { topK: 20, returnMetadata: 'none' });
-  const min = parseFloat(env.MATCH_THRESHOLD || '0.62');
+  const min = matchMin(env);
   const stmts = res.matches.filter(m => m.score >= min).map(m =>
     env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score) VALUES (?, ?, ?)').bind(profileId, m.id.replace(/^j_/, ''), m.score));
   if (stmts.length) await env.DB.batch(stmts);
+  await trimMatches(env, [profileId]);
   if (quiet) await env.DB.prepare('UPDATE matches SET notified = 1 WHERE profile_id = ? AND notified = 0').bind(profileId).run(); else await notifyPending(env);
 }
 
@@ -253,16 +268,19 @@ async function embedAndMatchJobs(env, jobs, quiet) {
   if (!pc || !pc.n) return;
 
   // Match every new job against all embedded profiles
-  const min = parseFloat(env.MATCH_THRESHOLD || '0.62');
-  const stmts = [];
+  const min = matchMin(env);
+  const stmts = [], touched = [];
   for (let i = 0; i < jobs.length; i++) {
     const res = await env.PROFILE_VEC.query(vecs[i], { topK: 50, returnMetadata: 'none' });
     for (const m of res.matches) {
       if (m.score < min) continue;
-      stmts.push(env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score) VALUES (?, ?, ?)').bind(parseInt(m.id.replace(/^p_/, ''), 10), jobs[i].id, m.score));
+      const pid = parseInt(m.id.replace(/^p_/, ''), 10);
+      touched.push(pid);
+      stmts.push(env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score) VALUES (?, ?, ?)').bind(pid, jobs[i].id, m.score));
     }
   }
   for (let i = 0; i < stmts.length; i += 90) await env.DB.batch(stmts.slice(i, i + 90));
+  await trimMatches(env, touched);
   if (quiet) await env.DB.prepare('UPDATE matches SET notified = 1 WHERE notified = 0').run(); else await notifyPending(env);
 }
 
@@ -293,9 +311,10 @@ async function notifyPending(env) {
     WHERE m.notified = 0 AND p.phone != '' GROUP BY p.id LIMIT 200`).all();
   for (const r of results) {
     const first = (r.full_name || '').split(' ')[0] || 'there';
-    const msg = r.n === 1
+    const n = Math.min(r.n, matchCap(env));
+    const msg = n === 1
       ? `Hi ${first}, Chania AI found a job matching your profile: ${r.top}. Open Chania AI to apply.`
-      : `Hi ${first}, Chania AI found ${r.n} jobs matching your profile, including ${r.top}. Open Chania AI to apply.`;
+      : `Hi ${first}, Chania AI found ${n} jobs matching your profile, including ${r.top}. Open Chania AI to apply.`;
     if (await sendSms(env, r.phone, msg)) await env.DB.prepare('UPDATE matches SET notified = 1 WHERE profile_id = ?').bind(r.pid).run();
   }
 }
@@ -820,7 +839,7 @@ export default {
         const { results } = await env.DB.prepare(`
           SELECT j.id, j.title, j.company, j.location, j.description, j.apply_url, j.posted_at, j.employment_type, j.remote, m.score
           FROM matches m JOIN profiles p ON p.id = m.profile_id JOIN jobs j ON j.id = m.job_id
-          WHERE p.device_id = ? ORDER BY m.score DESC LIMIT 100`).bind(deviceId).all();
+          WHERE p.device_id = ? ORDER BY m.score DESC LIMIT ?`).bind(deviceId, matchCap(env)).all();
         const prow = await env.DB.prepare('SELECT data FROM profiles WHERE device_id = ?').bind(deviceId).first();
         let have = NaN; try { have = parseFloat(JSON.parse((prow && prow.data) || '{}').years_experience); } catch (e) {}
         const fitted = results.map(r => ({ r, s: experienceAdjust(r.score, have, r) })).filter(x => x.s !== null)
