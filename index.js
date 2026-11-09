@@ -28,6 +28,20 @@ async function embed(env, texts) {
 
 const clean = s => String(s ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
+/* ---------- Match limits: minimum score 0.68 and at most 20 matches kept per profile (MATCH_THRESHOLD, MATCH_CAP) ---------- */
+const matchMin = env => parseFloat(env.MATCH_THRESHOLD || '0.68');
+const matchCap = env => num(env.MATCH_CAP, 20);
+async function trimMatches(env, profileIds) {   // keeps each profile's top-scoring matches, deletes the rest
+  const cap = matchCap(env);
+  const ids = [...new Set(profileIds)].filter(Number.isFinite);
+  for (let i = 0; i < ids.length; i += 90) {
+    const part = ids.slice(i, i + 90);
+    await env.DB.prepare(`DELETE FROM matches WHERE rowid IN (
+      SELECT rowid FROM (SELECT rowid, ROW_NUMBER() OVER (PARTITION BY profile_id ORDER BY score DESC) AS rn
+        FROM matches WHERE profile_id IN (${part.map(() => '?').join(',')})) WHERE rn > ?)`).bind(...part, cap).run();
+  }
+}
+
 /* ---------- profile -> text ---------- */
 function profileToText(p) {
   const parts = [];
@@ -106,42 +120,34 @@ async function saveProfile(env, ctx, body) {
 
   // Only embed finished profiles whose content changed
   if (status === 'submitted' && text && (row.text_hash !== hash || !row.embedded)) {
-    ctx.waitUntil(embedAndMatchProfile(env, row.id, text, hash));
+    if (env.MATCH_QUEUE) ctx.waitUntil(env.MATCH_QUEUE.send({ t: 'embed' }));   // many signups at once get embedded together in batches
+    else ctx.waitUntil(embedAndMatchProfile(env, row.id, text, hash));
   }
   return { ok: true, profileId: row.id };
 }
 
-/* ---------- Match limits: minimum score 0.68 and at most 20 matches kept per profile (MATCH_THRESHOLD, MATCH_CAP) ---------- */
-const matchMin = env => parseFloat(env.MATCH_THRESHOLD || '0.68');
-const matchCap = env => { const n = parseInt(env.MATCH_CAP, 10); return n > 0 ? n : 20; };
-async function trimMatches(env, profileIds) {   // keeps each profile's top-scoring matches, deletes the rest
-  const cap = matchCap(env);
-  const ids = [...new Set(profileIds)].filter(Number.isFinite);
-  for (let i = 0; i < ids.length; i += 90) {
-    const part = ids.slice(i, i + 90);
-    await env.DB.prepare(`DELETE FROM matches WHERE rowid IN (
-      SELECT rowid FROM (SELECT rowid, ROW_NUMBER() OVER (PARTITION BY profile_id ORDER BY score DESC) AS rn
-        FROM matches WHERE profile_id IN (${part.map(() => '?').join(',')})) WHERE rn > ?)`).bind(...part, cap).run();
-  }
-}
-
 async function embedAndMatchProfile(env, profileId, text, hash, quiet) {
+  await ensureMatchCols(env);
   if (!env.PROFILE_VEC || !env.JOB_VEC) return;   // Vectorize not set up yet: profile stays unembedded and is picked up once it is added
   const [vec] = await embed(env, [text]);
   await env.PROFILE_VEC.upsert([{ id: `p_${profileId}`, values: vec, metadata: { profileId } }]);
   await env.DB.prepare('UPDATE profiles SET profile_text = ?, text_hash = ?, embedded = 1 WHERE id = ?').bind(text, hash, profileId).run();
+  await saveVecs(env, 'p', [{ id: profileId, values: vec }]);
+  await matchDirect(env, [{ id: profileId, vec: normalise(vec) }], quiet);   // against every recent job, no cap on the comparison
 
   // Backfill: match this profile against jobs already in the database
   const res = await env.JOB_VEC.query(vec, { topK: 20, returnMetadata: 'none' });
   const min = matchMin(env);
   const stmts = res.matches.filter(m => m.score >= min).map(m =>
-    env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score) VALUES (?, ?, ?)').bind(profileId, m.id.replace(/^j_/, ''), m.score));
+    env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score, created_at) VALUES (?, ?, ?, ?)').bind(profileId, m.id.replace(/^j_/, ''), m.score, Date.now()));
   if (stmts.length) await env.DB.batch(stmts);
   await trimMatches(env, [profileId]);
   if (quiet) await env.DB.prepare('UPDATE matches SET notified = 1 WHERE profile_id = ? AND notified = 0').bind(profileId).run(); else await notifyPending(env);
 }
 
 /* ---------- Automatic Bright Data searches, built from saved profiles ---------- */
+const SWEEP_CRON = '0 14 * * *';   // must match the second line under [triggers] crons in wrangler.toml (17:00 East Africa Time)
+const ENTRY_KEYWORDS = ['entry level', 'graduate trainee', 'customer service'];
 const MAX_SEARCHES = 10;                       // cost control: at most 10 searches per run (x 25 jobs each)
 const TITLE_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 const cleanTitle = t => clean(t).replace(/["{}\[\]\\]/g, '').slice(0, 60);
@@ -187,25 +193,22 @@ async function buildSearches(env) {
     keywords = keywords.slice(0, MAX_SEARCHES);
   }
 
-  if (!keywords.length) return fixed;           // no finished profiles yet: use the fixed list from wrangler.toml
-  return keywords.map(k => ({ location: 'Kenya', keyword: k, country: 'KE' }));
+  // Entry-level searches always run too, because entry and no-degree jobs are shown to every profile
+  const entry = ENTRY_KEYWORDS.filter(k => !keywords.includes(k));
+  if (!keywords.length) return [...fixed, ...entry.map(k => ({ location: 'Kenya', keyword: k, country: 'KE' }))];   // no finished profiles yet: use the fixed list from wrangler.toml
+  return [...keywords, ...entry].map(k => ({ location: 'Kenya', keyword: k, country: 'KE' }));
 }
 
 /* ---------- Bright Data: trigger + webhook ---------- */
-async function triggerBrightData(env) {
-  // tolerate a pasted "Bearer " prefix or stray spaces/line breaks in the secret
-  const apiKey = String(env.BRIGHTDATA_API_KEY || '').replace(/^\s*Bearer\s+/i, '').replace(/\s+/g, '');
-  if (!apiKey || !env.BRIGHTDATA_DATASET_ID) return { skipped: 'Bright Data not configured' };
-  const inputs = await buildSearches(env);
-  if (!inputs.length) return { skipped: 'no searches to run' };
+async function bdTrigger(env, apiKey, discoverBy, inputs, limit) {
   const params = new URLSearchParams({
     dataset_id: env.BRIGHTDATA_DATASET_ID,
     format: 'json',
     type: 'discover_new',
-    discover_by: 'keyword',
+    discover_by: discoverBy,
     endpoint: `${env.WORKER_URL}/webhook/brightdata`,
     uncompressed_webhook: 'true',
-    limit_per_input: '25',   // cap results per search (cost control while testing)
+    limit_per_input: String(limit),
     auth_header: `Bearer ${env.WEBHOOK_SECRET}`,   // sent by Bright Data as the Authorization header on the webhook
   });
   const res = await fetch(`https://api.brightdata.com/datasets/v3/trigger?${params}`, {
@@ -213,7 +216,25 @@ async function triggerBrightData(env) {
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(inputs),
   });
-  return { status: res.status, body: await res.text(), searches: inputs };
+  return { status: res.status, body: await res.text() };
+}
+
+// Latest jobs anywhere in Kenya (LinkedIn search page for Kenya, past 24 hours, no keyword). Open this link in a browser to check it shows Kenya jobs.
+const ALL_KE_URL = 'https://www.linkedin.com/jobs/search?location=Kenya&geoId=100710459&f_TPR=r86400&position=1&pageNum=0';
+
+async function triggerBrightData(env) {
+  // tolerate a pasted "Bearer " prefix or stray spaces/line breaks in the secret
+  const apiKey = String(env.BRIGHTDATA_API_KEY || '').replace(/^\s*Bearer\s+/i, '').replace(/\s+/g, '');
+  if (!apiKey || !env.BRIGHTDATA_DATASET_ID) return { skipped: 'Bright Data not configured' };
+  const cap = parseInt(env.DAILY_JOB_CAP || '180', 10);                       // most jobs pulled per run
+  const allKe = Math.min(Math.max(parseInt(env.ALL_KE_JOBS || String(cap), 10) || 0, 0), cap);   // share for "all Kenya" jobs; the rest goes to the keyword searches
+  const out = {};
+  if (allKe > 0) out.all_kenya = await bdTrigger(env, apiKey, 'url', [{ url: env.ALL_KE_URL || ALL_KE_URL }], allKe);
+  const inputs = await buildSearches(env);
+  if (inputs.length && cap - allKe > 0) {
+    out.keywords = Object.assign(await bdTrigger(env, apiKey, 'keyword', inputs, Math.max(3, Math.floor((cap - allKe) / inputs.length))), { searches: inputs });
+  }
+  return Object.keys(out).length ? out : { skipped: 'no searches to run' };
 }
 
 const pick = (o, ...keys) => { for (const k of keys) { const v = o?.[k]; if (v) return clean(v); } return ''; };
@@ -258,10 +279,13 @@ const jobToText = jobToEmbedText;
 
 async function embedAndMatchJobs(env, jobs, quiet) {
   if (!jobs.length) return;
+  await ensureMatchCols(env);
   if (!env.JOB_VEC || !env.PROFILE_VEC) return;   // Vectorize not set up yet: jobs stay embedded = 0 and are retried by the cron later
   const vecs = await embed(env, jobs.map(jobToText));
   await env.JOB_VEC.upsert(jobs.map((j, i) => ({ id: `j_${j.id}`, values: vecs[i], metadata: { title: j.title.slice(0, 100) } })));
   await env.DB.batch(jobs.map(j => env.DB.prepare('UPDATE jobs SET embedded = 1 WHERE id = ?').bind(j.id)));
+  await saveVecs(env, 'j', jobs.map((j, i) => ({ id: j.id, values: vecs[i] })));   // kept in D1 too, for the direct comparison
+  for (const k in jobVecPools) jobVecPools[k].at = 0;
 
   // Nothing to match against until at least one profile has been embedded
   const pc = await env.DB.prepare('SELECT COUNT(*) AS n FROM profiles WHERE embedded = 1').first();
@@ -269,18 +293,15 @@ async function embedAndMatchJobs(env, jobs, quiet) {
 
   // Match every new job against all embedded profiles
   const min = matchMin(env);
-  const stmts = [], touched = [];
+  const stmts = [];
   for (let i = 0; i < jobs.length; i++) {
-    const res = await env.PROFILE_VEC.query(vecs[i], { topK: 50, returnMetadata: 'none' });
+    const res = await env.PROFILE_VEC.query(vecs[i], { topK: 100, returnMetadata: 'none' });
     for (const m of res.matches) {
       if (m.score < min) continue;
-      const pid = parseInt(m.id.replace(/^p_/, ''), 10);
-      touched.push(pid);
-      stmts.push(env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score) VALUES (?, ?, ?)').bind(pid, jobs[i].id, m.score));
+      stmts.push(env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score, created_at) VALUES (?, ?, ?, ?)').bind(parseInt(m.id.replace(/^p_/, ''), 10), jobs[i].id, m.score, Date.now()));
     }
   }
   for (let i = 0; i < stmts.length; i += 90) await env.DB.batch(stmts.slice(i, i + 90));
-  await trimMatches(env, touched);
   if (quiet) await env.DB.prepare('UPDATE matches SET notified = 1 WHERE notified = 0').run(); else await notifyPending(env);
 }
 
@@ -288,6 +309,200 @@ async function embedAndMatchJobs(env, jobs, quiet) {
 async function retryUnembedded(env) {
   const { results } = await env.DB.prepare('SELECT * FROM jobs WHERE embedded = 0 LIMIT 100').all();
   await embedAndMatchJobs(env, results);
+}
+
+/* ---------- Daily release window (East Africa Time): from 09:07 to 20:06 Discover shows the shimmering "working" skeleton, and the matches appear at 20:06 ----------
+   Change the times with DISCOVER_WORK_FROM and DISCOVER_RELEASE_AT ("HH:MM", EAT), or set DISCOVER_WORK_FROM = "off" to show matches all day. */
+function discoverWindow(env, now) {
+  const hm = s => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s)); return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null; };
+  const from = hm(env.DISCOVER_WORK_FROM || '09:07'), to = hm(env.DISCOVER_RELEASE_AT || '20:06');
+  if (from === null || to === null) return { working: false, releaseAt: null };
+  const eat = new Date(now + 3 * 3600000);   // UTC+3
+  const mins = eat.getUTCHours() * 60 + eat.getUTCMinutes();
+  const working = from < to ? (mins >= from && mins < to) : (mins >= from || mins < to);
+  if (!working) return { working: false, releaseAt: null };
+  const wait = (to - mins + 1440) % 1440 || 1440;
+  return { working: true, releaseAt: now + wait * 60000 - eat.getUTCSeconds() * 1000 - eat.getUTCMilliseconds() };
+}
+
+/* ---------- 24-hour freshness: matches, saved CVs/letters and match points expire after a day so the Discover tab never piles up ---------- */
+const DAY_MS = 86400000;
+let matchColsReady = false;
+async function ensureMatchCols(env) {
+  if (matchColsReady) return;
+  try { await env.DB.prepare('ALTER TABLE matches ADD COLUMN created_at INTEGER').run(); } catch (e) { /* column already exists */ }
+  await env.DB.prepare('UPDATE matches SET created_at = ? WHERE created_at IS NULL').bind(Date.now()).run();   // existing rows start their 24 hours now
+  matchColsReady = true;
+}
+async function pruneExpired(env) {
+  await ensureMatchCols(env);
+  await ensureVecTable(env);
+  const cutoff = Date.now() - DAY_MS;
+  for (let i = 0; i < 40; i++) {   // up to 200,000 rows per call; the rest goes on the next call
+    const del = await env.DB.prepare('DELETE FROM matches WHERE rowid IN (SELECT rowid FROM matches WHERE created_at < ? LIMIT 5000)').bind(cutoff).run();
+    if (!(del && del.meta && del.meta.changes >= 5000)) break;
+  }
+  const iso = new Date(cutoff).toISOString();
+  for (const t of ['documents', 'job_matches']) { try { await env.DB.prepare(`DELETE FROM ${t} WHERE created_at < ?`).bind(iso).run(); } catch (e) { /* table not created yet */ } }
+  await env.DB.prepare("DELETE FROM vecs WHERE kind = 'j' AND at < ?").bind(Date.now() - Math.max(num(env.JOB_WINDOW_DAYS, 7), 2) * DAY_MS).run();
+}
+
+/* ---------- Direct vector comparison ----------
+   Jobs and profiles are both plain vectors, and only the day's new jobs need comparing, so matching is just a dot product of every profile with every recent job.
+   No per-profile search and no "top 100" cap on the comparison: every pair above the cutoff is scored, and each profile keeps its best MATCH_CAP (20). Vectors are stored normalised, so the dot product equals cosine similarity. */
+let vecTableReady = false;
+async function ensureVecTable(env) {
+  if (vecTableReady) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS vecs (kind TEXT NOT NULL, id INTEGER NOT NULL, v TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (kind, id))').run();
+  vecTableReady = true;
+}
+function normalise(v) { let s = 0; for (const x of v) s += x * x; s = Math.sqrt(s) || 1; return Float32Array.from(v, x => x / s); }
+function packVec(v) {   // int8 + one scale per vector: about 1 KB per vector instead of 4 KB, with negligible effect on cosine scores
+  const f = normalise(v); let mx = 0; for (const x of f) if (Math.abs(x) > mx) mx = Math.abs(x);
+  const scale = mx || 1, q = new Uint8Array(f.length);
+  for (let i = 0; i < f.length; i++) q[i] = Math.round(f[i] / scale * 127) & 255;   // two's-complement int8 stored in a byte
+  let bin = ''; for (let i = 0; i < q.length; i += 8192) bin += String.fromCharCode(...q.subarray(i, i + 8192));
+  return `${scale.toFixed(6)}:${btoa(bin)}`;
+}
+function unpackVec(s) {
+  if (s.indexOf(':') < 0) { const raw = atob(s), b = new Uint8Array(raw.length); for (let k = 0; k < raw.length; k++) b[k] = raw.charCodeAt(k); return new Float32Array(b.buffer); }   // older float32 format
+  const i = s.indexOf(':'), bin = atob(s.slice(i + 1)), scale = parseFloat(s.slice(0, i)), out = new Float32Array(bin.length);
+  for (let k = 0; k < bin.length; k++) { const c = bin.charCodeAt(k); out[k] = (c > 127 ? c - 256 : c) / 127 * scale; }
+  return out;
+}
+async function saveVecs(env, kind, entries) {
+  if (!entries.length) return;
+  await ensureVecTable(env);
+  const at = Date.now();
+  const stmts = entries.map(e => env.DB.prepare('INSERT OR REPLACE INTO vecs (kind, id, v, at) VALUES (?, ?, ?, ?)').bind(kind, e.id, packVec(e.values), at));
+  for (let i = 0; i < stmts.length; i += 90) await env.DB.batch(stmts.slice(i, i + 90));
+}
+const jobVecPools = {};   // recent job vectors per window, shared for 5 minutes by everything in this worker instance
+async function recentJobVecs(env, days) {
+  days = days || num(env.JOB_WINDOW_DAYS, 7);   // new signups: look back several days so they have something to see
+  const pool = jobVecPools[days];
+  if (pool && Date.now() - pool.at < 5 * 60 * 1000) return pool.rows;
+  await ensureVecTable(env);
+  const { results } = await env.DB.prepare("SELECT id, v FROM vecs WHERE kind = 'j' AND at > ?").bind(Date.now() - days * DAY_MS).all();
+  jobVecPools[days] = { at: Date.now(), rows: results.map(r => ({ id: r.id, vec: unpackVec(r.v) })) };
+  return jobVecPools[days].rows;
+}
+async function matchDirect(env, profiles, quiet, days) {
+  await ensureMatchCols(env);   // profiles: [{ id, vec: Float32Array (normalised) }]
+  const jobs = await recentJobVecs(env, days);
+  if (!jobs.length || !profiles.length) return 0;
+  const min = matchMin(env), cap = matchCap(env);
+  const stmts = [];
+  for (const p of profiles) {
+    const hits = [];
+    for (const j of jobs) {
+      let s = 0; const a = p.vec, b = j.vec;
+      for (let k = 0; k < a.length; k++) s += a[k] * b[k];
+      if (s >= min) hits.push({ id: j.id, s });
+    }
+    hits.sort((x, y) => y.s - x.s);
+    for (const h of hits.slice(0, cap)) stmts.push(env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score, created_at) VALUES (?, ?, ?, ?)').bind(p.id, h.id, h.s, Date.now()));
+  }
+  for (let i = 0; i < stmts.length; i += 90) await env.DB.batch(stmts.slice(i, i + 90));
+  await trimMatches(env, profiles.map(p => p.id));   // also trims against matches already saved when jobs were ingested
+  if (quiet) await env.DB.prepare(`UPDATE matches SET notified = 1 WHERE notified = 0 AND profile_id IN (${profiles.map(() => '?').join(',')})`).bind(...profiles.map(p => p.id)).run();
+  return stmts.length;
+}
+
+/* ---------- Profile-side matching in batches ----------
+   Job-side matching only reaches the 100 most similar profiles per job, so every day each profile is also checked against the whole job set, a few at a time.
+   Profiles that finished onboarding but never got embedded (for example many signing up at once) are embedded here too, in one batched AI call. ---------- */
+async function stateGet(env, k) { const r = await env.DB.prepare('SELECT v FROM sweep_state WHERE k = ?').bind(k).first(); return r ? r.v : null; }
+async function stateSet(env, k, v) { await env.DB.prepare('INSERT OR REPLACE INTO sweep_state (k, v) VALUES (?, ?)').bind(k, String(v)).run(); }
+
+async function matchProfileVectors(env, items, quiet) {   // items: [{ id, values }]
+  await ensureMatchCols(env);
+  const min = matchMin(env);
+  const stmts = [];
+  for (const it of items) {
+    const res = await env.JOB_VEC.query(it.values, { topK: 50, returnMetadata: 'none' });
+    for (const m of res.matches) if (m.score >= min) stmts.push(env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score, created_at) VALUES (?, ?, ?, ?)').bind(it.id, m.id.replace(/^j_/, ''), m.score, Date.now()));
+  }
+  for (let i = 0; i < stmts.length; i += 90) await env.DB.batch(stmts.slice(i, i + 90));
+  await trimMatches(env, items.map(i => i.id));
+  if (quiet && items.length) await env.DB.prepare(`UPDATE matches SET notified = 1 WHERE notified = 0 AND profile_id IN (${items.map(() => '?').join(',')})`).bind(...items.map(i => i.id)).run();
+}
+
+async function embedPendingProfiles(env, limit, quiet) {
+  if (!env.AI) return 0;
+  const { results } = await env.DB.prepare("SELECT id, data FROM profiles WHERE status = 'submitted' AND embedded = 0 LIMIT ?").bind(limit).all();
+  const rows = [];
+  for (const r of results) { let p = {}; try { p = JSON.parse(r.data || '{}'); } catch (e) {} const text = profileToEmbedText(p); if (text) rows.push({ id: r.id, text, hash: await sha(text) }); }
+  if (!rows.length) return 0;
+  const vecs = await embed(env, rows.map(r => r.text));   // one batched AI call for the whole group
+  if (env.PROFILE_VEC) await env.PROFILE_VEC.upsert(rows.map((r, i) => ({ id: `p_${r.id}`, values: vecs[i], metadata: { profileId: r.id } })));
+  await env.DB.batch(rows.map(r => env.DB.prepare('UPDATE profiles SET profile_text = ?, text_hash = ?, embedded = 1 WHERE id = ?').bind(r.text, r.hash, r.id)));
+  await saveVecs(env, 'p', rows.map((r, i) => ({ id: r.id, values: vecs[i] })));
+  await matchDirect(env, rows.map((r, i) => ({ id: r.id, vec: normalise(vecs[i]) })), quiet);
+  return rows.length;
+}
+
+// One chunk of the daily sweep. Call it repeatedly (cron every 5 minutes); it remembers where it stopped and starts again from the top each new day.
+async function sweepProfiles(env, limit, opts = {}) {
+  if (!env.PROFILE_VEC || !env.JOB_VEC) return { skipped: 'Vectorize not connected' };
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS sweep_state (k TEXT PRIMARY KEY, v TEXT)').run();
+  const embeddedNow = await embedPendingProfiles(env, limit, false);
+  const today = new Date().toISOString().slice(0, 10);
+  if (opts.reset || (await stateGet(env, 'day')) !== today) { await stateSet(env, 'day', today); await stateSet(env, 'cursor', 0); await stateSet(env, 'done', 0); }
+  if ((await stateGet(env, 'done')) === '1') { if (embeddedNow) await notifyPending(env); return { day: today, done: true, embedded_new: embeddedNow, processed: 0 }; }
+  const cursor = parseInt((await stateGet(env, 'cursor')) || '0', 10);
+  const { results } = await env.DB.prepare("SELECT id FROM profiles WHERE status = 'submitted' AND embedded = 1 AND id > ? ORDER BY id LIMIT ?").bind(cursor, limit).all();
+  if (!results.length) { await stateSet(env, 'done', 1); if (embeddedNow) await notifyPending(env); return { day: today, done: true, embedded_new: embeddedNow, processed: 0 }; }
+  const got = await env.PROFILE_VEC.getByIds(results.map(r => `p_${r.id}`));
+  const items = got.map(g => ({ id: parseInt(String(g.id).replace(/^p_/, ''), 10), values: g.values })).filter(i => i.values);
+  await matchProfileVectors(env, items, !!opts.quiet);
+  await stateSet(env, 'cursor', results[results.length - 1].id);
+  if (!opts.quiet) await notifyPending(env);
+  return { day: today, done: false, embedded_new: embeddedNow, processed: results.length, cursor: results[results.length - 1].id };
+}
+
+/* ---------- Automatic scaling: a queue fans the profile matching out over as many parallel workers as needed ----------
+   plan  -> reads the next 1,000 profile ids, queues one "range" message per 25 profiles, then queues the next plan until all profiles are covered
+   range -> matches those profiles against all jobs
+   embed -> embeds up to 40 waiting profiles in one batched AI call (this is what absorbs a rush of signups)
+   Nothing here has a fixed ceiling: more profiles just means more messages, and Cloudflare adds consumers automatically. */
+const num = (v, d) => { const n = parseInt(v, 10); return n > 0 ? n : d; };   // all of these can be changed in Cloudflare variables: RANGE_SIZE, PLAN_PAGE, EMBED_BATCH
+
+async function processRange(env, from, to, quiet) {
+  await ensureVecTable(env);
+  const { results } = await env.DB.prepare("SELECT id, v FROM vecs WHERE kind = 'p' AND id BETWEEN ? AND ?").bind(from, to).all();
+  if (!results.length) return 0;
+  await matchDirect(env, results.map(r => ({ id: r.id, vec: unpackVec(r.v) })), quiet, num(env.SWEEP_JOB_DAYS, 1));   // the daily sweep only looks at the newest jobs, so yesterday's matches aren't recreated
+  if (!quiet) await notifyPending(env);
+  return results.length;
+}
+
+async function handleQueueMessage(env, m) {
+  const RANGE_SIZE = num(env.RANGE_SIZE, 100), PLAN_PAGE = num(env.PLAN_PAGE, 1000), EMBED_BATCH = num(env.EMBED_BATCH, 40);
+  if (m.t === 'range') { await processRange(env, m.from, m.to, !!m.quiet); return; }
+  if (m.t === 'embed') {
+    const n = await embedPendingProfiles(env, EMBED_BATCH, !!m.quiet);
+    if (!m.quiet && n) await notifyPending(env);
+    if (n >= EMBED_BATCH) await env.MATCH_QUEUE.send({ t: 'embed', quiet: !!m.quiet });   // more are waiting: keep going
+    return;
+  }
+  if (m.t === 'prune') { await pruneExpired(env); return; }
+  if (m.t === 'plan') {
+    const { results } = await env.DB.prepare("SELECT id FROM profiles WHERE status = 'submitted' AND id > ? ORDER BY id LIMIT ?").bind(m.after || 0, PLAN_PAGE).all();
+    const msgs = [];
+    for (let i = 0; i < results.length; i += RANGE_SIZE) {
+      const part = results.slice(i, i + RANGE_SIZE);
+      msgs.push({ body: { t: 'range', from: part[0].id, to: part[part.length - 1].id, quiet: !!m.quiet } });
+    }
+    for (let i = 0; i < msgs.length; i += 100) await env.MATCH_QUEUE.sendBatch(msgs.slice(i, i + 100));
+    if (results.length === PLAN_PAGE) await env.MATCH_QUEUE.send({ t: 'plan', after: results[results.length - 1].id, quiet: !!m.quiet });
+  }
+}
+
+async function startFullMatch(env, quiet) {   // queue the embed step and the first plan page
+  if (!env.MATCH_QUEUE) return { skipped: 'MATCH_QUEUE not bound' };
+  await env.MATCH_QUEUE.sendBatch([{ body: { t: 'embed', quiet: !!quiet } }, { body: { t: 'plan', after: 0, quiet: !!quiet } }, { body: { t: 'prune' } }]);
+  return { queued: true };
 }
 
 /* ---------- SMS alerts (Africa's Talking; swap for your provider) ---------- */
@@ -311,7 +526,7 @@ async function notifyPending(env) {
     WHERE m.notified = 0 AND p.phone != '' GROUP BY p.id LIMIT 200`).all();
   for (const r of results) {
     const first = (r.full_name || '').split(' ')[0] || 'there';
-    const n = Math.min(r.n, matchCap(env));
+    const n = Math.min(r.n, matchCap(env));   // never report more than the per-profile cap
     const msg = n === 1
       ? `Hi ${first}, Chania AI found a job matching your profile: ${r.top}. Open Chania AI to apply.`
       : `Hi ${first}, Chania AI found ${n} jobs matching your profile, including ${r.top}. Open Chania AI to apply.`;
@@ -560,10 +775,12 @@ function isOpenEntry(job) {
 let entryPool = { at: 0, rows: [] };   // shared for 10 minutes so every /matches call doesn't rescan the jobs table
 async function openEntryPool(env) {
   if (Date.now() - entryPool.at < 10 * 60 * 1000 && entryPool.rows.length) return entryPool.rows;
+  await ensureVecTable(env);
+  const fresh = Date.now() - num(env.SWEEP_JOB_DAYS, 1) * DAY_MS;   // same freshness as ordinary matches
   const { results } = await env.DB.prepare(`SELECT id, title, company, location, description, apply_url, posted_at, employment_type, remote FROM jobs
-    WHERE lower(title) LIKE '%junior%' OR lower(title) LIKE '%intern%' OR lower(title) LIKE '%entry%' OR lower(title) LIKE '%graduate%' OR lower(title) LIKE '%trainee%' OR lower(title) LIKE '%attach%'
-       OR lower(description) LIKE '%no experience%' OR lower(description) LIKE '%entry level%' OR lower(description) LIKE '%entry-level%' OR lower(description) LIKE '%no degree%' OR lower(description) LIKE '%no diploma%'
-    ORDER BY posted_at DESC LIMIT 200`).all();
+    WHERE id IN (SELECT id FROM vecs WHERE kind = 'j' AND at > ?) AND (lower(title) LIKE '%junior%' OR lower(title) LIKE '%intern%' OR lower(title) LIKE '%entry%' OR lower(title) LIKE '%graduate%' OR lower(title) LIKE '%trainee%' OR lower(title) LIKE '%attach%'
+       OR lower(description) LIKE '%no experience%' OR lower(description) LIKE '%entry level%' OR lower(description) LIKE '%entry-level%' OR lower(description) LIKE '%no degree%' OR lower(description) LIKE '%no diploma%')
+    ORDER BY posted_at DESC LIMIT 200`).bind(fresh).all();
   entryPool = { at: Date.now(), rows: results.filter(isOpenEntry) };
   return entryPool.rows;
 }
@@ -836,10 +1053,13 @@ export default {
       if (url.pathname === '/matches' && req.method === 'GET') {
         const deviceId = url.searchParams.get('deviceId');
         if (!deviceId) return json(env, { error: 'deviceId required' }, 400);
+        const win = discoverWindow(env, Date.now());
+        if (win.working) return json(env, { matches: [], hidden: 0, state: 'working', release_at: win.releaseAt });   // matches are held back until the release time
+        await ensureMatchCols(env);
         const { results } = await env.DB.prepare(`
           SELECT j.id, j.title, j.company, j.location, j.description, j.apply_url, j.posted_at, j.employment_type, j.remote, m.score
           FROM matches m JOIN profiles p ON p.id = m.profile_id JOIN jobs j ON j.id = m.job_id
-          WHERE p.device_id = ? ORDER BY m.score DESC LIMIT ?`).bind(deviceId, matchCap(env)).all();
+          WHERE p.device_id = ? AND m.created_at > ? ORDER BY m.score DESC LIMIT ?`).bind(deviceId, Date.now() - DAY_MS, matchCap(env)).all();
         const prow = await env.DB.prepare('SELECT data FROM profiles WHERE device_id = ?').bind(deviceId).first();
         let have = NaN; try { have = parseFloat(JSON.parse((prow && prow.data) || '{}').years_experience); } catch (e) {}
         const fitted = results.map(r => ({ r, s: experienceAdjust(r.score, have, r) })).filter(x => x.s !== null)
@@ -858,7 +1078,7 @@ export default {
           }
           fitted.sort((a, b) => b.score - a.score);
         }
-        const out = { matches: fitted, hidden: hiddenCount };
+        const out = { matches: fitted, hidden: hiddenCount, state: 'ready' };
         if (url.searchParams.get('debug') === '1') {   // which jobs the experience rule removed, and why
           out.profile_years = Number.isNaN(have) ? null : have;
           out.hidden_jobs = results.filter(r => experienceAdjust(r.score, have, r) === null).map(r => ({ title: r.title, required_years: requiredYears(r), score: r.score }));
@@ -904,6 +1124,34 @@ export default {
         }
         return json(env, { error: 'stage must be profiles or jobs' }, 400);
       }
+      // Where things stand, so you know when to add funds: GET /admin/status with the admin password
+      if (url.pathname === '/admin/status' && req.method === 'GET') {
+        if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
+        await ensureVecTable(env);
+        const one = async sql => { const r = await env.DB.prepare(sql).first(); return r ? r.n : null; };
+        return json(env, {
+          profiles: await one("SELECT COUNT(*) AS n FROM profiles WHERE status = 'submitted'"),
+          profiles_waiting_to_embed: await one("SELECT COUNT(*) AS n FROM profiles WHERE status = 'submitted' AND embedded = 0"),
+          jobs: await one('SELECT COUNT(*) AS n FROM jobs'),
+          jobs_waiting_to_embed: await one('SELECT COUNT(*) AS n FROM jobs WHERE embedded = 0'),
+          matches: await one('SELECT COUNT(*) AS n FROM matches'),
+          profile_vectors: await one("SELECT COUNT(*) AS n FROM vecs WHERE kind = 'p'"),
+          job_vectors: await one("SELECT COUNT(*) AS n FROM vecs WHERE kind = 'j'"),
+          approx_vector_storage_mb: Math.round(((await one('SELECT COUNT(*) AS n FROM vecs')) || 0) * 1.1 / 1024),
+          d1_limit_note: 'A single D1 database is capped at 10 GB whatever you pay.',
+        });
+      }
+      // Start the full queued match by hand: POST /admin/match-all (add ?quiet=1 for no SMS)
+      if (url.pathname === '/admin/match-all' && req.method === 'POST') {
+        if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
+        return json(env, await startFullMatch(env, url.searchParams.get('quiet') === '1'));
+      }
+      // Run one chunk of the profile sweep by hand: POST /admin/sweep?limit=20 (add &reset=1 to start over, &quiet=1 to send no SMS)
+      if (url.pathname === '/admin/sweep' && req.method === 'POST') {
+        if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
+        const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 1), 40);
+        return json(env, await sweepProfiles(env, limit, { reset: url.searchParams.get('reset') === '1', quiet: url.searchParams.get('quiet') === '1' }));
+      }
       if (url.pathname === '/admin/embed' && req.method === 'POST') {
         if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
         if (!env.JOB_VEC || !env.PROFILE_VEC) return json(env, { skipped: 'Vectorize not connected' });
@@ -920,7 +1168,17 @@ export default {
     }
   },
 
-  async scheduled(_evt, env, ctx) {
-    ctx.waitUntil((async () => { await retryUnembedded(env); await triggerBrightData(env); })());
+  async queue(batch, env) {
+    for (const msg of batch.messages) {
+      try { await handleQueueMessage(env, msg.body); msg.ack(); }
+      catch (e) { console.error('queue message failed', JSON.stringify(msg.body), String((e && e.message) || e)); msg.retry(); }   // matches are INSERT OR IGNORE, so a retry is safe
+    }
+  },
+  async scheduled(evt, env, ctx) {
+    if (evt && evt.cron === SWEEP_CRON) {
+      ctx.waitUntil(env.MATCH_QUEUE ? startFullMatch(env, false) : sweepProfiles(env, Math.min(Math.max(parseInt(env.SWEEP_BATCH || '25', 10) || 25, 1), 40)));   // without the queue: old one-chunk sweep
+      return;
+    }
+    ctx.waitUntil((async () => { await pruneExpired(env); await retryUnembedded(env); await triggerBrightData(env); })());
   },
 };
