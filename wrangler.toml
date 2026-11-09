@@ -21,15 +21,28 @@ index_name = "chania-profiles"
 binding = "JOB_VEC"
 index_name = "chania-jobs"
 
-# 13:01 UTC = 16:01 EAT, the daily Bright Data pull.
-# Keep this to one entry: every cron run triggers a pull.
+# Run first: npx wrangler queues create chania-match   (Workers Paid plan)
+[[queues.producers]]
+binding = "MATCH_QUEUE"
+queue = "chania-match"
+
+[[queues.consumers]]
+queue = "chania-match"
+max_batch_size = 10
+max_retries = 3
+
+# Cron runs in UTC.
+#  12:02 UTC = 15:02 EAT -> prune, retry, and pull jobs from Bright Data
+#  14:00 UTC = 17:00 EAT -> daily match (must equal SWEEP_CRON in index.js)
 [triggers]
-crons = ["1 13 * * *"]
+crons = ["2 12 * * *", "0 14 * * *"]
 
 [vars]
 ALLOWED_ORIGIN = "*"
 WORKER_URL = "https://chaniajobsai.muchirirobinson49.workers.dev"
 MATCH_THRESHOLD = "0.68"
 MATCH_CAP = "20"
+DAILY_JOB_CAP = "180"
+ALL_KE_JOBS = "180"
 BRIGHTDATA_DATASET_ID = "gd_lpfll7v5hcqtkxl6l"
 BRIGHTDATA_INPUTS = '[{"location":"Nairobi","keyword":"data analyst","country":"KE"},{"location":"Kenya","keyword":"software developer","country":"KE"}]'
