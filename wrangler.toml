@@ -21,12 +21,15 @@ index_name = "chania-profiles"
 binding = "JOB_VEC"
 index_name = "chania-jobs"
 
+# 13:01 UTC = 16:01 EAT, the daily Bright Data pull.
+# Keep this to one entry: every cron run triggers a pull.
 [triggers]
-crons = []
+crons = ["1 13 * * *"]
 
 [vars]
 ALLOWED_ORIGIN = "*"
 WORKER_URL = "https://chaniajobsai.muchirirobinson49.workers.dev"
-MATCH_THRESHOLD = "0.62"
+MATCH_THRESHOLD = "0.68"
+MATCH_CAP = "20"
 BRIGHTDATA_DATASET_ID = "gd_lpfll7v5hcqtkxl6l"
 BRIGHTDATA_INPUTS = '[{"location":"Nairobi","keyword":"data analyst","country":"KE"},{"location":"Kenya","keyword":"software developer","country":"KE"}]'
