@@ -852,6 +852,24 @@
             background: linear-gradient(90deg, var(--bg-surface) 25%, var(--border-subtle) 50%, var(--bg-surface) 75%);
             background-size: 200% 100%; animation: skelShimmer 1.4s linear infinite; }
 
+        /* Daily insights */
+        .ins-card { background: var(--bg-card); border-radius: 16px; padding: 16px 18px; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); margin-bottom: 14px; }
+        .ins-h { font-size: 12px; font-weight: 800; color: var(--text-primary); margin-bottom: 12px; }
+        .ins-big { font-size: 34px; font-weight: 800; color: var(--emerald-green); line-height: 1; }
+        .ins-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+        .ins-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; color: var(--text-primary); }
+        .ins-row .n { width: 112px; flex-shrink: 0; font-weight: 700; }
+        .ins-bar { flex: 1; height: 8px; border-radius: 6px; background: var(--bg-surface); overflow: hidden; }
+        .ins-bar > i { display: block; height: 100%; border-radius: 6px; background: var(--emerald-green); }
+        .ins-bar > i.miss { background: #D97706; }
+        .ins-tag { font-size: 10px; font-weight: 800; flex-shrink: 0; width: 44px; text-align: right; color: var(--emerald-green); }
+        .ins-tag.miss { color: #B45309; }
+        .ins-stats { display: flex; gap: 8px; }
+        .ins-stat { flex: 1; text-align: center; background: var(--bg-surface); border-radius: 12px; padding: 10px 4px; }
+        .ins-stat b { display: block; font-size: 18px; color: var(--text-primary); }
+        .ins-stat span { font-size: 10.5px; color: var(--text-muted); }
+        .ins-tip { background: var(--emerald-green-light); border-color: transparent; font-size: 12.5px; font-weight: 700; color: var(--emerald-green); line-height: 1.5; }
+
         /* Launch splash screen */
         #splash {
             position: fixed; inset: 0; z-index: 9999;
@@ -1229,6 +1247,11 @@
                 <div class="vibe-feed" id="vibeFeed"></div>
             </div>
 
+            <!-- TAB 2: DAILY INSIGHTS -->
+            <div class="tab-view" id="insightsTab">
+                <div class="slim-card-list" id="insightsView"></div>
+            </div>
+
             <!-- TAB 3: APPLIED JOBS -->
             <div class="tab-view" id="appliedTab">
                 <div class="slim-card-list" id="appliedJobList"></div>
@@ -1273,9 +1296,9 @@
                     <i data-lucide="compass" style="width:20px; height:20px;"></i>
                     <span>Discover</span>
                 </div>
-                <div class="nav-item" onclick="switchTab(this, 'vibeTab')">
-                    <i data-lucide="clapperboard" style="width:20px; height:20px;"></i>
-                    <span>Vibe</span>
+                <div class="nav-item" onclick="switchTab(this, 'insightsTab')">
+                    <i data-lucide="bar-chart-3" style="width:20px; height:20px;"></i>
+                    <span>Insights</span>
                 </div>
                 <div class="nav-item" onclick="switchTab(this, 'appliedTab')">
                     <i data-lucide="clipboard-list" style="width:20px; height:20px;"></i>
@@ -1746,6 +1769,7 @@
         const SKEL_LOGO = `<svg class="skel-logo" aria-hidden="true"><use href="#chania-logo"/></svg>`;
         const SKEL_TABS = {
             discoverTab: { box: 'jobList', title: 'Finding jobs for you', kind: 'job' },
+            insightsTab: { box: 'insightsView', title: 'Hunting opportunities for you', kind: 'job' },
             appliedTab: { box: 'appliedJobList', title: 'Loading your applications', kind: 'slim' },
             profileTab: { box: 'profileView', title: 'Loading your profile', kind: 'profile' }
         };
@@ -1980,6 +2004,17 @@
                         </div>`).join('')}
                     </div>
                 `;
+            } else if (tabId === 'insightsTab') {
+                container.classList.remove('hidden');
+                container.innerHTML = `
+                    <div class="summary-banner">
+                        <div class="summary-title">
+                            <i data-lucide="bar-chart-3" style="width:14px; height:14px; color: var(--emerald-green);"></i>
+                            Daily Insights
+                        </div>
+                        <span class="summary-count" style="background: var(--emerald-green-light); color: var(--emerald-green);">TODAY</span>
+                    </div>
+                `;
             } else if (tabId === 'appliedTab') {
                 container.classList.remove('hidden');
                 container.innerHTML = `
@@ -2012,7 +2047,7 @@
             if (tabId !== 'vibeTab') vibeStop();
             if (tabId === 'vibeTab') { renderVibe(); return; }
 
-            const renderers = { discoverTab: renderJobs, appliedTab: renderAppliedJobs, profileTab: renderProfile };
+            const renderers = { discoverTab: renderJobs, insightsTab: renderInsights, appliedTab: renderAppliedJobs, profileTab: renderProfile };
             const fn = renderers[tabId];
             if (!fn) return;
             if (wasActive) { fn(); return; }   // re-tapping the open tab: refresh instantly
@@ -2600,6 +2635,40 @@
                 desc: m.description || '', companyAbout: '', resp: [],
                 applyUrl: m.apply_url || undefined
             };
+        }
+
+        let insightsTimer = null;
+        async function renderInsights() {
+            const box = byId('insightsView');
+            if (!box) return;
+            clearTimeout(insightsTimer);
+            if (!CHANIA_API || !localStorage.getItem('chania_profile')) {
+                box.removeAttribute('aria-busy');
+                box.innerHTML = `<div class="ins-card" style="text-align:center"><div class="ins-h">No insights yet</div><div class="ins-sub">Create your profile and Chania AI will study the job market for you every day.</div></div>`;
+                return;
+            }
+            let data = null;
+            try { const r = await fetch(`${CHANIA_API}/insights?deviceId=${encodeURIComponent(deviceId)}`); if (r.ok) data = await r.json(); } catch (e) {}
+            if (!data) { box.removeAttribute('aria-busy'); box.innerHTML = `<div class="ins-card" style="text-align:center"><div class="ins-h">Could not load insights</div><div class="ins-sub">Check your connection and open this tab again.</div></div>`; return; }
+            if (data.state === 'working') {
+                const t = data.release_at ? new Date(data.release_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+                box.setAttribute('aria-busy', 'true');
+                box.innerHTML = skelHead('Hunting opportunities for you') + (t ? `<div style="font-size:11px;color:var(--text-muted);margin:-4px 2px 12px">Your insights will be ready at ${t}</div>` : '') + Array.from({ length: 3 }, skelJobCard).join('');
+                if (data.release_at) insightsTimer = setTimeout(() => { if (byId('insightsTab').classList.contains('active')) renderInsights(); }, Math.max(data.release_at - Date.now(), 0) + 3000);
+                return;
+            }
+            box.removeAttribute('aria-busy');
+            const i = data.insights;
+            if (!i) { box.innerHTML = `<div class="ins-card" style="text-align:center"><div class="ins-h">No insights yet</div><div class="ins-sub">Finish your profile to get daily insights.</div></div>`; return; }
+            const skills = (i.skills || []).map(s => `<div class="ins-row"><span class="n">${s.skill}</span><span class="ins-bar"><i class="${s.have ? '' : 'miss'}" style="width:${Math.max(s.pct, 4)}%"></i></span><span class="ins-tag ${s.have ? '' : 'miss'}">${s.have ? 'You' : 'Gap'} ${s.pct}%</span></div>`).join('');
+            const L = i.locations || {}, T = i.types || {};
+            const stat = (n, l) => `<div class="ins-stat"><b>${n || 0}</b><span>${l}</span></div>`;
+            box.innerHTML = `
+                <div class="ins-card"><div class="ins-big">${i.new_jobs}</div><div class="ins-sub">new jobs matched to you today · ${i.tracked_jobs} jobs tracked in total</div></div>
+                <div class="ins-card ins-tip">${i.tip}</div>
+                ${skills ? `<div class="ins-card"><div class="ins-h">Skills employers want from you</div>${skills}</div>` : ''}
+                <div class="ins-card"><div class="ins-h">Where the jobs are</div><div class="ins-stats">${stat(L.nairobi, 'Nairobi')}${stat(L.other, 'Other counties')}${stat(L.remote, 'Remote')}</div></div>
+                <div class="ins-card"><div class="ins-h">Job types</div><div class="ins-stats">${stat(T.full, 'Full-time')}${stat(T.part, 'Part-time')}${stat(T.other, 'Other')}</div></div>`;
         }
 
         async function loadMyMatches() {
