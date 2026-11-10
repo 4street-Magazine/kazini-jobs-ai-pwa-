@@ -28,9 +28,9 @@ async function embed(env, texts) {
 
 const clean = s => String(s ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
-/* ---------- Match limits: minimum score 0.68 and at most 20 matches kept per profile (MATCH_THRESHOLD, MATCH_CAP) ---------- */
+/* ---------- Match limits: minimum score from MATCH_THRESHOLD (0.65) and at most MATCH_CAP matches kept per profile (0 = no limit) ---------- */
 const matchMin = env => parseFloat(env.MATCH_THRESHOLD || '0.68');
-const matchCap = env => num(env.MATCH_CAP, 20);
+const matchCap = env => /^(0|none|unlimited)$/i.test(String(env.MATCH_CAP ?? '').trim()) ? 1000000 : num(env.MATCH_CAP, 20);   // MATCH_CAP = "0" means no limit
 async function trimMatches(env, profileIds) {   // keeps each profile's top-scoring matches, deletes the rest
   const cap = matchCap(env);
   const ids = [...new Set(profileIds)].filter(Number.isFinite);
