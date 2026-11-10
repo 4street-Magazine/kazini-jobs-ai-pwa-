@@ -1740,6 +1740,8 @@
         let activeJobId = null;
         let studioAttachments = ['Job CV attachment.pdf'];
 
+        let discoverState = { working: false, releaseAt: 0 };   // set from /matches: the worker holds matches back until the release time
+        let releaseTimer = null;
         /* ===== Loading skeletons for every tab (CHANIA logo symbol + shimmer) ===== */
         const SKEL_LOGO = `<svg class="skel-logo" aria-hidden="true"><use href="#chania-logo"/></svg>`;
         const SKEL_TABS = {
@@ -1850,6 +1852,13 @@
         function renderJobs() {
             const container = document.getElementById('jobList');
             const visibleJobs = jobData.filter(jobMatchesFilter);
+            if (!visibleJobs.length && discoverState.working && activeJobFilter !== 'saved') {
+                const t = discoverState.releaseAt ? new Date(discoverState.releaseAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+                container.setAttribute('aria-busy', 'true');
+                container.innerHTML = skelHead('Hunting opportunities for you') + (t ? `<div style="font-size:11px;color:var(--text-muted);margin:-4px 2px 12px">Your matches will be ready at ${t}</div>` : '') + Array.from({ length: 3 }, skelJobCard).join('');
+                return;
+            }
+            container.removeAttribute('aria-busy');
             if (!visibleJobs.length) {
                 const sv = activeJobFilter === 'saved';
                 container.innerHTML = `<div class="glass-panel" style="text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:4px">${sv ? 'No saved roles yet' : 'No jobs here yet'}</div><div style="font-size:12px;color:var(--text-secondary)">${sv ? 'Tap the heart on any job card to save it here.' : 'We will notify you when a matching job is found.'}</div></div>`;
@@ -2599,6 +2608,11 @@
                 const r = await fetch(`${CHANIA_API}/matches?deviceId=${encodeURIComponent(deviceId)}`);
                 if (!r.ok) return;
                 const data = await r.json();
+                discoverState = { working: data.state === 'working', releaseAt: data.release_at || 0 };
+                clearTimeout(releaseTimer);
+                if (discoverState.working && discoverState.releaseAt) {
+                    releaseTimer = setTimeout(loadMyMatches, Math.max(discoverState.releaseAt - Date.now(), 0) + 3000);   // fetch the matches as soon as they are released
+                }
                 const mapped = (data.matches || []).map(mapMatchToJob);
                 mapped.forEach(j => { const c = insightCache[j.serverId]; if (c) { j.insight = c; const s = salaryText(c); if (s) j.salary = s.est ? 'Est. ' + s.text : s.text; } });
                 jobData.splice(0, jobData.length, ...mapped);
