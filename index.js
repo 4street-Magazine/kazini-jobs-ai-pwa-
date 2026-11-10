@@ -37,9 +37,20 @@ async function trimMatches(env, profileIds) {   // keeps each profile's top-scor
   for (let i = 0; i < ids.length; i += 90) {
     const part = ids.slice(i, i + 90);
     await env.DB.prepare(`DELETE FROM matches WHERE rowid IN (
-      SELECT rowid FROM (SELECT rowid, ROW_NUMBER() OVER (PARTITION BY profile_id ORDER BY score DESC) AS rn
-        FROM matches WHERE profile_id IN (${part.map(() => '?').join(',')})) WHERE rn > ?)`).bind(...part, cap).run();
+      SELECT rowid FROM (SELECT m.rowid AS rowid, ROW_NUMBER() OVER (PARTITION BY m.profile_id ORDER BY m.score DESC) AS rn
+        FROM matches m WHERE m.profile_id IN (${part.map(() => '?').join(',')})
+          AND NOT EXISTS (SELECT 1 FROM applications a WHERE a.profile_id = m.profile_id AND a.job_id = m.job_id)) WHERE rn > ?)`).bind(...part, cap).run();
   }
+}
+
+async function appliedMap(env, profileIds) {   // profile id -> Set of job ids already applied to
+  const map = new Map();
+  for (let i = 0; i < profileIds.length; i += 90) {
+    const part = profileIds.slice(i, i + 90);
+    const { results } = await env.DB.prepare(`SELECT profile_id, job_id FROM applications WHERE profile_id IN (${part.map(() => '?').join(',')})`).bind(...part).all();
+    for (const r of results) { if (!map.has(r.profile_id)) map.set(r.profile_id, new Set()); map.get(r.profile_id).add(String(r.job_id)); }
+  }
+  return map;
 }
 
 /* ---------- profile -> text ---------- */
@@ -332,6 +343,7 @@ async function ensureMatchCols(env) {
   if (matchColsReady) return;
   try { await env.DB.prepare('ALTER TABLE matches ADD COLUMN created_at INTEGER').run(); } catch (e) { /* column already exists */ }
   await env.DB.prepare('UPDATE matches SET created_at = ? WHERE created_at IS NULL').bind(Date.now()).run();   // existing rows start their 24 hours now
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS applications (profile_id INTEGER NOT NULL, job_id TEXT NOT NULL, status TEXT, score REAL, applied_at INTEGER, updated_at INTEGER, PRIMARY KEY (profile_id, job_id))').run();
   matchColsReady = true;
 }
 async function pruneExpired(env) {
@@ -342,6 +354,7 @@ async function pruneExpired(env) {
     const del = await env.DB.prepare('DELETE FROM matches WHERE rowid IN (SELECT rowid FROM matches WHERE created_at < ? LIMIT 5000)').bind(cutoff).run();
     if (!(del && del.meta && del.meta.changes >= 5000)) break;
   }
+  await env.DB.prepare('DELETE FROM applications WHERE applied_at < ?').bind(cutoff).run();   // applied jobs go after 24 hours
   const iso = new Date(cutoff).toISOString();
   for (const t of ['documents', 'job_matches']) { try { await env.DB.prepare(`DELETE FROM ${t} WHERE created_at < ?`).bind(iso).run(); } catch (e) { /* table not created yet */ } }
   await env.DB.prepare("DELETE FROM vecs WHERE kind = 'j' AND at < ?").bind(Date.now() - Math.max(num(env.JOB_WINDOW_DAYS, 7), 2) * DAY_MS).run();
@@ -392,10 +405,12 @@ async function matchDirect(env, profiles, quiet, days) {
   const jobs = await recentJobVecs(env, days);
   if (!jobs.length || !profiles.length) return 0;
   const min = matchMin(env), cap = matchCap(env);
+  const applied = await appliedMap(env, profiles.map(p => p.id));
   const stmts = [];
   for (const p of profiles) {
-    const hits = [];
+    const hits = [], done = applied.get(p.id);
     for (const j of jobs) {
+      if (done && done.has(String(j.id))) continue;   // already applied: not a new match
       let s = 0; const a = p.vec, b = j.vec;
       for (let k = 0; k < a.length; k++) s += a[k] * b[k];
       if (s >= min) hits.push({ id: j.id, s });
@@ -416,16 +431,9 @@ async function stateGet(env, k) { const r = await env.DB.prepare('SELECT v FROM 
 async function stateSet(env, k, v) { await env.DB.prepare('INSERT OR REPLACE INTO sweep_state (k, v) VALUES (?, ?)').bind(k, String(v)).run(); }
 
 async function matchProfileVectors(env, items, quiet) {   // items: [{ id, values }]
-  await ensureMatchCols(env);
-  const min = matchMin(env);
-  const stmts = [];
-  for (const it of items) {
-    const res = await env.JOB_VEC.query(it.values, { topK: 50, returnMetadata: 'none' });
-    for (const m of res.matches) if (m.score >= min) stmts.push(env.DB.prepare('INSERT OR IGNORE INTO matches (profile_id, job_id, score, created_at) VALUES (?, ?, ?, ?)').bind(it.id, m.id.replace(/^j_/, ''), m.score, Date.now()));
-  }
-  for (let i = 0; i < stmts.length; i += 90) await env.DB.batch(stmts.slice(i, i + 90));
-  await trimMatches(env, items.map(i => i.id));
-  if (quiet && items.length) await env.DB.prepare(`UPDATE matches SET notified = 1 WHERE notified = 0 AND profile_id IN (${items.map(() => '?').join(',')})`).bind(...items.map(i => i.id)).run();
+  // Do not use Vectorize topK here: a topK limit can hide a qualifying job.
+  // Compare each profile against every recent job vector held in D1 instead.
+  return matchDirect(env, items.map(it => ({ id: it.id, vec: normalise(it.values) })), quiet);
 }
 
 async function embedPendingProfiles(env, limit, quiet) {
@@ -964,6 +972,52 @@ async function handleVibe(req, env, ctx) {
 }
 
 /* ---------- entry points ---------- */
+/* ---------- Daily insights ----------
+   Built from the jobs matched to the profile in the last 24 hours, saved once per day (East Africa Time) so opening the tab costs nothing.
+   Held back during the same working window as the matches, and released with them. ---------- */
+const INSIGHT_SKILLS = ['Excel', 'Power BI', 'SQL', 'Python', 'Tableau', 'Data analysis', 'Data entry', 'Communication', 'Customer service', 'Sales', 'Marketing', 'Social media', 'SEO', 'Content writing', 'Copywriting', 'Graphic design', 'Photoshop', 'Canva', 'Accounting', 'QuickBooks', 'Budgeting', 'Auditing', 'Project management', 'Leadership', 'Teamwork', 'Problem solving', 'Negotiation', 'Time management', 'Report writing', 'Research', 'Administration', 'Microsoft Office', 'JavaScript', 'React', 'Node.js', 'Java', 'PHP', 'Laravel', 'HTML', 'CSS', 'WordPress', 'Git', 'AWS', 'Linux', 'Networking', 'Cybersecurity', 'Machine learning', 'Supply chain', 'Procurement', 'Logistics', 'Teaching', 'Nursing'];
+const INSIGHT_RES = INSIGHT_SKILLS.map(sk => [sk, new RegExp('(^|[^a-z0-9])' + sk.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)')]);
+const eatDay = now => new Date(now + 3 * 3600000).toISOString().slice(0, 10);
+let insightsTableReady = false;
+async function ensureInsightsTable(env) {
+  if (insightsTableReady) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS insights (profile_id INTEGER PRIMARY KEY, day TEXT, data TEXT)').run();
+  insightsTableReady = true;
+}
+async function buildInsights(env, deviceId) {
+  const prof = await env.DB.prepare('SELECT id, data FROM profiles WHERE device_id = ?').bind(deviceId).first();
+  if (!prof) return null;
+  await ensureInsightsTable(env);
+  await ensureMatchCols(env);
+  const day = eatDay(Date.now());
+  const cached = await env.DB.prepare('SELECT data FROM insights WHERE profile_id = ? AND day = ?').bind(prof.id, day).first();
+  if (cached) { try { return JSON.parse(cached.data); } catch (e) { /* rebuild below */ } }
+  let p = {}; try { p = JSON.parse(prof.data || '{}'); } catch (e) {}
+  const { results } = await env.DB.prepare(
+    'SELECT j.title, j.description, j.location, j.employment_type, j.remote FROM matches m JOIN jobs j ON j.id = m.job_id WHERE m.profile_id = ? AND m.created_at > ?'
+  ).bind(prof.id, Date.now() - DAY_MS).all();
+  const tracked = await env.DB.prepare('SELECT COUNT(*) AS n FROM jobs').first();
+  const n = results.length;
+  const counts = new Map();
+  const loc = { nairobi: 0, other: 0, remote: 0 }, types = { full: 0, part: 0, other: 0 };
+  for (const j of results) {
+    const text = (clean(j.title) + ' ' + clean(j.description)).toLowerCase();
+    for (const [sk, re] of INSIGHT_RES) if (re.test(text)) counts.set(sk, (counts.get(sk) || 0) + 1);
+    if (j.remote) loc.remote++; else if (/nairobi/i.test(j.location || '')) loc.nairobi++; else loc.other++;
+    if (/part/i.test(j.employment_type || '')) types.part++; else if (/full/i.test(j.employment_type || '')) types.full++; else types.other++;
+  }
+  const mine = (clean(Array.isArray(p.skills) ? p.skills.join(', ') : p.skills) + ' ' + clean(p.job_title) + ' ' + clean(p.course)).toLowerCase();
+  const skills = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([sk, c]) => ({ skill: sk, pct: Math.round(100 * c / n), have: mine.includes(sk.toLowerCase()) }));
+  const gap = skills.find(x => !x.have);
+  const tip = !n ? 'No new matches today. Check back tomorrow, and keep your profile up to date.'
+    : gap ? `Add ${gap.skill} to your CV today: ${gap.pct}% of the jobs matched to you ask for it.`
+    : 'Your skills cover what employers asked for today. Apply early, the best roles fill fast.';
+  const data = { new_jobs: n, tracked_jobs: tracked ? tracked.n : 0, skills, locations: loc, types, tip, day };
+  if (n) await env.DB.prepare('INSERT OR REPLACE INTO insights (profile_id, day, data) VALUES (?, ?, ?)').bind(prof.id, day, JSON.stringify(data)).run();   // an empty day is not saved, so it is rebuilt once matches arrive
+  return data;
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -1016,8 +1070,8 @@ export default {
         const job = await env.DB.prepare('SELECT id, title, company, description FROM jobs WHERE id = ?').bind(jobId).first();
         if (!job) return json(env, { error: 'job not found' }, 404);
         const hash = await sha(String(prow.data || ''));
-        const cached = await env.DB.prepare('SELECT data, profile_hash FROM job_matches WHERE profile_id = ? AND job_id = ?').bind(prow.id, jobId).first();
-        if (cached && cached.profile_hash === hash) {
+        const cached = await env.DB.prepare('SELECT data, profile_hash, created_at FROM job_matches WHERE profile_id = ? AND job_id = ?').bind(prow.id, jobId).first();
+        if (cached && cached.profile_hash === hash && Date.parse(cached.created_at) > Date.now() - DAY_MS) {
           try { const c = JSON.parse(cached.data); if (c.ai || Date.now() - (c.at || 0) < INSIGHT_RETRY_MS) return json(env, { match: c }); } catch (e) { /* rebuild below */ }
         }
         let profile = {}; try { profile = JSON.parse(prow.data || '{}'); } catch (e) {}
@@ -1037,8 +1091,8 @@ export default {
         const job = await env.DB.prepare('SELECT id, title, company, location, description FROM jobs WHERE id = ?').bind(jobId).first();
         if (!job) return json(env, { error: 'job not found' }, 404);
         const hash = await sha(String(prow.data || ''));
-        const cached = await env.DB.prepare('SELECT data, profile_hash FROM documents WHERE profile_id = ? AND job_id = ?').bind(prow.id, jobId).first();
-        if (cached && cached.profile_hash === hash) {
+        const cached = await env.DB.prepare('SELECT data, profile_hash, created_at FROM documents WHERE profile_id = ? AND job_id = ?').bind(prow.id, jobId).first();
+        if (cached && cached.profile_hash === hash && Date.parse(cached.created_at) > Date.now() - DAY_MS) {
           // saved for this exact profile and job: reuse it; only a failed AI attempt is retried, and not within the hour
           try { const c = JSON.parse(cached.data); if (c.ai || Date.now() - (c.at || 0) < DOCS_RETRY_MS) return json(env, { docs: c }); } catch (e) { /* rebuild below */ }
         }
@@ -1050,16 +1104,40 @@ export default {
         return json(env, { docs });
       }
 
+      // The app tells the worker when a job is applied to (status pending, then completed); it stays for 24 hours, then it and its CV are deleted
+      if (url.pathname === '/apply' && req.method === 'POST') {
+        const body = await req.json().catch(() => ({}));
+        const deviceId = String(body.deviceId || '').slice(0, 100), jobId = String(body.jobId || '').slice(0, 100);
+        const status = body.status === 'completed' ? 'completed' : 'pending';
+        if (!deviceId || !jobId) return json(env, { error: 'deviceId and jobId required' }, 400);
+        await ensureMatchCols(env);
+        const prow = await env.DB.prepare('SELECT id FROM profiles WHERE device_id = ?').bind(deviceId).first();
+        if (!prow) return json(env, { error: 'profile not found' }, 404);
+        const job = await env.DB.prepare('SELECT id FROM jobs WHERE id = ?').bind(jobId).first();
+        if (!job) return json(env, { error: 'job not found' }, 404);
+        const m = await env.DB.prepare('SELECT score FROM matches WHERE profile_id = ? AND job_id = ?').bind(prow.id, jobId).first();
+        const now = Date.now();
+        await env.DB.prepare(`INSERT INTO applications (profile_id, job_id, status, score, applied_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)
+          ON CONFLICT(profile_id, job_id) DO UPDATE SET status = ?3, updated_at = ?5`).bind(prow.id, jobId, status, m ? m.score : parseFloat(env.OPEN_ENTRY_SCORE || '0.70'), now).run();
+        return json(env, { ok: true });
+      }
+
       if (url.pathname === '/matches' && req.method === 'GET') {
         const deviceId = url.searchParams.get('deviceId');
         if (!deviceId) return json(env, { error: 'deviceId required' }, 400);
-        const win = discoverWindow(env, Date.now());
-        if (win.working) return json(env, { matches: [], hidden: 0, state: 'working', release_at: win.releaseAt });   // matches are held back until the release time
         await ensureMatchCols(env);
+        const { results: appliedRows } = await env.DB.prepare(`
+          SELECT j.id, j.title, j.company, j.location, j.description, j.apply_url, j.posted_at, j.employment_type, j.remote, a.score, a.status, a.applied_at
+          FROM applications a JOIN profiles p ON p.id = a.profile_id JOIN jobs j ON j.id = a.job_id
+          WHERE p.device_id = ? AND a.applied_at > ? ORDER BY a.applied_at DESC LIMIT 50`).bind(deviceId, Date.now() - DAY_MS).all();   // applied jobs stay for 24 hours
+        const win = discoverWindow(env, Date.now());
+        if (win.working) return json(env, { matches: [], applied: appliedRows, hidden: 0, state: 'working', release_at: win.releaseAt });   // matches are held back until the release time
         const { results } = await env.DB.prepare(`
           SELECT j.id, j.title, j.company, j.location, j.description, j.apply_url, j.posted_at, j.employment_type, j.remote, m.score
           FROM matches m JOIN profiles p ON p.id = m.profile_id JOIN jobs j ON j.id = m.job_id
-          WHERE p.device_id = ? AND m.created_at > ? ORDER BY m.score DESC LIMIT ?`).bind(deviceId, Date.now() - DAY_MS, matchCap(env)).all();
+          WHERE p.device_id = ? AND m.created_at > ?
+            AND NOT EXISTS (SELECT 1 FROM applications a WHERE a.profile_id = p.id AND a.job_id = j.id)
+          ORDER BY m.score DESC LIMIT ?`).bind(deviceId, Date.now() - DAY_MS, matchCap(env)).all();
         const prow = await env.DB.prepare('SELECT data FROM profiles WHERE device_id = ?').bind(deviceId).first();
         let have = NaN; try { have = parseFloat(JSON.parse((prow && prow.data) || '{}').years_experience); } catch (e) {}
         const fitted = results.map(r => ({ r, s: experienceAdjust(r.score, have, r) })).filter(x => x.s !== null)
@@ -1068,7 +1146,7 @@ export default {
         const max = parseInt(env.OPEN_ENTRY_MAX || '10', 10);
         if (prow && max > 0) {   // entry-level / no-degree jobs join the list as normal matches, at a standard score
           const floor = parseFloat(env.OPEN_ENTRY_SCORE || '0.70');
-          const seen = new Set(results.map(r => r.id));
+          const seen = new Set([...results.map(r => r.id), ...appliedRows.map(r => r.id)]);
           let added = 0;
           for (const j of await openEntryPool(env)) {
             if (added >= max) break;
@@ -1078,12 +1156,20 @@ export default {
           }
           fitted.sort((a, b) => b.score - a.score);
         }
-        const out = { matches: fitted, hidden: hiddenCount, state: 'ready' };
+        const out = { matches: fitted, applied: appliedRows, hidden: hiddenCount, state: 'ready' };
         if (url.searchParams.get('debug') === '1') {   // which jobs the experience rule removed, and why
           out.profile_years = Number.isNaN(have) ? null : have;
           out.hidden_jobs = results.filter(r => experienceAdjust(r.score, have, r) === null).map(r => ({ title: r.title, required_years: requiredYears(r), score: r.score }));
         }
         return json(env, out);
+      }
+
+      if (url.pathname === '/insights' && req.method === 'GET') {
+        const deviceId = url.searchParams.get('deviceId');
+        if (!deviceId) return json(env, { error: 'deviceId required' }, 400);
+        const win = discoverWindow(env, Date.now());
+        if (win.working) return json(env, { state: 'working', release_at: win.releaseAt });   // held back with the matches until the release time
+        return json(env, { state: 'ready', insights: await buildInsights(env, deviceId) });
       }
 
       if (url.pathname === '/webhook/brightdata' && req.method === 'POST') {
