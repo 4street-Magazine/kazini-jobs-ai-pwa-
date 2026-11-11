@@ -536,10 +536,11 @@ async function ensurePushTable(env) {
   pushTableReady = true;
 }
 let fcmCache = { token: '', exp: 0 };
+let fcmLastError = '';
 async function fcmAccess(env) {
   if (!env.FCM_SERVICE_ACCOUNT) return null;
   if (fcmCache.token && Date.now() < fcmCache.exp) return fcmCache;
-  let sa; try { sa = JSON.parse(env.FCM_SERVICE_ACCOUNT); } catch (e) { console.error('FCM_SERVICE_ACCOUNT is not valid JSON'); return null; }
+  let sa; try { sa = JSON.parse(env.FCM_SERVICE_ACCOUNT); } catch (e) { fcmLastError = 'FCM_SERVICE_ACCOUNT is not valid JSON: paste the whole file, from the first { to the last }'; console.error(fcmLastError); return null; }
   const b64u = x => btoa(typeof x === 'string' ? x : String.fromCharCode(...new Uint8Array(x))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   const now = Math.floor(Date.now() / 1000);
   const unsigned = b64u(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' + b64u(JSON.stringify({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/firebase.messaging', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 }));
@@ -548,7 +549,7 @@ async function fcmAccess(env) {
   const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
   const res = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: unsigned + '.' + b64u(sig) }) });
   const j = await res.json().catch(() => ({}));
-  if (!j.access_token) { console.error('FCM auth failed', JSON.stringify(j)); return null; }
+  if (!j.access_token) { fcmLastError = JSON.stringify(j).slice(0, 300); console.error('FCM auth failed', fcmLastError); return null; }
   fcmCache = { token: j.access_token, exp: Date.now() + 50 * 60000, project: sa.project_id };
   return fcmCache;
 }
@@ -564,7 +565,7 @@ async function pushToProfile(env, profileId, n) {   // true when at least one de
     const res = await fetch(`https://fcm.googleapis.com/v1/projects/${auth.project}/messages:send`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: { token, notification: { title: 'New opportunities for you', body }, webpush: { headers: { Urgency: 'high' }, fcm_options: { link: env.APP_URL || '/' } } } }),
+      body: JSON.stringify({ message: { token, notification: { title: 'New opportunities for you', body }, webpush: { headers: { Urgency: 'high' }, notification: { vibrate: [200, 100, 200, 100, 300] }, fcm_options: { link: env.APP_URL || '/' } } } }),
     });
     if (res.ok) { reached = true; continue; }
     const txt = await res.text();
@@ -1227,6 +1228,31 @@ export default {
         await ensurePushTable(env);
         await env.DB.prepare('INSERT OR REPLACE INTO push_tokens (token, profile_id, created_at) VALUES (?, ?, ?)').bind(String(b.token), prof.id, Date.now()).run();
         return json(env, { ok: true });
+      }
+
+      // Push check without a terminal: open /admin/push-test?key=YOUR_ADMIN_SECRET in a browser. It reports the setup and sends one test push to every saved device. Remove it when push works.
+      if (url.pathname === '/admin/push-test' && req.method === 'GET') {
+        if (!env.ADMIN_SECRET || url.searchParams.get('key') !== env.ADMIN_SECRET) return json(env, { error: 'unauthorized' }, 401);
+        await ensurePushTable(env);
+        const { results } = await env.DB.prepare('SELECT token FROM push_tokens').all();
+        const out = { tokens: results.length, secret_set: !!env.FCM_SERVICE_ACCOUNT, app_url: env.APP_URL || null };
+        let auth = null;
+        try { auth = await fcmAccess(env); } catch (e) { fcmLastError = String(e && e.message || e); }
+        out.firebase_login_ok = !!auth;
+        if (auth) out.project_id = auth.project;
+        else out.firebase_login_error = fcmLastError || 'secret missing';
+        if (auth) {
+          out.sends = [];
+          for (const { token } of results) {
+            const res = await fetch(`https://fcm.googleapis.com/v1/projects/${auth.project}/messages:send`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: { token, notification: { title: 'Chania AI test', body: 'If you can read this, push works.' }, webpush: { headers: { Urgency: 'high' }, notification: { vibrate: [200, 100, 200, 100, 300] }, fcm_options: { link: env.APP_URL || '/' } } } }),
+            });
+            out.sends.push({ status: res.status, reply: (await res.text()).slice(0, 300) });
+          }
+        }
+        return json(env, out);
       }
 
       if (url.pathname === '/insights' && req.method === 'GET') {
