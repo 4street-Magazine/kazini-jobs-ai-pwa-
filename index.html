@@ -2714,8 +2714,8 @@
                 <div class="ins-card"><div class="ins-h">Job types</div><div class="ins-stats">${stat(T.full, 'Full-time')}${stat(T.part, 'Part-time')}${stat(T.other, 'Other')}</div></div>`;
         }
 
-        /* Plays "Job match.mp3" once a day, the first time that day's released matches show on screen. Browsers only allow sound after a tap, so if it is blocked it plays on the user's next tap. */
-        const JOB_MATCH_SOUND = encodeURI('Job match.mp3');
+        /* Plays "job-match.mp3" once a day, the first time that day's released matches show on screen. Browsers only allow sound after a tap, so if it is blocked it plays on the user's next tap. */
+        const JOB_MATCH_SOUND = 'job-match.mp3';
         let soundWaiting = false;
         function playJobMatchSound() {
             try {
