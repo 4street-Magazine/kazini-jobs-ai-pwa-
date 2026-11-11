@@ -12,6 +12,8 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
     <script>
         // If unpkg is slow or blocked, try a second CDN, and if both fail run without icons instead of a blank app
         window.lucide || document.write('<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"><\/script>');
@@ -1239,6 +1241,12 @@
             
             <!-- TAB 1: DISCOVER -->
             <div class="tab-view active" id="discoverTab">
+                <div id="pushPrompt" class="ins-card" style="display:none">
+                    <div class="ins-h">Get notified when your matches are ready</div>
+                    <div class="ins-sub" style="margin:-6px 0 12px">Chania AI will tell you the moment new opportunities are found for you.</div>
+                    <button class="apply-cta free" onclick="enablePush()"><span class="cta-text">Turn on notifications</span></button>
+                    <div style="text-align:center;margin-top:10px;font-size:11.5px;color:var(--text-muted);cursor:pointer" onclick="dismissPush()">Not now</div>
+                </div>
                 <div class="job-list" id="jobList"></div>
             </div>
 
@@ -2637,6 +2645,36 @@
             };
         }
 
+        /* ===== Firebase web push =====
+           Fill in the values from Firebase console > Project settings > General (web app) and Cloud Messaging (Web Push certificates key).
+           The same config must also be set in firebase-messaging-sw.js. ===== */
+        const FIREBASE_CONFIG = { apiKey: 'AIzaSyALr2O4ydif18Er5MOGCEzxPhfOLsDYe84', authDomain: 'chania-ai-22392.firebaseapp.com', projectId: 'chania-ai-22392', messagingSenderId: '647948327540', appId: '1:647948327540:web:74fafdb834aa07d00a0f21' };
+        const VAPID_KEY = 'BOkoVLp2IlHjw8xRZd3pRJliNxxe6kmWfBjTWYPN6zv0BBxkTrWDuBST7-cUGg4l5pBJgD18Sez9BY2K3bhlogs';
+        const pushReady = () => 'Notification' in window && 'serviceWorker' in navigator && typeof firebase !== 'undefined' && !FIREBASE_CONFIG.apiKey.startsWith('YOUR');
+        function hidePushPrompt() { const el = byId('pushPrompt'); if (el) el.style.display = 'none'; }
+        function dismissPush() { try { localStorage.setItem('chania_push_dismissed', '1'); } catch (e) {} hidePushPrompt(); }
+        async function registerPushToken() {
+            if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+            const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './firebase-cloud-messaging-push-scope' });   // its own scope, so it never clashes with sw.js
+            const token = await firebase.messaging().getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+            if (token) await fetch(`${CHANIA_API}/push-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId, token }) });
+        }
+        async function enablePush() {
+            try {
+                if (!pushReady()) return;
+                const perm = await Notification.requestPermission();
+                hidePushPrompt();
+                if (perm === 'granted') await registerPushToken();
+            } catch (e) { console.warn('push setup failed', e); }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                if (!pushReady() || !localStorage.getItem('chania_profile')) return;
+                if (Notification.permission === 'granted') registerPushToken().catch(() => {});   // tokens can change, so refresh it each launch
+                else if (Notification.permission === 'default' && !localStorage.getItem('chania_push_dismissed')) byId('pushPrompt').style.display = 'block';
+            } catch (e) {}
+        });
+
         let insightsTimer = null;
         async function renderInsights() {
             const box = byId('insightsView');
@@ -2671,6 +2709,21 @@
                 <div class="ins-card"><div class="ins-h">Job types</div><div class="ins-stats">${stat(T.full, 'Full-time')}${stat(T.part, 'Part-time')}${stat(T.other, 'Other')}</div></div>`;
         }
 
+        /* Plays "Job match.mp3" once a day, the first time that day's released matches show on screen. Browsers only allow sound after a tap, so if it is blocked it plays on the user's next tap. */
+        const JOB_MATCH_SOUND = encodeURI('Job match.mp3');
+        let soundWaiting = false;
+        function playJobMatchSound() {
+            try {
+                const day = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);   // East Africa day
+                if (localStorage.getItem('chania_sound_day') === day || localStorage.getItem('chania_sound') === 'off') return;
+                const a = new Audio(JOB_MATCH_SOUND);
+                a.volume = 0.8;
+                a.play().then(() => localStorage.setItem('chania_sound_day', day)).catch(() => {
+                    if (!soundWaiting) { soundWaiting = true; document.addEventListener('pointerdown', () => { soundWaiting = false; playJobMatchSound(); }, { once: true }); }
+                });
+            } catch (e) {}
+        }
+
         async function loadMyMatches() {
             if (!CHANIA_API || !localStorage.getItem('chania_profile')) return; // no profile yet: keep demo jobs
             try {
@@ -2686,6 +2739,7 @@
                 mapped.forEach(j => { const c = insightCache[j.serverId]; if (c) { j.insight = c; const s = salaryText(c); if (s) j.salary = s.est ? 'Est. ' + s.text : s.text; } });
                 jobData.splice(0, jobData.length, ...mapped);
                 renderJobs();
+                if (!discoverState.working && mapped.length) playJobMatchSound();
                 renderAppliedJobs();
                 lucide.createIcons();
                 prefetchSalaries();
