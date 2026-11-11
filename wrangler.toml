@@ -34,14 +34,16 @@ max_retries = 3
 # Cron runs in UTC.
 #  12:02 UTC = 15:02 EAT -> prune, retry, and pull jobs from Bright Data
 #  14:00 UTC = 17:00 EAT -> daily match (must equal SWEEP_CRON in index.js)
+#  17:06 UTC = 20:06 EAT -> matches released: send push / SMS (must equal NOTIFY_CRON in index.js)
 [triggers]
-crons = ["2 12 * * *", "0 14 * * *"]
+crons = ["2 12 * * *", "0 14 * * *", "6 17 * * *"]
 
 [vars]
 ALLOWED_ORIGIN = "*"
 WORKER_URL = "https://chaniajobsai.muchirirobinson49.workers.dev"
-MATCH_THRESHOLD = "0.68"
-MATCH_CAP = "20"
+APP_URL = "https://4street-magazine.github.io/kazini-jobs-ai-pwa-/"
+MATCH_THRESHOLD = "0.65"
+MATCH_CAP = "0"
 DAILY_JOB_CAP = "180"
 ALL_KE_JOBS = "180"
 BRIGHTDATA_DATASET_ID = "gd_lpfll7v5hcqtkxl6l"
