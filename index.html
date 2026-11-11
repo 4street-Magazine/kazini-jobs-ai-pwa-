@@ -2650,6 +2650,8 @@
            The same config must also be set in firebase-messaging-sw.js. ===== */
         const FIREBASE_CONFIG = { apiKey: 'AIzaSyALr2O4ydif18Er5MOGCEzxPhfOLsDYe84', authDomain: 'chania-ai-22392.firebaseapp.com', projectId: 'chania-ai-22392', messagingSenderId: '647948327540', appId: '1:647948327540:web:74fafdb834aa07d00a0f21' };
         const VAPID_KEY = 'BOkoVLp2IlHjw8xRZd3pRJliNxxe6kmWfBjTWYPN6zv0BBxkTrWDuBST7-cUGg4l5pBJgD18Sez9BY2K3bhlogs';
+        const PUSH_DEBUG = /pushdebug/.test(location.search);   // open the app with ?pushdebug=1 to see push setup messages on screen
+        const dbg = m => { if (PUSH_DEBUG) alert(m); };
         const pushReady = () => 'Notification' in window && 'serviceWorker' in navigator && typeof firebase !== 'undefined' && !FIREBASE_CONFIG.apiKey.startsWith('YOUR');
         function hidePushPrompt() { const el = byId('pushPrompt'); if (el) el.style.display = 'none'; }
         function dismissPush() { try { localStorage.setItem('chania_push_dismissed', '1'); } catch (e) {} hidePushPrompt(); }
@@ -2657,7 +2659,9 @@
             if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
             const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './firebase-cloud-messaging-push-scope' });   // its own scope, so it never clashes with sw.js
             const token = await firebase.messaging().getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
-            if (token) await fetch(`${CHANIA_API}/push-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId, token }) });
+            if (!token) { dbg('Push: Firebase gave no token'); return; }
+            const res = await fetch(`${CHANIA_API}/push-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId, token }) });
+            dbg(res.ok ? 'Push: this phone is registered' : 'Push: worker said ' + res.status + ' ' + (await res.text()));
         }
         async function enablePush() {
             try {
@@ -2669,8 +2673,9 @@
         }
         document.addEventListener('DOMContentLoaded', () => {
             try {
-                if (!pushReady() || !localStorage.getItem('chania_profile')) return;
-                if (Notification.permission === 'granted') registerPushToken().catch(() => {});   // tokens can change, so refresh it each launch
+                if (!pushReady() || !localStorage.getItem('chania_profile')) { dbg('Push: not ready. Firebase loaded: ' + (typeof firebase !== 'undefined') + ', notifications supported: ' + ('Notification' in window) + ', profile saved on this phone: ' + !!localStorage.getItem('chania_profile')); return; }
+                dbg('Push: notification permission is ' + Notification.permission);
+                if (Notification.permission === 'granted') registerPushToken().catch(e => dbg('Push error: ' + (e && e.message || e)));   // tokens can change, so refresh it each launch
                 else if (Notification.permission === 'default' && !localStorage.getItem('chania_push_dismissed')) byId('pushPrompt').style.display = 'block';
             } catch (e) {}
         });
