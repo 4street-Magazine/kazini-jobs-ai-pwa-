@@ -157,6 +157,7 @@ async function embedAndMatchProfile(env, profileId, text, hash, quiet) {
 }
 
 /* ---------- Automatic Bright Data searches, built from saved profiles ---------- */
+const NOTIFY_CRON = '6 17 * * *';   // 20:06 EAT, when the day's matches are released: must match the third line under [triggers] crons in wrangler.toml
 const SWEEP_CRON = '0 14 * * *';   // must match the second line under [triggers] crons in wrangler.toml (17:00 East Africa Time)
 const ENTRY_KEYWORDS = ['entry level', 'graduate trainee', 'customer service'];
 const MAX_SEARCHES = 10;                       // cost control: at most 10 searches per run (x 25 jobs each)
@@ -525,20 +526,74 @@ async function sendSms(env, to, message) {
 }
 
 // One SMS per profile summarising its unnotified matches
+/* ---------- Firebase web push (FCM HTTP v1) ----------
+   Secret: FCM_SERVICE_ACCOUNT = the whole service-account JSON from Firebase (npx wrangler secret put FCM_SERVICE_ACCOUNT). Variable: APP_URL = the address of the app, opened when a notification is tapped. ---------- */
+let pushTableReady = false;
+async function ensurePushTable(env) {
+  if (pushTableReady) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS push_tokens (token TEXT PRIMARY KEY, profile_id INTEGER NOT NULL, created_at INTEGER)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_push_profile ON push_tokens(profile_id)').run();
+  pushTableReady = true;
+}
+let fcmCache = { token: '', exp: 0 };
+async function fcmAccess(env) {
+  if (!env.FCM_SERVICE_ACCOUNT) return null;
+  if (fcmCache.token && Date.now() < fcmCache.exp) return fcmCache;
+  let sa; try { sa = JSON.parse(env.FCM_SERVICE_ACCOUNT); } catch (e) { console.error('FCM_SERVICE_ACCOUNT is not valid JSON'); return null; }
+  const b64u = x => btoa(typeof x === 'string' ? x : String.fromCharCode(...new Uint8Array(x))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const now = Math.floor(Date.now() / 1000);
+  const unsigned = b64u(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' + b64u(JSON.stringify({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/firebase.messaging', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 }));
+  const der = Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '')), c => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
+  const res = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: unsigned + '.' + b64u(sig) }) });
+  const j = await res.json().catch(() => ({}));
+  if (!j.access_token) { console.error('FCM auth failed', JSON.stringify(j)); return null; }
+  fcmCache = { token: j.access_token, exp: Date.now() + 50 * 60000, project: sa.project_id };
+  return fcmCache;
+}
+async function pushToProfile(env, profileId, n) {   // true when at least one device was reached
+  await ensurePushTable(env);
+  const { results } = await env.DB.prepare('SELECT token FROM push_tokens WHERE profile_id = ?').bind(profileId).all();
+  if (!results.length) return false;
+  const auth = await fcmAccess(env);
+  if (!auth) return false;
+  const body = `We found ${n} new ${n === 1 ? 'job' : 'jobs'} matching your profile today. Tap to review & apply`;
+  let reached = false;
+  for (const { token } of results) {
+    const res = await fetch(`https://fcm.googleapis.com/v1/projects/${auth.project}/messages:send`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: { token, notification: { title: 'New opportunities for you', body }, webpush: { headers: { Urgency: 'high' }, fcm_options: { link: env.APP_URL || '/' } } } }),
+    });
+    if (res.ok) { reached = true; continue; }
+    const txt = await res.text();
+    if (res.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(txt)) await env.DB.prepare('DELETE FROM push_tokens WHERE token = ?').bind(token).run();   // dead token: remove it
+    else console.error('FCM send failed', res.status, txt.slice(0, 200));
+  }
+  return reached;
+}
+
 async function notifyPending(env) {
+  if (discoverWindow(env, Date.now()).working) return;   // matches are released at the end of the working window; people are told then (NOTIFY_CRON)
+  await ensurePushTable(env);
   const { results } = await env.DB.prepare(`
     SELECT p.id AS pid, p.phone, p.full_name, COUNT(*) AS n,
            (SELECT j.title || ' at ' || COALESCE(j.company, '') FROM matches m2 JOIN jobs j ON j.id = m2.job_id
              WHERE m2.profile_id = p.id AND m2.notified = 0 ORDER BY m2.score DESC LIMIT 1) AS top
     FROM matches m JOIN profiles p ON p.id = m.profile_id
-    WHERE m.notified = 0 AND p.phone != '' GROUP BY p.id LIMIT 200`).all();
+    WHERE m.notified = 0 AND (p.phone != '' OR EXISTS (SELECT 1 FROM push_tokens t WHERE t.profile_id = p.id)) GROUP BY p.id LIMIT 200`).all();
   for (const r of results) {
     const first = (r.full_name || '').split(' ')[0] || 'there';
     const n = Math.min(r.n, matchCap(env));   // never report more than the per-profile cap
-    const msg = n === 1
-      ? `Hi ${first}, Chania AI found a job matching your profile: ${r.top}. Open Chania AI to apply.`
-      : `Hi ${first}, Chania AI found ${n} jobs matching your profile, including ${r.top}. Open Chania AI to apply.`;
-    if (await sendSms(env, r.phone, msg)) await env.DB.prepare('UPDATE matches SET notified = 1 WHERE profile_id = ?').bind(r.pid).run();
+    let done = await pushToProfile(env, r.pid, n);   // push first: free. SMS only for people with no working push token
+    if (!done && r.phone) {
+      const msg = n === 1
+        ? `Hi ${first}, Chania AI found a job matching your profile: ${r.top}. Open Chania AI to apply.`
+        : `Hi ${first}, Chania AI found ${n} jobs matching your profile, including ${r.top}. Open Chania AI to apply.`;
+      done = await sendSms(env, r.phone, msg);
+    }
+    if (done) await env.DB.prepare('UPDATE matches SET notified = 1 WHERE profile_id = ?').bind(r.pid).run();
   }
 }
 
@@ -1164,6 +1219,16 @@ export default {
         return json(env, out);
       }
 
+      if (url.pathname === '/push-token' && req.method === 'POST') {
+        const b = await req.json().catch(() => ({}));
+        if (!b.deviceId || !b.token || String(b.token).length > 4096) return json(env, { error: 'deviceId and token required' }, 400);
+        const prof = await env.DB.prepare('SELECT id FROM profiles WHERE device_id = ?').bind(b.deviceId).first();
+        if (!prof) return json(env, { error: 'no profile yet' }, 404);
+        await ensurePushTable(env);
+        await env.DB.prepare('INSERT OR REPLACE INTO push_tokens (token, profile_id, created_at) VALUES (?, ?, ?)').bind(String(b.token), prof.id, Date.now()).run();
+        return json(env, { ok: true });
+      }
+
       if (url.pathname === '/insights' && req.method === 'GET') {
         const deviceId = url.searchParams.get('deviceId');
         if (!deviceId) return json(env, { error: 'deviceId required' }, 400);
@@ -1261,6 +1326,7 @@ export default {
     }
   },
   async scheduled(evt, env, ctx) {
+    if (evt && evt.cron === NOTIFY_CRON) { ctx.waitUntil(notifyPending(env)); return; }
     if (evt && evt.cron === SWEEP_CRON) {
       ctx.waitUntil(env.MATCH_QUEUE ? startFullMatch(env, false) : sweepProfiles(env, Math.min(Math.max(parseInt(env.SWEEP_BATCH || '25', 10) || 25, 1), 40)));   // without the queue: old one-chunk sweep
       return;
