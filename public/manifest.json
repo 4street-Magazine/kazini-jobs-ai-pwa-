@@ -1,8 +1,9 @@
 {
+  "id": "/",
   "name": "Chania AI",
   "short_name": "Chania AI",
   "description": "We hunt. You apply.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#000000",
