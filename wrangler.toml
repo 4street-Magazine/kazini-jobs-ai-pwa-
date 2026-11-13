@@ -2,6 +2,9 @@ name = "chaniajobsai"
 main = "index.js"
 compatibility_date = "2026-10-25"
 
+[assets]
+directory = "./public"
+
 [observability]
 enabled = true
 
