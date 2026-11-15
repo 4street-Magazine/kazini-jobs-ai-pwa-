@@ -2764,10 +2764,10 @@
             { k: 'period', q: 'When did you work there?', ex: 'eg. 2021 - 2023' }
         ];
 
-        async function api(path, body) {
+        async function api(path, body, ms) {
             if (!CHANIA_API) return null;
             try {
-                const c = new AbortController(), t = setTimeout(() => c.abort(), 9000);
+                const c = new AbortController(), t = setTimeout(() => c.abort(), ms || 9000);
                 const r = await fetch(CHANIA_API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: c.signal });
                 clearTimeout(t);
                 return r.ok ? await r.json() : null;
@@ -2839,7 +2839,7 @@
             setQuickReplies([]);
             if (flow === 'ask_help' && AGREE.test(text)) return askProfile();
             if (flow === 'ask_profile' && AGREE.test(text)) return startOnboarding();
-            if (flow === 'onboarding') return answer(text);
+            if (flow === 'onboarding') return isSideQuestion(text) ? sideQuestion(text) : answer(text);
             if (flow === 'review' && /submit|confirm|done/i.test(text)) return submitProfile();
             return freeChat(text);
         }
@@ -2968,11 +2968,30 @@
         async function freeChat(text) {
             history.push({ role: 'user', content: text });
             typingOn();
-            const r = await api('/chat', { messages: history.slice(-10) });
+            const r = await api('/chat', { messages: history.slice(-10) }, 20000);   // Gemini fallback lives in the worker's /chat
             typingOff();
             const reply = r && r.reply ? r.reply : "I'm having trouble connecting right now. Please try again in a moment 🙏";
-            history.push({ role: 'assistant', content: reply });
+            if (r && r.reply) history.push({ role: 'assistant', content: reply });
             bot(escapeHtml(reply).replace(/\n/g, '<br>'), restoreReplies, '', 250);
+        }
+
+        /* A random question in the middle of onboarding: answer it with the fallback AI, then repeat the profile question */
+        const SIDE_START = /^\s*(what|how|why|who|where|when|can|could|should|do|does|is|are|will|wapi|nini|vipi)\b/i;
+        const SIDE_TOPIC = /\b(chania|you|app|fee|fees|pay|paying|cost|price|mpesa|m-pesa|sms|cv|safe|legit|trust|free|refund)\b/i;
+        function isSideQuestion(text) {
+            const s = Q[qi];
+            if (!s || s.yn || s.opts || s.singleLineOpts) return false;   // Yes/No and option steps keep their own validation
+            return /\?\s*$/.test(text) || (SIDE_START.test(text) && SIDE_TOPIC.test(text) && text.length < 140);
+        }
+        async function sideQuestion(text) {
+            const s = Q[qi];
+            history.push({ role: 'user', content: text });
+            typingOn();
+            const r = await api('/chat', { messages: history.slice(-10), step: s.q }, 20000);
+            typingOff();
+            const reply = r && r.reply ? r.reply : "I'm having trouble answering that right now 🙏";
+            if (r && r.reply) history.push({ role: 'assistant', content: reply });
+            bot(escapeHtml(reply).replace(/\n/g, '<br>'), () => bot(ask(s), restoreReplies), '', 250);
         }
 
         function handleFileUpload(event) {
