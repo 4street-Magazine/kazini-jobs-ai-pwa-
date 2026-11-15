@@ -12,6 +12,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
     <script>
@@ -1626,7 +1627,7 @@
                 </div>
 
                 <div id="mpesaStepPin" style="padding: 18px;">
-                    <p style="font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.5; margin-bottom: 14px;">Do you want to pay KSH 35 to CHANIA AI for Job application services ?</p>
+                    <p style="font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.5; margin-bottom: 14px;">Do you want to pay KSH 30 to CHANIA AI for Job application services ?</p>
                     <label for="mpesaPin" style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">Enter M-PESA PIN</label>
                     <input id="mpesaPin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="••••" oninput="this.value = this.value.replace(/\D/g, ''); document.getElementById('mpesaSendBtn').disabled = this.value.length !== 4;" style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 20px; letter-spacing: 0.5em; text-align: center; border: 2px solid #00A651; border-radius: 12px; background: var(--bg-surface); color: var(--text-primary); outline: none; margin-bottom: 16px;">
                     <div style="display: flex; gap: 10px;">
@@ -1759,8 +1760,8 @@
             }, ms || SKELETON_MS);
         }
 
-        /* ===== Pay-to-apply: the first job is free, every other job costs KSh 35 (stars hide company and location until paid) ===== */
-        const FEES = [['Job matching', 15], ['Application CV', 10], ['Application cover letter', 10]];
+        /* ===== Pay-to-apply: the first job is free, every other job costs KSh 30 (stars hide company and location until paid) ===== */
+        const FEES = [['Job matching', 10], ['Application CV', 10], ['Application cover letter', 10]];   // total KSh 30
         const UNLOCK_KEY = 'chania_unlocked';
         const jobKey = j => String(j.serverId || j.id);
         const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -2221,7 +2222,7 @@
         }
 
         /* ===== M-PESA STK PUSH ===== */
-        const MPESA_AMOUNT = FEES.reduce((s, f) => s + f[1], 0);   // KSh 35
+        const MPESA_AMOUNT = FEES.reduce((s, f) => s + f[1], 0);   // KSh 30
         const MPESA_SIMULATE = true; // set to false once your backend exposes POST /mpesa/stk (Daraja)
 
         function mpesaStep(step) {
@@ -2773,6 +2774,45 @@
                 return r.ok ? await r.json() : null;
             } catch (e) { return null; }
         }
+
+        /* ===== GOOGLE SIGN-IN: the verified Gmail is attached to the profile on the server, so clearing site data no longer loses it ===== */
+        const GOOGLE_CLIENT_ID = '174493910551-1b0fjgrjppsd2mt2d4khg3h3oltits8s.apps.googleusercontent.com';   // Google OAuth Web client id (public). Empty = Google sign-in stays off.
+        let gsiInit = false;
+        function mountGoogleButton(elId, tries) {
+            const el = byId(elId);
+            if (!el || !GOOGLE_CLIENT_ID) return;
+            if (!(window.google && google.accounts && google.accounts.id)) {   // the Google script loads async: wait for it
+                if ((tries || 0) < 25) setTimeout(() => mountGoogleButton(elId, (tries || 0) + 1), 200);
+                else el.innerHTML = '<span style="font-size:11px;opacity:.7">Google sign-in could not load. Check your connection and reopen the app.</span>';
+                return;
+            }
+            if (!gsiInit) { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential }); gsiInit = true; }
+            google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 260 });
+        }
+        async function onGoogleCredential(resp) {
+            const inChat = byId('chatModal').style.display === 'flex';
+            const say = (html, cb) => inChat ? bot(html, cb) : (byId('gLinkBox') && (byId('gLinkBox').innerHTML = `<div style="font-size:12.5px;font-weight:700;color:var(--text-primary);padding:6px 0">${html}</div>`));
+            if (inChat) typingOn();
+            const r = await api('/auth/google', { credential: resp && resp.credential, deviceId }, 20000);
+            if (inChat) typingOff();
+            if (!r || r.ok === false) {
+                const msg = r && r.error === 'device_linked' ? `This phone is already linked to ${escapeHtml(r.email || 'another Google account')}. Please sign in with that account 🙏` : "Google sign-in didn't work. Please try again 🙏";
+                return say(msg, restoreReplies);
+            }
+            localStorage.setItem('chania_email', r.email);
+            const first = escapeHtml(((r.profile && r.profile.full_name) || r.name || '').split(' ')[0]);
+            if (r.status === 'restored' && r.profile) {
+                profile = Object.assign({ past_jobs: [] }, r.profile);
+                if (!Array.isArray(profile.past_jobs)) profile.past_jobs = [];
+                localStorage.setItem('chania_profile', JSON.stringify(profile));
+                flow = 'chat'; setQuickReplies([]);
+                loadMyMatches(); renderProfile();
+                return say(`Welcome back${first ? ' ' + first : ''} 🎉 Your profile and matches are restored.`);
+            }
+            if (r.status === 'attached') { renderProfile(); return say(`Done ✅ Your profile is now linked to ${escapeHtml(r.email)}.`); }
+            flow = 'ask_help';
+            say(`Signed in as ${escapeHtml(r.email)} ✅ How can I help you today?`, restoreReplies);
+        }
         const bot = (html, cb, cls, delay) => showTypingAndReply(html, cb, cls, delay);
         const stepReplies = s => s ? (s.singleLineOpts || (s.yn ? ['Yes', 'No'] : (s.opts || []))) : [];
         function setQuickReplies(arr) {
@@ -2781,7 +2821,7 @@
             f.style.display = arr.length ? 'flex' : 'none';
         }
         function restoreReplies() {
-            setQuickReplies(flow === 'ask_help' ? ['Find Me a Job'] : flow === 'ask_profile' ? ['Create Profile'] : flow === 'review' ? ['Submit Profile'] : flow === 'onboarding' ? stepReplies(Q[qi]) : []);
+            setQuickReplies(flow === 'google_gate' ? ['Continue without Google'] : flow === 'ask_help' ? ['Find Me a Job'] : flow === 'ask_profile' ? ['Create Profile'] : flow === 'review' ? ['Submit Profile'] : flow === 'onboarding' ? stepReplies(Q[qi]) : []);
         }
         const BOT_AVATAR_SRC = 'kazini-ai-avatar.png';
         const MIN_BOT_DELAY = 3000; // replies feel human: never faster than 3s
@@ -2814,6 +2854,11 @@
                 flow = 'chat';
                 return bot(`Hi ${escapeHtml(profile.full_name.split(' ')[0])} 😊, how can I help you today? Ask me anything about Chania AI.`);
             }
+            if (GOOGLE_CLIENT_ID && !localStorage.getItem('chania_email')) {
+                flow = 'google_gate';
+                const id = 'gbtn' + Date.now();
+                return bot(`Hi 😊 Sign in with Google to keep your profile safe, even if you change phones or clear your browser. If you have used Chania AI before, signing in brings your profile back.<div id="${id}" style="margin-top:10px;min-height:44px"></div>`, () => { mountGoogleButton(id); restoreReplies(); });
+            }
             flow = 'ask_help';
             bot('Hi 😊, how can I help you today?', restoreReplies);
         }
@@ -2837,6 +2882,10 @@
                 </div>`);
             c.scrollTop = c.scrollHeight;
             setQuickReplies([]);
+            if (flow === 'google_gate') {
+                if (/^\s*continue without google\s*$/i.test(text)) { flow = 'ask_help'; return bot('No problem 😊 You can link Google later from your Profile tab. How can I help you today?', restoreReplies); }
+                return freeChat(text);
+            }
             if (flow === 'ask_help' && AGREE.test(text)) return askProfile();
             if (flow === 'ask_profile' && AGREE.test(text)) return startOnboarding();
             if (flow === 'onboarding') return isSideQuestion(text) ? sideQuestion(text) : answer(text);
@@ -2945,7 +2994,10 @@
                 + `<div class="stat-grid">${stat(jobData.length, 'Matches')}${stat(apps, 'Applied')}${stat(unlocked, 'Unlocked')}</div>`;
             const hdr = document.getElementById('headerContextContainer');
             if (hdr && document.getElementById('profileTab').classList.contains('active')) { hdr.classList.remove('hidden'); hdr.innerHTML = pinned; }
-            v.innerHTML = `<div style="height:12px"></div>` + cardHtml(pEdit, 'body');
+            const linkBox = (GOOGLE_CLIENT_ID && !localStorage.getItem('chania_email'))
+                ? `<div class="glass-panel" id="gLinkBox" style="margin-bottom:10px;text-align:center"><div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:4px">Keep your profile safe</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">Link your Google account so you never lose your profile, even if you clear your browser or change phones.</div><div id="gLinkBtn" style="display:flex;justify-content:center;min-height:44px"></div></div>` : '';
+            v.innerHTML = `<div style="height:12px"></div>` + linkBox + cardHtml(pEdit, 'body');
+            if (linkBox) mountGoogleButton('gLinkBtn');
             lucide.createIcons();
             setVibeVars();   // keeps --head-h current so the identity card sticks right under the app header
         }
