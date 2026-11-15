@@ -1082,6 +1082,9 @@ ABOUT CHANIA AI
 - Creating a profile takes about 5 minutes: short questions on name, education, skills, work experience, certifications, projects, achievements, languages and phone number. The user reviews everything and taps Submit Profile at the end.
 - After submitting, new matching jobs are found automatically and the user gets an SMS when there is a good match. The user does not need to keep searching.
 
+KEEPING THE PROFILE SAFE
+- Users sign in with Google so their profile is tied to their Gmail. If they clear their browser data or change phones, signing in with the same Google account brings back their profile and matches.
+
 APP TABS
 - Discover: jobs matched to the user's profile. Can be filtered by Remote, Full-Time and Part-Time.
 - Vibe: short career, money, mindset and productivity videos.
@@ -1093,9 +1096,10 @@ APPLYING FOR A JOB
 - When the user taps Apply on a matched job, the Application Studio writes a CV and a cover letter tailored to that job. Both can be edited, downloaded as PDF, and sent with extra attachments before submitting.
 
 PRICING (paid by M-Pesa prompt on the user's phone)
-- To support the continued operation of Chania AI's job-hunting service, there is a contribution of KSh 35 per matched opportunity, paid when the user applies to a job.
-- The KSh 35 contribution includes a CV tailored for that job and a cover letter tailored for that job.
-- Building a profile and seeing matched jobs is not charged separately. The user can tap "Not now" if they do not want to apply to a job yet.
+- The user's first job is free.
+- After that, to support the continued operation of Chania AI's job-hunting service, there is a contribution of KSh 30 per matched opportunity.
+- Paying unlocks the job (the company name and location stay hidden until then) and includes a CV tailored for that job and a cover letter tailored for that job.
+- Building a profile and seeing matched jobs is not charged separately. The user can tap "Not now" if they do not want to unlock a job yet.
 
 LIMITS (never claim otherwise)
 - Chania AI cannot guarantee interviews, job offers or salaries. It only matches and helps with applications.
@@ -1164,6 +1168,98 @@ async function handleChat(req, env) {
   }
 }
 
+/* ---------- Google sign-in: the user's verified Gmail is attached to their profile, so the profile can be found again
+   even when the app's saved device id is wiped (cleared site data, new phone). No SMS involved.
+   The Web OAuth client id is set below (and in index.html). ---------- */
+const GOOGLE_CLIENT_ID_DEFAULT = '174493910551-1b0fjgrjppsd2mt2d4khg3h3oltits8s.apps.googleusercontent.com';   // public id (safe to keep in code); a GOOGLE_CLIENT_ID variable in wrangler.toml overrides it
+const googleClientId = env => env.GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_DEFAULT;
+let emailColReady = false;
+async function ensureEmailCol(env) {
+  if (emailColReady) return;
+  try { await env.DB.prepare('SELECT email FROM profiles LIMIT 1').first(); }
+  catch (e) { await env.DB.prepare('ALTER TABLE profiles ADD COLUMN email TEXT').run(); }   // first use only
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS profiles_email_uq ON profiles(email) WHERE email IS NOT NULL').run();   // one profile per email
+  emailColReady = true;
+}
+
+let googleKeyCache = { at: 0, keys: [] };
+async function googleKeys(force) {
+  if (!force && googleKeyCache.keys.length && Date.now() - googleKeyCache.at < 3600000) return googleKeyCache.keys;
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+  if (!r.ok) throw new Error('Google certs ' + r.status);
+  googleKeyCache = { at: Date.now(), keys: (await r.json()).keys || [] };
+  return googleKeyCache.keys;
+}
+const b64u = s => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(String(s).length / 4) * 4, '=')), c => c.charCodeAt(0));
+
+// Checks Google's signature, audience (our client id), expiry and that the email is verified. Returns { email, name } or null.
+async function verifyGoogleToken(env, token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3 || !googleClientId(env)) return null;
+  let header, payload;
+  try { header = JSON.parse(new TextDecoder().decode(b64u(parts[0]))); payload = JSON.parse(new TextDecoder().decode(b64u(parts[1]))); } catch (e) { return null; }
+  if (header.alg !== 'RS256') return null;
+  let jwk = (await googleKeys(false)).find(k => k.kid === header.kid);
+  if (!jwk) jwk = (await googleKeys(true)).find(k => k.kid === header.kid);   // Google rotates keys
+  if (!jwk) return null;
+  const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64u(parts[2]), new TextEncoder().encode(parts[0] + '.' + parts[1]));
+  if (!ok) return null;
+  if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') return null;
+  if (payload.aud !== googleClientId(env)) return null;
+  if (!payload.exp || payload.exp * 1000 < Date.now()) return null;
+  if (payload.email_verified !== true && payload.email_verified !== 'true') return null;
+  if (!payload.email) return null;
+  return { email: String(payload.email).toLowerCase(), name: String(payload.name || '') };
+}
+
+// Duplicate rows are switched off (not deleted): they stop matching and notifying, and free the email and device id.
+async function retireProfile(env, id) {
+  await env.DB.batch([
+    env.DB.prepare("UPDATE profiles SET device_id = 'merged-' || id || '-' || ?, email = NULL, status = 'draft', embedded = 0 WHERE id = ?").bind(Date.now(), id),
+    env.DB.prepare('DELETE FROM matches WHERE profile_id = ?').bind(id),
+  ]);
+}
+async function bindProfile(env, keepId, deviceId, email) {
+  await ensurePushTable(env);
+  const { results } = await env.DB.prepare('SELECT id FROM profiles WHERE id != ? AND (device_id = ? OR email = ?)').bind(keepId, deviceId, email).all();
+  for (const o of results || []) {
+    await env.DB.prepare('UPDATE push_tokens SET profile_id = ? WHERE profile_id = ?').bind(keepId, o.id).run();   // notifications follow the profile
+    await retireProfile(env, o.id);
+  }
+  await env.DB.prepare('UPDATE profiles SET device_id = ?, email = ? WHERE id = ?').bind(deviceId, email, keepId).run();
+}
+const profileOut = row => { try { const p = JSON.parse((row && row.data) || '{}'); return p && p.full_name ? p : null; } catch (e) { return null; } };
+
+async function handleGoogleAuth(req, env) {
+  if (!googleClientId(env)) return json(env, { ok: false, error: 'not_configured' }, 500);
+  let b = {}; try { b = await req.json(); } catch (e) {}
+  const deviceId = String(b.deviceId || '').slice(0, 100);
+  if (!deviceId) return json(env, { ok: false, error: 'bad_request' }, 400);
+  const g = await verifyGoogleToken(env, b.credential);
+  if (!g) return json(env, { ok: false, error: 'invalid_token' });
+  await ensureEmailCol(env);
+
+  const byEmail = await env.DB.prepare('SELECT id, status, data, email FROM profiles WHERE email = ?').bind(g.email).first();
+  const byDev = await env.DB.prepare('SELECT id, status, data, email FROM profiles WHERE device_id = ?').bind(deviceId).first();
+  const out = { ok: true, email: g.email, name: g.name };
+
+  if (byEmail) {   // this Gmail already owns a profile: bring it to this device
+    let keep = byEmail;
+    if (byDev && byDev.id !== byEmail.id && byDev.status === 'submitted' && byEmail.status !== 'submitted') keep = byDev;   // the finished one wins over an empty one
+    await bindProfile(env, keep.id, deviceId, g.email);
+    const p = profileOut(keep);
+    return json(env, Object.assign(out, p ? { status: 'restored', profile: p } : { status: 'new' }));
+  }
+  if (byDev) {
+    if (byDev.email && byDev.email !== g.email) return json(env, { ok: false, error: 'device_linked', email: byDev.email });   // this phone already belongs to another Google account
+    await env.DB.prepare('UPDATE profiles SET email = ? WHERE id = ?').bind(g.email, byDev.id).run();
+    return json(env, Object.assign(out, { status: profileOut(byDev) ? 'attached' : 'new' }));
+  }
+  await env.DB.prepare("INSERT INTO profiles (device_id, full_name, phone, data, status, updated_at, email) VALUES (?, '', '', '{}', 'draft', datetime('now'), ?)").bind(deviceId, g.email).run();
+  return json(env, Object.assign(out, { status: 'new' }));
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -1181,6 +1277,7 @@ export default {
 
       if (url.pathname === '/vibe' && req.method === 'POST') return handleVibe(req, env, ctx);
       if (url.pathname === '/chat' && req.method === 'POST') return handleChat(req, env);
+      if (url.pathname === '/auth/google' && req.method === 'POST') return handleGoogleAuth(req, env);
 
       if (url.pathname === '/profile' && req.method === 'POST') {
         const r = await saveProfile(env, ctx, await req.json());
