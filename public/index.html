@@ -2786,14 +2786,15 @@
                 else el.innerHTML = '<span style="font-size:11px;opacity:.7">Google sign-in could not load. Check your connection and reopen the app.</span>';
                 return;
             }
-            if (!gsiInit) { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential }); gsiInit = true; }
+            if (!gsiInit) { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, use_fedcm_for_button: true }); gsiInit = true; }
             google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 260 });
         }
         async function onGoogleCredential(resp) {
             const inChat = byId('chatModal').style.display === 'flex';
             const say = (html, cb) => inChat ? bot(html, cb) : (byId('gLinkBox') && (byId('gLinkBox').innerHTML = `<div style="font-size:12.5px;font-weight:700;color:var(--text-primary);padding:6px 0">${html}</div>`));
             if (inChat) typingOn();
-            const r = await api('/auth/google', { credential: resp && resp.credential, deviceId }, 20000);
+            let r = null;
+            try { r = await api('/auth/google', { credential: resp && resp.credential, deviceId }, 20000); } catch (e) { r = null; }
             if (inChat) typingOff();
             if (!r || r.ok === false) {
                 const msg = r && r.error === 'device_linked' ? `This phone is already linked to ${escapeHtml(r.email || 'another Google account')}. Please sign in with that account 🙏` : "Google sign-in didn't work. Please try again 🙏";
