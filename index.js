@@ -1099,6 +1099,7 @@ PRICING (paid by M-Pesa prompt on the user's phone)
 - The user's first job is free.
 - After that, to support the continued operation of Chania AI's job-hunting service, there is a contribution of KSh 30 per matched opportunity.
 - Paying unlocks the job (the company name and location stay hidden until then) and includes a CV tailored for that job and a cover letter tailored for that job.
+- The M-Pesa prompt appears on the user's phone and the PIN is typed only on that prompt, never in the app.
 - Building a profile and seeing matched jobs is not charged separately. The user can tap "Not now" if they do not want to unlock a job yet.
 
 LIMITS (never claim otherwise)
@@ -1260,6 +1261,181 @@ async function handleGoogleAuth(req, env) {
   return json(env, Object.assign(out, { status: 'new' }));
 }
 
+/* ---------- Paystack M-Pesa payments. The phone never decides what is unlocked: a job opens only after Paystack confirms the payment here.
+   Secret: PAYSTACK_SECRET_KEY (Cloudflare secret). Optional variable: CONTRIBUTION_KES (default 30). Webhook URL for the Paystack dashboard: <this worker>/pay/webhook ---------- */
+let payTablesReady = false;
+async function ensurePayTables(env) {
+  if (payTablesReady) return;
+  await env.DB.batch([
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS payments (reference TEXT PRIMARY KEY, profile_id INTEGER NOT NULL, job_id TEXT NOT NULL, amount INTEGER NOT NULL, currency TEXT NOT NULL, status TEXT NOT NULL, created_at INTEGER NOT NULL, paid_at INTEGER)'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS payments_profile_job ON payments(profile_id, job_id)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS unlocks (profile_id INTEGER NOT NULL, job_id TEXT NOT NULL, kind TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, PRIMARY KEY (profile_id, job_id))'),
+  ]);
+  payTablesReady = true;
+}
+const contributionKes = env => Math.max(1, parseInt(env.CONTRIBUTION_KES || '30', 10) || 30);
+
+async function paystack(env, path, method, body) {
+  try {
+    const res = await fetch('https://api.paystack.co' + path, {
+      method, headers: { Authorization: 'Bearer ' + env.PAYSTACK_SECRET_KEY, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(20000),
+    });
+    const d = await res.json().catch(() => ({}));
+    return { ok: res.ok && d.status === true, data: d.data || {}, message: String(d.message || '') };
+  } catch (e) { return { ok: false, data: {}, message: String((e && e.message) || e) }; }
+}
+async function hmacSha512Hex(secret, text) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(text));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+const safeEqual = (a, b) => { a = String(a); b = String(b); if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
+function kePhone(raw) {
+  const d = String(raw || '').replace(/\D/g, '');
+  const n = d.startsWith('254') ? d.slice(3) : d.startsWith('0') ? d.slice(1) : d;
+  return /^[17]\d{8}$/.test(n) ? '+254' + n : null;
+}
+
+async function isJobUnlocked(env, profileId, jobId) {
+  await ensurePayTables(env); await ensureMatchCols(env);
+  const u = await env.DB.prepare('SELECT 1 AS x FROM unlocks WHERE profile_id = ? AND job_id = ?').bind(profileId, jobId).first();
+  if (u) return true;
+  const a = await env.DB.prepare('SELECT 1 AS x FROM applications WHERE profile_id = ? AND job_id = ?').bind(profileId, jobId).first();
+  return !!a;
+}
+async function markFreeUsed(env, profileId, jobId) {
+  await env.DB.prepare("UPDATE unlocks SET used = 1 WHERE profile_id = ? AND job_id = ? AND kind = 'free'").bind(profileId, jobId).run();
+}
+
+// Checks the payment with Paystack itself (never trusts the caller) and unlocks the job once it is confirmed and the amount is right.
+async function settlePayment(env, ref) {
+  const p = await env.DB.prepare('SELECT reference, profile_id, job_id, amount, currency, status, created_at FROM payments WHERE reference = ?').bind(ref).first();
+  if (!p) return null;
+  if (p.status === 'success' || p.status === 'failed') return p.status;
+  const v = await paystack(env, '/transaction/verify/' + encodeURIComponent(ref), 'GET');
+  const d = v.data || {};
+  if (v.ok && d.status === 'success') {
+    if (Number(d.amount) >= p.amount && String(d.currency || '').toUpperCase() === p.currency) {
+      const now = Date.now();
+      await env.DB.batch([
+        env.DB.prepare("UPDATE payments SET status = 'success', paid_at = ? WHERE reference = ?").bind(now, ref),
+        env.DB.prepare("INSERT OR IGNORE INTO unlocks (profile_id, job_id, kind, used, created_at) VALUES (?, ?, 'paid', 0, ?)").bind(p.profile_id, p.job_id, now),
+      ]);
+      return 'success';
+    }
+    console.log('pay: amount or currency mismatch for', ref, d.amount, d.currency);
+    await env.DB.prepare("UPDATE payments SET status = 'failed' WHERE reference = ?").bind(ref).run();
+    return 'failed';
+  }
+  if (v.ok && ['failed', 'abandoned', 'reversed'].includes(String(d.status))) {
+    await env.DB.prepare("UPDATE payments SET status = 'failed' WHERE reference = ?").bind(ref).run();
+    return 'failed';
+  }
+  if (Date.now() - p.created_at > 300000) {   // no answer after 5 minutes: stop waiting, but a late confirmation can still unlock it
+    await env.DB.prepare("UPDATE payments SET status = 'expired' WHERE reference = ? AND status = 'pending'").bind(ref).run();
+    return 'expired';
+  }
+  return 'pending';
+}
+
+async function handlePayStart(req, env) {
+  const fail = (message, error) => json(env, { ok: false, error: error || 'failed', message });
+  if (!env.PAYSTACK_SECRET_KEY) return fail('Payments are not switched on yet. Please try again later.', 'not_configured');
+  let b = {}; try { b = await req.json(); } catch (e) {}
+  const deviceId = String(b.deviceId || '').slice(0, 100), jobId = String(b.jobId || '').slice(0, 100);
+  const phone = kePhone(b.phone);
+  if (!deviceId || !jobId) return json(env, { ok: false, error: 'bad_request', message: 'Something went wrong. Please try again.' }, 400);
+  if (!phone) return fail('Please enter a valid Safaricom number, like 0712 345 678.', 'bad_phone');
+  await ensurePayTables(env); await ensureEmailCol(env);
+  const prow = await env.DB.prepare('SELECT id, email FROM profiles WHERE device_id = ?').bind(deviceId).first();
+  if (!prow) return fail('We could not find your profile. Please sign in again.', 'no_profile');
+  const job = await env.DB.prepare('SELECT id FROM jobs WHERE id = ?').bind(jobId).first();
+  if (!job) return fail('That job is no longer available.', 'job_not_found');
+  if (await isJobUnlocked(env, prow.id, jobId)) return json(env, { ok: true, status: 'success', already: true });
+
+  const now = Date.now();
+  const open = await env.DB.prepare("SELECT reference FROM payments WHERE profile_id = ? AND job_id = ? AND status = 'pending' AND created_at > ? ORDER BY created_at DESC LIMIT 1").bind(prow.id, jobId, now - 90000).first();
+  if (open) return json(env, { ok: true, status: 'pending', reference: open.reference });   // a double tap must not charge twice
+  const recent = await env.DB.prepare('SELECT COUNT(*) AS n FROM payments WHERE profile_id = ? AND created_at > ?').bind(prow.id, now - 600000).first();
+  if (recent && recent.n >= 5) return fail('Too many attempts. Please wait a few minutes and try again.', 'too_many');
+
+  const kes = contributionKes(env);
+  const ref = 'chn_' + now.toString(36) + [...crypto.getRandomValues(new Uint8Array(6))].map(x => x.toString(16).padStart(2, '0')).join('');
+  await env.DB.prepare("INSERT INTO payments (reference, profile_id, job_id, amount, currency, status, created_at) VALUES (?, ?, ?, ?, 'KES', 'pending', ?)").bind(ref, prow.id, jobId, kes * 100, now).run();
+  const ch = await paystack(env, '/charge', 'POST', {
+    email: prow.email || `p${prow.id}@chaniajobsai.co.ke`, amount: kes * 100, currency: 'KES', reference: ref,
+    mobile_money: { phone, provider: 'mpesa' }, metadata: { profile_id: prow.id, job_id: jobId },
+  });
+  const st = String((ch.data && ch.data.status) || '');
+  if (!ch.ok || st === 'failed') {
+    console.log('pay: charge not started', ref, ch.message, st);
+    await env.DB.prepare("UPDATE payments SET status = 'failed' WHERE reference = ?").bind(ref).run();
+    return fail(String((ch.data && ch.data.display_text) || '').slice(0, 160) || 'We could not send the M-PESA prompt. Please check your number and try again.', 'charge_failed');
+  }
+  if (st === 'success') return json(env, { ok: true, status: await settlePayment(env, ref), reference: ref });
+  return json(env, { ok: true, status: 'pending', reference: ref });
+}
+
+async function handlePayStatus(req, env) {
+  let b = {}; try { b = await req.json(); } catch (e) {}
+  const deviceId = String(b.deviceId || '').slice(0, 100), ref = String(b.reference || '').slice(0, 100);
+  if (!deviceId || !ref || !env.PAYSTACK_SECRET_KEY) return json(env, { status: 'failed' }, 400);
+  await ensurePayTables(env);
+  const row = await env.DB.prepare('SELECT p.reference FROM payments p JOIN profiles pr ON pr.id = p.profile_id WHERE p.reference = ? AND pr.device_id = ?').bind(ref, deviceId).first();
+  if (!row) return json(env, { status: 'failed' }, 404);
+  return json(env, { status: await settlePayment(env, ref) });
+}
+
+async function handlePayWebhook(req, env) {
+  if (!env.PAYSTACK_SECRET_KEY) return new Response('not configured', { status: 500 });
+  const raw = await req.text();
+  const expected = await hmacSha512Hex(env.PAYSTACK_SECRET_KEY, raw);
+  if (!safeEqual(req.headers.get('x-paystack-signature') || '', expected)) return new Response('bad signature', { status: 401 });
+  let ev = {}; try { ev = JSON.parse(raw); } catch (e) {}
+  const ref = ev && ev.data && ev.data.reference;
+  if (ref && (ev.event === 'charge.success' || ev.event === 'charge.failed')) {
+    await ensurePayTables(env);
+    try { await settlePayment(env, String(ref)); } catch (e) { console.log('pay webhook error', String((e && e.message) || e)); }
+  }
+  return new Response('ok', { status: 200 });
+}
+
+// Jobs the person has not unlocked keep their company, location and apply link on the server. Their first job is free.
+const reEscape = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function maskJob(j) {
+  const company = String(j.company || '').trim();
+  let desc = String(j.description || '');
+  if (company.length > 2) desc = desc.replace(new RegExp(reEscape(company), 'gi'), '*****');
+  return Object.assign({}, j, { company: '', location: '', apply_url: null, description: desc, unlocked: false, free: false });
+}
+async function applyLocks(env, profileId, list, appliedRows) {
+  await ensurePayTables(env);
+  const { results } = await env.DB.prepare('SELECT job_id, kind, used FROM unlocks WHERE profile_id = ?').bind(profileId).all();
+  const rows = results || [];
+  const appliedIds = new Set((appliedRows || []).map(r => r.id));
+  const inList = new Set(list.map(j => j.id));
+  let free = rows.find(r => r.kind === 'free');
+  const claim = (jobId) => env.DB.prepare("INSERT INTO unlocks (profile_id, job_id, kind, used, created_at) SELECT ?1, ?2, 'free', 0, ?3 WHERE NOT EXISTS (SELECT 1 FROM unlocks WHERE profile_id = ?1 AND kind = 'free')").bind(profileId, jobId, Date.now());
+  if (!free && list.length) {
+    await claim(list[0].id).run();
+    free = { job_id: list[0].id, kind: 'free', used: 0 };
+    rows.push(free);
+  } else if (free && !free.used && list.length && !inList.has(free.job_id) && !appliedIds.has(free.job_id)) {
+    // the free job expired before it was used: hand the free job to the best current match
+    await env.DB.batch([env.DB.prepare("DELETE FROM unlocks WHERE profile_id = ? AND kind = 'free'").bind(profileId), claim(list[0].id)]);
+    rows.splice(rows.indexOf(free), 1);
+    free = { job_id: list[0].id, kind: 'free', used: 0 };
+    rows.push(free);
+  }
+  const open = new Set(rows.map(r => r.job_id));
+  return list.map(j => {
+    const unlocked = open.has(j.id) || appliedIds.has(j.id);
+    const isFree = !!(free && !free.used && free.job_id === j.id);
+    return unlocked ? Object.assign({}, j, { unlocked: true, free: isFree }) : maskJob(j);
+  });
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -1278,6 +1454,9 @@ export default {
       if (url.pathname === '/vibe' && req.method === 'POST') return handleVibe(req, env, ctx);
       if (url.pathname === '/chat' && req.method === 'POST') return handleChat(req, env);
       if (url.pathname === '/auth/google' && req.method === 'POST') return handleGoogleAuth(req, env);
+      if (url.pathname === '/pay/start' && req.method === 'POST') return handlePayStart(req, env);
+      if (url.pathname === '/pay/status' && req.method === 'POST') return handlePayStatus(req, env);
+      if (url.pathname === '/pay/webhook' && req.method === 'POST') return handlePayWebhook(req, env);
 
       if (url.pathname === '/profile' && req.method === 'POST') {
         const r = await saveProfile(env, ctx, await req.json());
@@ -1334,6 +1513,8 @@ export default {
         if (!prow) return json(env, { error: 'profile not found' }, 404);
         const job = await env.DB.prepare('SELECT id, title, company, location, description FROM jobs WHERE id = ?').bind(jobId).first();
         if (!job) return json(env, { error: 'job not found' }, 404);
+        if (!(await isJobUnlocked(env, prow.id, jobId))) return json(env, { error: 'locked' }, 402);   // the tailored CV and cover letter are for unlocked jobs only
+        await markFreeUsed(env, prow.id, jobId);   // generating the documents uses up the free job
         const hash = await sha(String(prow.data || ''));
         const cached = await env.DB.prepare('SELECT data, profile_hash, created_at FROM documents WHERE profile_id = ? AND job_id = ?').bind(prow.id, jobId).first();
         if (cached && cached.profile_hash === hash && Date.parse(cached.created_at) > Date.now() - DAY_MS) {
@@ -1359,6 +1540,7 @@ export default {
         if (!prow) return json(env, { error: 'profile not found' }, 404);
         const job = await env.DB.prepare('SELECT id FROM jobs WHERE id = ?').bind(jobId).first();
         if (!job) return json(env, { error: 'job not found' }, 404);
+        if (!(await isJobUnlocked(env, prow.id, jobId))) return json(env, { error: 'locked' }, 402);
         const m = await env.DB.prepare('SELECT score FROM matches WHERE profile_id = ? AND job_id = ?').bind(prow.id, jobId).first();
         const now = Date.now();
         await env.DB.prepare(`INSERT INTO applications (profile_id, job_id, status, score, applied_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)
@@ -1400,7 +1582,9 @@ export default {
           }
           fitted.sort((a, b) => b.score - a.score);
         }
-        const out = { matches: fitted, applied: appliedRows, hidden: hiddenCount, state: 'ready' };
+        const pid = await env.DB.prepare('SELECT id FROM profiles WHERE device_id = ?').bind(deviceId).first();
+        const shown = pid ? await applyLocks(env, pid.id, fitted, appliedRows) : fitted.map(maskJob);   // locked jobs never leave the server with their company, location or apply link
+        const out = { matches: shown, applied: appliedRows, hidden: hiddenCount, state: 'ready' };
         if (url.searchParams.get('debug') === '1') {   // which jobs the experience rule removed, and why
           out.profile_years = Number.isNaN(have) ? null : have;
           out.hidden_jobs = results.filter(r => experienceAdjust(r.score, have, r) === null).map(r => ({ title: r.title, required_years: requiredYears(r), score: r.score }));
