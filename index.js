@@ -1339,10 +1339,9 @@ async function settlePayment(env, ref) {
   if (v.ok && d.status === 'success') {
     if (Number(d.amount) >= p.amount && String(d.currency || '').toUpperCase() === p.currency) {
       const now = Date.now();
-      await env.DB.batch([
-        env.DB.prepare("UPDATE payments SET status = 'success', paid_at = ? WHERE reference = ?").bind(now, ref),
-        env.DB.prepare("INSERT OR IGNORE INTO unlocks (profile_id, job_id, kind, used, created_at) VALUES (?, ?, 'paid', 0, ?)").bind(p.profile_id, p.job_id, now),
-      ]);
+      const stmts = [env.DB.prepare("UPDATE payments SET status = 'success', paid_at = ? WHERE reference = ?").bind(now, ref)];
+      if (p.job_id !== '__test__') stmts.push(env.DB.prepare("INSERT OR IGNORE INTO unlocks (profile_id, job_id, kind, used, created_at) VALUES (?, ?, 'paid', 0, ?)").bind(p.profile_id, p.job_id, now));   // admin test payments unlock nothing
+      await env.DB.batch(stmts);
       return 'success';
     }
     console.log('pay: amount or currency mismatch for', ref, d.amount, d.currency);
@@ -1489,6 +1488,10 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--card);border:1px
 <div class="step"><b>1. Embed stuck jobs</b><span>Prepares jobs that are waiting so they can be matched. It repeats until none are left.</span><button data-act="embed">Embed waiting jobs</button></div>
 <div class="step"><b>2. Fetch new jobs</b><span>Asks Bright Data for fresh jobs. The reply below shows if it worked.</span><button data-act="trigger">Fetch new jobs</button></div>
 <div class="step"><b>3. Match everyone (no SMS)</b><span>Matches every profile with the recent jobs. No messages are sent.</span><button class="alt" data-act="match">Match everyone</button></div>
+<div class="step"><b>4. Test M-PESA payment</b><span>Sends a real prompt to the number below and waits for you to approve it. Real money is taken from that phone with your live key.</span>
+<input id="tphone" type="tel" inputmode="tel" placeholder="M-PESA number, e.g. 0712 345 678" style="margin-bottom:10px">
+<input id="tamt" type="number" inputmode="numeric" min="1" max="100" value="30" placeholder="Amount in KSh" style="margin-bottom:10px">
+<button data-act="paytest">Send test prompt</button></div>
 <pre id="out">Results appear here.</pre>
 </div>
 <script>
@@ -1521,6 +1524,22 @@ var acts = {
   trigger: async function () {
     var r = await call("/admin/trigger"); if (r) log("Fetch reply (" + r.status + "): " + JSON.stringify(r.data, null, 2));
   },
+  paytest: async function () {
+    var ph = document.getElementById("tphone").value.trim(), amt = document.getElementById("tamt").value.trim() || "30";
+    if (!ph) { log("Type the M-PESA number first."); return; }
+    var r = await call("/admin/pay-test?phone=" + encodeURIComponent(ph) + "&amount=" + encodeURIComponent(amt));
+    if (!r) return;
+    log("Paystack reply: " + JSON.stringify(r.data, null, 2));
+    if (!r.data.ok || !r.data.reference) { log("The prompt was not sent. The reason is in the reply above."); return; }
+    log("Prompt sent. Approve it on the phone. Waiting up to 2 minutes...");
+    for (var i = 0; i < 40; i++) {
+      await new Promise(function (res) { setTimeout(res, 3000); });
+      var c = await call("/admin/pay-check?ref=" + encodeURIComponent(r.data.reference)); if (!c) return;
+      if (c.data.status === "success") { log("PAID. Paystack confirmed the payment: " + JSON.stringify(c.data.paystack, null, 2)); return; }
+      if (c.data.status === "failed") { log("FAILED: " + JSON.stringify(c.data.paystack, null, 2)); return; }
+    }
+    log("No confirmation after 2 minutes. If you approved it, check Paystack > Transactions.");
+  },
   match: async function () {
     if (!confirm("Match every profile with the recent jobs? No SMS will be sent.")) return;
     var r = await call("/admin/match-all?quiet=1"); if (r) log("Match reply (" + r.status + "): " + JSON.stringify(r.data, null, 2));
@@ -1534,6 +1553,33 @@ btns.forEach(function (b) {
   });
 });
 </script></body></html>`;
+
+
+// Admin test: sends a real M-PESA prompt to a number you type, with no job or profile involved, and shows exactly what Paystack answers.
+async function handleAdminPayTest(url, env) {
+  if (!env.PAYSTACK_SECRET_KEY) return json(env, { ok: false, error: 'PAYSTACK_SECRET_KEY is not set: add it as a Secret under Settings > Variables and Secrets.' });
+  const phone = kePhone(url.searchParams.get('phone'));
+  if (!phone) return json(env, { ok: false, error: 'Enter a valid Safaricom number, like 0712 345 678.' });
+  const kes = Math.min(100, Math.max(1, parseInt(url.searchParams.get('amount') || '', 10) || contributionKes(env)));
+  await ensurePayTables(env);
+  const ref = 'tst_' + Date.now().toString(36) + [...crypto.getRandomValues(new Uint8Array(4))].map(x => x.toString(16).padStart(2, '0')).join('');
+  const email = env.PAY_TEST_EMAIL || 'chaniajobsai@gmail.com';
+  await env.DB.prepare("INSERT INTO payments (reference, profile_id, job_id, amount, currency, status, created_at) VALUES (?, 0, '__test__', ?, 'KES', 'pending', ?)").bind(ref, kes * 100, Date.now()).run();
+  const ch = await paystack(env, '/charge', 'POST', { email, amount: kes * 100, currency: 'KES', reference: ref, mobile_money: { phone, provider: 'mpesa' }, metadata: { test: true } });
+  const d = ch.data || {};
+  console.log('pay-test: Paystack charge reply', ref, 'ok=' + ch.ok, 'status=' + d.status, 'message=' + ch.message);
+  if (!ch.ok || String(d.status) === 'failed') await env.DB.prepare("UPDATE payments SET status = 'failed' WHERE reference = ?").bind(ref).run();
+  return json(env, { ok: ch.ok, reference: ref, sent: { phone, amount_kes: kes, email }, paystack: { ok: ch.ok, message: ch.message, status: d.status, display_text: d.display_text, gateway_response: d.gateway_response } });
+}
+async function handleAdminPayCheck(url, env) {
+  const ref = String(url.searchParams.get('ref') || '').slice(0, 100);
+  if (!ref || !env.PAYSTACK_SECRET_KEY) return json(env, { ok: false, error: 'Missing reference or key.' });
+  await ensurePayTables(env);
+  const v = await paystack(env, '/transaction/verify/' + encodeURIComponent(ref), 'GET');
+  const d = v.data || {};
+  const status = await settlePayment(env, ref);
+  return json(env, { ok: true, status, paystack: { ok: v.ok, message: v.message, status: d.status, gateway_response: d.gateway_response, amount: d.amount, currency: d.currency, channel: d.channel } });
+}
 
 export default {
   async fetch(req, env, ctx) {
@@ -1744,6 +1790,10 @@ export default {
       // Phone-friendly admin page: it holds no secret. Every action sends the password you type as a header to the routes below.
       if (url.pathname === '/admin/panel' && req.method === 'GET') {
         return new Response(ADMIN_PANEL_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Robots-Tag': 'noindex', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'" } });
+      }
+      if ((url.pathname === '/admin/pay-test' || url.pathname === '/admin/pay-check') && req.method === 'POST') {
+        if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
+        return url.pathname === '/admin/pay-test' ? handleAdminPayTest(url, env) : handleAdminPayCheck(url, env);
       }
       if (url.pathname === '/admin/trigger' && req.method === 'POST') {
         if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
