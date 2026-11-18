@@ -1389,6 +1389,7 @@ async function handlePayStart(req, env) {
     mobile_money: { phone, provider: 'mpesa' }, metadata: { profile_id: prow.id, job_id: jobId },
   });
   const st = String((ch.data && ch.data.status) || '');
+  console.log('pay: Paystack charge reply', ref, 'ok=' + ch.ok, 'status=' + st, 'message=' + ch.message, 'display=' + String((ch.data && ch.data.display_text) || ''), 'gateway=' + String((ch.data && ch.data.gateway_response) || ''));   // what Paystack said: no secrets in here
   if (!ch.ok || st === 'failed') {
     console.log('pay: charge not started', ref, ch.message, st);
     await env.DB.prepare("UPDATE payments SET status = 'failed' WHERE reference = ?").bind(ref).run();
