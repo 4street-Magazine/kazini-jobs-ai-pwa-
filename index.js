@@ -1379,7 +1379,7 @@ async function handlePayStart(req, env) {
   const open = await env.DB.prepare("SELECT reference FROM payments WHERE profile_id = ? AND job_id = ? AND status = 'pending' AND created_at > ? ORDER BY created_at DESC LIMIT 1").bind(prow.id, jobId, now - 90000).first();
   if (open) return json(env, { ok: true, status: 'pending', reference: open.reference });   // a double tap must not charge twice
   const recent = await env.DB.prepare('SELECT COUNT(*) AS n FROM payments WHERE profile_id = ? AND created_at > ?').bind(prow.id, now - 600000).first();
-  if (recent && recent.n >= 5) return fail('Too many attempts. Please wait a few minutes and try again.', 'too_many');
+  if (recent && recent.n >= (env.PAY_DEBUG === '1' ? 30 : 5)) return fail('Too many attempts. Please wait a few minutes and try again.', 'too_many');
 
   const kes = contributionKes(env);
   const ref = 'chn_' + now.toString(36) + [...crypto.getRandomValues(new Uint8Array(6))].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -1393,7 +1393,8 @@ async function handlePayStart(req, env) {
   if (!ch.ok || st === 'failed') {
     console.log('pay: charge not started', ref, ch.message, st);
     await env.DB.prepare("UPDATE payments SET status = 'failed' WHERE reference = ?").bind(ref).run();
-    return fail(String((ch.data && ch.data.display_text) || '').slice(0, 160) || 'We could not send the M-PESA prompt. Please check your number and try again.', 'charge_failed');
+    const why = env.PAY_DEBUG === '1' ? ' [Paystack: ' + String(ch.message || st || 'no reply').slice(0, 160) + ']' : '';   // set PAY_DEBUG = 1 while testing to see Paystack's reason on screen
+    return fail((String((ch.data && ch.data.display_text) || '').slice(0, 160) || 'We could not send the M-PESA prompt. Please check your number and try again.') + why, 'charge_failed');
   }
   if (st === 'success') return json(env, { ok: true, status: await settlePayment(env, ref), reference: ref });
   return json(env, { ok: true, status: 'pending', reference: ref });
