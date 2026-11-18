@@ -1491,13 +1491,15 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--card);border:1px
 <div class="step"><b>4. Test M-PESA payment</b><span>Sends a real prompt to the number below and waits for you to approve it. Real money is taken from that phone with your live key.</span>
 <input id="tphone" type="tel" inputmode="tel" placeholder="M-PESA number, e.g. 0712 345 678" style="margin-bottom:10px">
 <input id="tamt" type="number" inputmode="numeric" min="1" max="100" value="30" placeholder="Amount in KSh" style="margin-bottom:10px">
-<button data-act="paytest">Send test prompt</button></div>
+<button data-act="paytest">Send test prompt</button>
+<button class="alt" data-act="checkpay" style="margin-top:10px">Check last test payment</button></div>
 <pre id="out">Results appear here.</pre>
 </div>
 <script>
 var out = document.getElementById("out"), key = document.getElementById("key"), btns = document.querySelectorAll("button");
 function log(t) { out.textContent = t + "\n\n" + (out.textContent === "Results appear here." ? "" : out.textContent); }
-async function call(path, method) {
+var lastRef = "";
+async function call(path, method, quiet) {
   var k = key.value.trim();
   if (!k) { log("Enter your admin password first."); return null; }
   try {
@@ -1505,7 +1507,7 @@ async function call(path, method) {
     var txt = await r.text(), d; try { d = JSON.parse(txt); } catch (e) { d = txt; }
     if (r.status === 401) { log("Wrong admin password."); return null; }
     return { status: r.status, data: d };
-  } catch (e) { log("Network error: " + e.message); return null; }
+  } catch (e) { if (!quiet) log("Network error: " + e.message); return null; }
 }
 var acts = {
   status: async function () {
@@ -1531,14 +1533,22 @@ var acts = {
     if (!r) return;
     log("Paystack reply: " + JSON.stringify(r.data, null, 2));
     if (!r.data.ok || !r.data.reference) { log("The prompt was not sent. The reason is in the reply above."); return; }
-    log("Prompt sent. Approve it on the phone. Waiting up to 2 minutes...");
-    for (var i = 0; i < 40; i++) {
+    lastRef = r.data.reference;
+    log("Prompt sent. Approve it on the phone. Waiting up to 3 minutes. If this page loses connection while you switch apps, it keeps trying. You can also tap Check last test payment.");
+    for (var i = 0; i < 60; i++) {
       await new Promise(function (res) { setTimeout(res, 3000); });
-      var c = await call("/admin/pay-check?ref=" + encodeURIComponent(r.data.reference)); if (!c) return;
+      var c = await call("/admin/pay-check?ref=" + encodeURIComponent(lastRef), "POST", true);
+      if (!c) continue;
       if (c.data.status === "success") { log("PAID. Paystack confirmed the payment: " + JSON.stringify(c.data.paystack, null, 2)); return; }
       if (c.data.status === "failed") { log("FAILED: " + JSON.stringify(c.data.paystack, null, 2)); return; }
     }
-    log("No confirmation after 2 minutes. If you approved it, check Paystack > Transactions.");
+    log("No confirmation yet. Tap Check last test payment in a moment, or look in Paystack > Transactions.");
+  },
+  checkpay: async function () {
+    var ref = lastRef || prompt("Paste the payment reference, for example tst_mwly2gj5d01b20e9");
+    if (!ref) return;
+    var c = await call("/admin/pay-check?ref=" + encodeURIComponent(ref.trim()));
+    if (c) log("Payment " + ref.trim() + ": " + JSON.stringify(c.data, null, 2));
   },
   match: async function () {
     if (!confirm("Match every profile with the recent jobs? No SMS will be sent.")) return;
