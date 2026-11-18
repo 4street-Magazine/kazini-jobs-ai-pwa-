@@ -1436,6 +1436,82 @@ async function applyLocks(env, profileId, list, appliedRows) {
   });
 }
 
+const ADMIN_PANEL_HTML = String.raw`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Chania AI admin</title>
+<style>
+:root{--bg:#0b0b0b;--fg:#ececec;--muted:#9a9a9a;--line:#2a2a2a;--card:#151515;--accent:#ff6a1f}
+@media (prefers-color-scheme:light){:root{--bg:#fff;--fg:#1b1b1b;--muted:#5f5f5f;--line:#e4e4e4;--card:#faf7f5;--accent:#c2410c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.w{max-width:560px;margin:0 auto;padding:24px 18px 60px}
+h1{font-size:24px;letter-spacing:-.02em;margin:0 0 4px}
+p{margin:0 0 14px;color:var(--muted);font-size:14px}
+input{width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--fg);font-size:16px;margin-bottom:16px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.step b{display:block;margin-bottom:2px}
+.step span{display:block;color:var(--muted);font-size:13px;margin-bottom:10px}
+button{width:100%;min-height:46px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5}
+button.alt{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:12.5px;min-height:90px;margin:16px 0 0}
+</style></head>
+<body><div class="w">
+<h1>Chania AI admin</h1>
+<p>Type your admin password, then run the steps in order. The password stays on this screen and is never saved.</p>
+<input id="key" type="password" placeholder="Admin password" autocomplete="off" autocapitalize="off" spellcheck="false">
+<div class="step"><b>0. Check status</b><span>Shows how many jobs, matches and waiting jobs there are.</span><button class="alt" data-act="status">Check status</button></div>
+<div class="step"><b>1. Embed stuck jobs</b><span>Prepares jobs that are waiting so they can be matched. It repeats until none are left.</span><button data-act="embed">Embed waiting jobs</button></div>
+<div class="step"><b>2. Fetch new jobs</b><span>Asks Bright Data for fresh jobs. The reply below shows if it worked.</span><button data-act="trigger">Fetch new jobs</button></div>
+<div class="step"><b>3. Match everyone (no SMS)</b><span>Matches every profile with the recent jobs. No messages are sent.</span><button class="alt" data-act="match">Match everyone</button></div>
+<pre id="out">Results appear here.</pre>
+</div>
+<script>
+var out = document.getElementById("out"), key = document.getElementById("key"), btns = document.querySelectorAll("button");
+function log(t) { out.textContent = t + "\n\n" + (out.textContent === "Results appear here." ? "" : out.textContent); }
+async function call(path, method) {
+  var k = key.value.trim();
+  if (!k) { log("Enter your admin password first."); return null; }
+  try {
+    var r = await fetch(path, { method: method || "POST", headers: { Authorization: "Bearer " + k } });
+    var txt = await r.text(), d; try { d = JSON.parse(txt); } catch (e) { d = txt; }
+    if (r.status === 401) { log("Wrong admin password."); return null; }
+    return { status: r.status, data: d };
+  } catch (e) { log("Network error: " + e.message); return null; }
+}
+var acts = {
+  status: async function () {
+    var r = await call("/admin/status", "GET"); if (r) log(JSON.stringify(r.data, null, 2));
+  },
+  embed: async function () {
+    for (var i = 0; i < 15; i++) {
+      var r = await call("/admin/embed?limit=20"); if (!r) return;
+      log("Batch " + (i + 1) + ": " + JSON.stringify(r.data));
+      if (r.status !== 200) { log("Stopped: embedding failed. Open Observability > Logs on the worker for the reason."); return; }
+      if (!r.data.remaining) { log("Done: no jobs are waiting."); return; }
+      if (!r.data.processed) { log("Stopped: nothing was processed. Check the worker logs."); return; }
+    }
+    log("Ran 15 batches. Tap again if jobs are still waiting.");
+  },
+  trigger: async function () {
+    var r = await call("/admin/trigger"); if (r) log("Fetch reply (" + r.status + "): " + JSON.stringify(r.data, null, 2));
+  },
+  match: async function () {
+    if (!confirm("Match every profile with the recent jobs? No SMS will be sent.")) return;
+    var r = await call("/admin/match-all?quiet=1"); if (r) log("Match reply (" + r.status + "): " + JSON.stringify(r.data, null, 2));
+  }
+};
+btns.forEach(function (b) {
+  b.addEventListener("click", async function () {
+    btns.forEach(function (x) { x.disabled = true; });
+    log("Running " + b.getAttribute("data-act") + "...");
+    try { await acts[b.getAttribute("data-act")](); } finally { btns.forEach(function (x) { x.disabled = false; }); }
+  });
+});
+</script></body></html>`;
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -1642,6 +1718,10 @@ export default {
         return json(env, { received: records.length });
       }
 
+      // Phone-friendly admin page: it holds no secret. Every action sends the password you type as a header to the routes below.
+      if (url.pathname === '/admin/panel' && req.method === 'GET') {
+        return new Response(ADMIN_PANEL_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Robots-Tag': 'noindex', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'" } });
+      }
       if (url.pathname === '/admin/trigger' && req.method === 'POST') {
         if (req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
         return json(env, await triggerBrightData(env));
@@ -1729,6 +1809,12 @@ export default {
       ctx.waitUntil(env.MATCH_QUEUE ? startFullMatch(env, false) : sweepProfiles(env, Math.min(Math.max(parseInt(env.SWEEP_BATCH || '25', 10) || 25, 1), 40)));   // without the queue: old one-chunk sweep
       return;
     }
-    ctx.waitUntil((async () => { await pruneExpired(env); await retryUnembedded(env); await triggerBrightData(env); })());
+    // Each step runs on its own: fetching new jobs goes first, and a failing cleanup can no longer stop it. Every outcome is written to the logs.
+    ctx.waitUntil((async () => {
+      for (const [name, step] of [['fetch new jobs', () => triggerBrightData(env)], ['retry embedding', () => retryUnembedded(env)], ['cleanup', () => pruneExpired(env)]]) {
+        try { console.log('cron', name, 'ok', JSON.stringify((await step()) || 'done').slice(0, 300)); }
+        catch (e) { console.log('cron', name, 'FAILED', String((e && e.message) || e)); }
+      }
+    })());
   },
 };
