@@ -17,11 +17,24 @@ async function sha(text) {
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function embed(env, texts) {
+// Empty or huge texts can make Workers AI reject a whole batch, so every text is made safe first.
+const embedSafe = t => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 4000) || 'job';
+async function embed(env, texts, lenient) {
   const out = [];
   for (let i = 0; i < texts.length; i += BATCH) {
-    const res = await env.AI.run(EMBED_MODEL, { text: texts.slice(i, i + BATCH) });
-    out.push(...res.data);
+    const chunk = texts.slice(i, i + BATCH).map(embedSafe);
+    try { out.push(...(await env.AI.run(EMBED_MODEL, { text: chunk })).data); continue; }
+    catch (e) {
+      if (!lenient || chunk.length === 1) throw e;
+      // One bad text must not block the others: retry one by one. If every single one fails, the problem is the service (quota, outage), not the texts, so it is thrown and nothing is given up on.
+      const part = []; let firstError = null;
+      for (const t of chunk) {
+        try { part.push((await env.AI.run(EMBED_MODEL, { text: [t] })).data[0]); }
+        catch (e2) { part.push(null); firstError = firstError || e2; }
+      }
+      if (part.every(v => v === null)) throw (firstError || e);
+      out.push(...part);
+    }
   }
   return out;
 }
@@ -293,7 +306,15 @@ async function embedAndMatchJobs(env, jobs, quiet) {
   if (!jobs.length) return;
   await ensureMatchCols(env);
   if (!env.JOB_VEC || !env.PROFILE_VEC) return;   // Vectorize not set up yet: jobs stay embedded = 0 and are retried by the cron later
-  const vecs = await embed(env, jobs.map(jobToText));
+  const all = await embed(env, jobs.map(jobToText), true);
+  const bad = jobs.filter((j, i) => !all[i]);
+  if (bad.length) {   // texts the model cannot take are set aside (embedded = 2) so they stop being retried and stop blocking the rest
+    console.log('embed: setting aside', bad.length, 'job(s) that cannot be embedded:', bad.slice(0, 10).map(j => j.id).join(','));
+    await env.DB.batch(bad.map(j => env.DB.prepare('UPDATE jobs SET embedded = 2 WHERE id = ?').bind(j.id)));
+    jobs = jobs.filter((j, i) => all[i]);
+  }
+  if (!jobs.length) return;
+  const vecs = all.filter(Boolean);
   await env.JOB_VEC.upsert(jobs.map((j, i) => ({ id: `j_${j.id}`, values: vecs[i], metadata: { title: j.title.slice(0, 100) } })));
   await env.DB.batch(jobs.map(j => env.DB.prepare('UPDATE jobs SET embedded = 1 WHERE id = ?').bind(j.id)));
   await saveVecs(env, 'j', jobs.map((j, i) => ({ id: j.id, values: vecs[i] })));   // kept in D1 too, for the direct comparison
@@ -1786,8 +1807,10 @@ export default {
         if (!env.JOB_VEC || !env.PROFILE_VEC) return json(env, { skipped: 'Vectorize not connected' });
         const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 1), 50);
         const { results } = await env.DB.prepare('SELECT * FROM jobs WHERE embedded = 0 LIMIT ?').bind(limit).all();
-        await embedAndMatchJobs(env, results);
+        let detail = null;
+        try { await embedAndMatchJobs(env, results); } catch (e) { detail = String((e && e.message) || e).slice(0, 500); console.error('admin embed failed:', detail); }
         const left = await env.DB.prepare('SELECT COUNT(*) AS n FROM jobs WHERE embedded = 0').first();
+        if (detail) return json(env, { error: 'embedding failed', detail, processed: 0, remaining: left ? left.n : null }, 500);   // the real reason, for the admin only
         return json(env, { processed: results.length, remaining: left ? left.n : null });
       }
       return json(env, { error: 'not found' }, 404);
