@@ -1791,6 +1791,9 @@ export default {
           job_vectors: await one("SELECT COUNT(*) AS n FROM vecs WHERE kind = 'j'"),
           approx_vector_storage_mb: Math.round(((await one('SELECT COUNT(*) AS n FROM vecs')) || 0) * 1.1 / 1024),
           d1_limit_note: 'A single D1 database is capped at 10 GB whatever you pay.',
+          paystack_key: (() => { const k = String(env.PAYSTACK_SECRET_KEY || '').trim(); return !k ? 'NOT SET: payments cannot start' : /^sk_live_/.test(k) ? 'live key is set' : /^sk_test_/.test(k) ? 'TEST key is set: no real M-PESA prompt will be sent' : 'set, but it does not start with sk_live_ or sk_test_'; })(),
+          pay_debug: env.PAY_DEBUG === '1' ? 'on (turn off before launch)' : 'off',
+          price_kes: contributionKes(env),
         });
       }
       // Start the full queued match by hand: POST /admin/match-all (add ?quiet=1 for no SMS)
