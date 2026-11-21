@@ -1041,7 +1041,7 @@
         .pc-top{display:flex;gap:12px;align-items:center;padding:16px;background:linear-gradient(135deg,var(--accent-orange-light),var(--emerald-green-light))}
         .pc-av{position:relative;width:62px;height:62px;border-radius:50%;background:var(--premium-orange-gradient);color:#fff;font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:3px solid var(--bg-card);overflow:hidden}
         .pc-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-        .pc-name{font-size:17px;font-weight:800;line-height:1.2}
+        .pc-name{font-size:15px;font-weight:800;line-height:1.2}
         .pc-pill{display:inline-block;margin-top:6px;border:1.5px solid var(--accent-orange);color:var(--accent-orange);border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700}
         .pc-sec{padding:12px 16px;border-top:1px solid var(--border-color)}
         .pc-h{font-size:11px;font-weight:800;color:var(--accent-orange);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between}
@@ -1055,11 +1055,14 @@
         .pc-e:focus{background:var(--accent-orange-light)}
         .pc-e:empty::before{content:attr(data-ph);opacity:.45}
         /* Profile tab: one standard text size for all details (names and section headings only slightly different) */
-        #profileView .pc-name{font-size:15px}
+        #profileView .pc-name{font-size:13px}
         #profileView .pc-pill{font-size:11px}
         #profileView .pc-h{font-size:10.5px}
         #profileView .pc-sec,#profileView .pc-tl,#profileView .pc-t,#profileView .pc-chips,#profileView .pc-e{font-size:11px}
         #profileView .pc-t{font-weight:700}
+        .pc-course{font-size:11px}
+        #profileView .pc-course{font-size:10px}
+        .chat-cta{display:inline-flex;align-items:center;background:var(--premium-orange-gradient);color:#fff;border:none;border-radius:14px;padding:9px 18px;font-size:12px;font-weight:800;cursor:pointer}
         .ai-mode{display:inline-flex;align-items:center;gap:7px;background:var(--emerald-green-light);color:var(--emerald-green);border:1px solid var(--emerald-green);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800}
         .live-dot{width:8px;height:8px;border-radius:50%;background:var(--emerald-green);animation:livePulse 1.3s infinite}
         @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(0,200,83,.6);opacity:1}70%{box-shadow:0 0 0 8px rgba(0,200,83,0);opacity:.5}100%{box-shadow:0 0 0 0 rgba(0,200,83,0);opacity:1}}
@@ -2076,9 +2079,41 @@
                 document.getElementById('modalSalaryLabel').innerText = sal.est ? 'Est. Salary' : 'Salary';
             }
         }
-        const insightCache = {};   // serverId -> saved insight, so a list reload does not wipe the salary estimates
+        /* Descriptions and salary summaries are fetched once and kept in the browser (3 days, 150 jobs), so a reload, a reopen or a list refresh never asks the server again */
+        const INSIGHT_LS = 'chania_insights';
+        const insFailAt = {};   // a prefetch that failed is not tried again on every app switch
+        let insightStore = null;   // { v: layout version from the worker, items: { serverId: { a: saved at, m: 1 if saved while locked, i: insight } } }
+        function insStore() {
+            if (insightStore) return insightStore;
+            try { insightStore = JSON.parse(localStorage.getItem(INSIGHT_LS) || 'null'); } catch (e) { insightStore = null; }
+            if (!insightStore || typeof insightStore.items !== 'object') insightStore = { v: 0, items: {} };
+            return insightStore;
+        }
+        function insSave() {
+            const s = insStore(), now = Date.now();
+            Object.keys(s.items).forEach(k => { if (now - s.items[k].a > 3 * 86400000) delete s.items[k]; });
+            Object.keys(s.items).sort((a, b) => s.items[b].a - s.items[a].a).slice(150).forEach(k => delete s.items[k]);
+            try { localStorage.setItem(INSIGHT_LS, JSON.stringify(s)); } catch (e) { /* storage full: it still works from memory */ }
+        }
+        function insGet(job) {
+            const c = job.serverId ? insStore().items[job.serverId] : null;
+            return c && !(c.m && job.unlocked) ? c.i : null;   // one saved while the employer was hidden is replaced by the full one after unlocking
+        }
+        function insPut(job, ins, later) {
+            if (!ins || !job.serverId) return;
+            insStore().items[job.serverId] = { a: Date.now(), m: job.unlocked ? 0 : 1, i: ins };
+            if (!later) insSave();
+        }
+        function insVersion(v) { if (v && insStore().v !== v) insightStore = { v, items: {} }; }   // the worker changed the layout: start fresh
         async function loadJobInsight(job, silent) {
             if (job.insight || job.insightState === 'loading' || !CHANIA_API || !job.serverId) return;
+            if (silent && insFailAt[job.serverId] && Date.now() - insFailAt[job.serverId] < 600000) return;
+            const hit = insGet(job);
+            if (hit) {   // already fetched before: reuse it
+                job.insight = hit; job.insightState = 'done';
+                const s0 = salaryText(hit); if (s0) { job.salary = s0.est ? 'Est. ' + s0.text : s0.text; renderJobs(); }
+                renderModalInsight(job); return;
+            }
             job.insightState = 'loading';
             if (!silent && job.id === activeJobId) renderModalDesc(job);
             const ctl = new AbortController();
@@ -2093,7 +2128,7 @@
             } catch (e) { job.insight = null; }
             clearTimeout(timer);
             job.insightState = job.insight ? 'done' : 'failed';
-            if (job.insight) insightCache[job.serverId] = job.insight;
+            if (job.insight) { insPut(job, job.insight); delete insFailAt[job.serverId]; } else insFailAt[job.serverId] = Date.now();
             const sal = salaryText(job.insight);
             if (sal) { job.salary = sal.est ? 'Est. ' + sal.text : sal.text; renderJobs(); }
             renderModalInsight(job);   // only redraws the modal when this job is the open one
@@ -2126,8 +2161,27 @@
                 lbl.style.display = 'none'; box.innerHTML = '';   // nothing to show: hide the section instead of an empty box
             }
         }
+        /* ===== One small browser cache for anything generated once and reused: "why this matches you" points and the CV / cover letter. A copy is kept for 24 hours (as long as the worker keeps its own) and dropped as soon as the career profile changes. ===== */
+        const LSC_KEY = 'chania_cache_v1';
+        let lscData = null;
+        function profHash() { const s = localStorage.getItem('chania_profile') || ''; let x = 5381; for (let i = 0; i < s.length; i++) x = ((x << 5) + x + s.charCodeAt(i)) | 0; return x + ':' + s.length; }
+        function lsc() {
+            if (!lscData) { try { lscData = JSON.parse(localStorage.getItem(LSC_KEY) || 'null'); } catch (e) { lscData = null; } if (!lscData || typeof lscData !== 'object') lscData = {}; }
+            return lscData;
+        }
+        function lscGet(kind, id) { const e = (lsc()[kind] || {})[id]; return e && e.h === profHash() && Date.now() - e.a < 86400000 ? e.d : null; }
+        function lscPut(kind, id, d) {
+            if (!id || !d) return;
+            const c = lsc(), now = Date.now(), hash = profHash(), m = c[kind] || (c[kind] = {});
+            m[id] = { a: now, h: hash, d };
+            Object.keys(m).forEach(k => { if (now - m[k].a > 86400000 || m[k].h !== hash) delete m[k]; });
+            Object.keys(m).sort((a, b) => m[b].a - m[a].a).slice(60).forEach(k => delete m[k]);
+            try { localStorage.setItem(LSC_KEY, JSON.stringify(c)); } catch (e) { /* storage full: it still works from the worker */ }
+        }
         async function loadJobMatch(job) {
             if (job.match || job.matchState === 'loading' || !CHANIA_API || !job.serverId || !localStorage.getItem('chania_profile')) return;
+            const saved = lscGet('why', job.serverId);
+            if (saved) { job.match = saved; job.matchState = 'done'; renderModalWhy(job); return; }   // fetched before: reuse it
             job.matchState = 'loading';
             renderModalWhy(job);
             const ctl = new AbortController();
@@ -2142,6 +2196,7 @@
             } catch (e) { job.match = null; }
             clearTimeout(timer);
             job.matchState = job.match ? 'done' : 'failed';
+            if (job.match) lscPut('why', job.serverId, job.match);
             if (job.id === activeJobId) renderModalWhy(job);
         }
 
@@ -2286,6 +2341,8 @@
 
         /* ===== CV + cover letter built from the career profile and the job ===== */
         async function fetchStudioDocs(job) {
+            const saved = lscGet('docs', job.serverId);
+            if (saved) return saved;   // built before for this profile and job: reuse it, no request
             const ctl = new AbortController();
             const timer = setTimeout(() => ctl.abort(), 40000);
             try {
@@ -2294,6 +2351,7 @@
                     body: JSON.stringify({ deviceId, jobId: job.serverId }), signal: ctl.signal
                 });
                 const d = r.ok ? await r.json() : null;
+                if (d && d.docs) lscPut('docs', job.serverId, d.docs);
                 return d && d.docs ? d.docs : null;
             } catch (e) { return null; } finally { clearTimeout(timer); }
         }
@@ -2309,13 +2367,14 @@
             const skills = list(p.skills).slice(0, 14);
             const company = job && job.company ? job.company : '', title = job && job.title ? job.title : 'this position';
             const lead = p.job_title || p.course || 'Motivated professional';
+            const roleAt = p.job_title ? `${p.job_title}${p.workplace ? ' at ' + p.workplace : ''}` : '';
+            const edu1 = education.length ? `${education[0].qualification}${education[0].institution ? ' from ' + education[0].institution : ''}` : '';
             const paras = [
-                `I am writing to apply for the ${title} position${company ? ' at ' + company : ''}.${p.job_title ? ` I currently work as ${p.job_title}${p.workplace ? ' at ' + p.workplace : ''}.` : ''}`,
-                `${education.length ? `My background includes ${education[0].qualification}${education[0].institution ? ' from ' + education[0].institution : ''}. ` : ''}${skills.length ? `My skills include ${skills.slice(0, 5).join(', ')}, which I believe fit what this role requires.` : ''}`.trim(),
-                `I would welcome the opportunity to discuss how I can contribute${company ? ' to ' + company : ''}. Thank you for your time and consideration.`
-            ].filter(x => x.length > 20);
+                `I am writing to apply for the ${title} position${company ? ' at ' + company : ''}.${roleAt ? ` I currently work as ${roleAt}.` : ''}`,
+                `${edu1 ? `My education includes ${edu1}. ` : ''}${skills.length ? `My skills include ${skills.slice(0, 5).join(', ')}, which I believe fit what this role requires. ` : ''}I would welcome the opportunity to discuss how I can contribute${company ? ' to ' + company : ''}. Thank you for your time and consideration.`
+            ];
             return {
-                name: p.full_name || '', headline: lead, contact: p.phone || '',
+                name: p.full_name || '', headline: lead, contact: p.phone || '', email: p.email || localStorage.getItem('chania_email') || '', template: Math.floor(Math.random() * 3),
                 summary: `${lead}${p.years_experience ? ` with ${p.years_experience} years of experience` : ''}${skills.length ? `, skilled in ${skills.slice(0, 4).join(', ')}` : ''}.`,
                 skills, experience, education, certifications: list(p.certifications).slice(0, 10),
                 projects: p.project_details || '', achievements: sents(p.achievements).slice(0, 8), languages: list(p.languages).slice(0, 8),
@@ -2328,7 +2387,7 @@
             const H = t => `<p style="font-weight:700;color:var(--text-primary);margin-bottom:4px;">${t}:</p>`;
             const ul = a => `<ul style="padding-left:16px;margin-bottom:8px;">${a.map(x => `<li>${E(x)}</li>`).join('')}</ul>`;
             let h = `<p style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:2px;">${E(d.name || 'Your Name')}</p>`;
-            const sub = [d.headline, d.contact].filter(Boolean).map(E).join(' \u2022 ');
+            const sub = [d.headline, d.contact, d.email].filter(Boolean).map(E).join(' \u2022 ');
             if (sub) h += `<p style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">${sub}</p>`;
             h += '<div style="font-size:11.5px;color:var(--text-secondary);line-height:1.6;">';
             if (d.summary) h += H('Summary') + `<p style="margin-bottom:8px;">${E(d.summary)}</p>`;
@@ -2355,6 +2414,7 @@
         }
 
         function renderStudioDocs(d) {
+            curDocs = d;
             document.querySelector('#content-cv .studio-editable').innerHTML = cvHtml(d);
             document.querySelector('#content-cover .studio-editable').innerHTML = coverHtml(d);
         }
@@ -2555,9 +2615,140 @@
             return new Blob([bytes], { type: 'application/pdf' });
         }
 
-        function downloadStudioPdf(kind) {
+        /* ===== Designed CV and cover letter: read the (possibly edited) text, lay it out in one of three styles, save an A4 PDF ===== */
+        let curDocs = null;
+        function parseCv(lines) {
+            const D = { name: lines[0] || '', headline: '', phone: '', email: '', sec: {} };
+            let i = 1;
+            if (lines[1] && !/:$/.test(lines[1])) {
+                i = 2;
+                lines[1].split(' \u2022 ').forEach((x, k) => { x = x.trim(); if (!x) return; if (/@/.test(x)) D.email = x; else if (k === 0) D.headline = x; else D.phone = x; });
+            }
+            let cur = null;
+            for (; i < lines.length; i++) {
+                const ln = lines[i];
+                if (/:$/.test(ln) && ln.charAt(0) !== '\u2022') { cur = ln.slice(0, -1).toLowerCase(); D.sec[cur] = []; }
+                else if (cur) D.sec[cur].push(ln);
+            }
+            const S = k => D.sec[k] || [], bul = l => l.replace(/^\u2022\s*/, '');
+            D.summary = S('summary').join(' ');
+            D.skills = S('skills').join(', ').split(/\s*,\s*/).filter(Boolean);
+            D.exp = [];
+            S('key professional experience').forEach(l => {
+                if (l.charAt(0) === '\u2022') { if (D.exp.length) D.exp[D.exp.length - 1].points.push(bul(l)); return; }
+                const m = l.match(/^(.*?)\s*\(([^()]*)\)$/), head = m ? m[1] : l, k = head.indexOf(',');
+                D.exp.push({ role: k > 0 ? head.slice(0, k) : head, company: k > 0 ? head.slice(k + 1).trim() : '', period: m ? m[2] : '', points: [] });
+            });
+            D.cred = S('education & credentials').map(bul);
+            D.projects = S('projects').join(' ');
+            D.ach = S('achievements').map(bul);
+            D.langs = S('languages').join(', ');
+            return D;
+        }
+        function parseCover(lines) {
+            if (lines.length < 4) return null;
+            return { greeting: lines[0], paras: lines.slice(1, -2), closing: lines[lines.length - 2], name: lines[lines.length - 1] };
+        }
+        function expBlock(D, dot) {
+            const E = escapeHtml;
+            return D.exp.map(e => `<div style="position:relative;margin:0 0 16px">${dot}<div style="font-weight:700;font-size:15px">${E(e.role)}</div><div style="color:#57534e">${E([e.company, e.period].filter(Boolean).join(' \u2022 '))}</div>${e.points.length ? `<ul style="margin:4px 0 0;padding-left:18px">${e.points.map(p => `<li>${E(p)}</li>`).join('')}</ul>` : ''}</div>`).join('');
+        }
+        function extrasBlock(D, hd) {
+            const E = escapeHtml;
+            return (D.projects ? hd('PROJECTS') + `<p style="margin:0 0 16px">${E(D.projects)}</p>` : '')
+                + (D.ach.length ? hd('ACHIEVEMENTS') + `<ul style="margin:0 0 16px;padding-left:18px">${D.ach.map(x => `<li>${E(x)}</li>`).join('')}</ul>` : '');
+        }
+        const pillList = (a, st) => a.map(t => `<span style="display:inline-block;margin:0 5px 6px 0;${st}">${escapeHtml(t)}</span>`).join('');
+
+        function cvEditorial(D) {   // layout 1: Editorial
+            const E = escapeHtml, hd = t => `<div style="margin:0 0 10px;font:700 11.5px Helvetica,Arial,sans-serif;letter-spacing:1.5px;color:#c2410c">${t}</div>`;
+            const nm = (D.name || 'Your Name').split(/\s+/), first = nm.shift();
+            const dot = '<span style="position:absolute;left:-29px;top:5px;width:10px;height:10px;border-radius:50%;background:#c2410c"></span>';
+            return `<div style="width:794px;min-height:1123px;box-sizing:border-box;padding:56px 54px;background:#faf7f2;font:13px/1.55 Helvetica,Arial,sans-serif;color:#1c1917">`
+                + `<div style="display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:16px;border-bottom:3px solid #1c1917"><div style="font:600 44px/1.02 Georgia,serif;letter-spacing:-1px">${E(first)}${nm.length ? '<br/>' + E(nm.join(' ')) : ''}</div>`
+                + `<div style="text-align:right">${D.headline ? `<span style="display:inline-block;background:#c2410c;color:#fff;border-radius:99px;padding:4px 16px;font-weight:700">${E(D.headline)}</span>` : ''}<div style="margin-top:8px;color:#57534e">${E(D.phone)}</div><div style="color:#57534e">${E(D.email)}</div></div></div>`
+                + (D.summary ? `<p style="margin:20px 0;font:italic 17px/1.45 Georgia,serif">${E(D.summary)}</p>` : '<div style="height:20px"></div>')
+                + `<div style="display:flex;gap:30px"><div style="flex:2">${D.exp.length ? hd('EXPERIENCE') + `<div style="margin-left:6px;padding-left:22px;border-left:2px solid #d6c7ba">${expBlock(D, dot)}</div>` : ''}${extrasBlock(D, hd)}</div>`
+                + `<div style="flex:1">${D.skills.length ? hd('SKILLS') + `<div style="margin-bottom:14px">${pillList(D.skills, 'background:#f3e3d6;color:#7c2d12;border-radius:99px;padding:3px 12px')}</div>` : ''}${D.cred.length ? hd('EDUCATION') + `<div style="background:#fff;border:1px solid #e7ddd3;border-radius:12px;padding:10px 12px;margin-bottom:16px">${D.cred.map(c => `<div style="margin-bottom:4px">${E(c)}</div>`).join('')}</div>` : ''}${D.langs ? hd('LANGUAGES') + `<div>${E(D.langs)}</div>` : ''}</div></div></div>`;
+        }
+        function cvSidebar(D) {   // layout 2: Sidebar
+            const E = escapeHtml, h = c => t => `<div style="margin:0 0 6px;font-weight:700;font-size:11.5px;letter-spacing:1.5px;${c}">${t}</div>`, sh = h(''), mh = h('color:#12403f');
+            const side = `<div style="width:250px;flex:none;box-sizing:border-box;padding:56px 26px;background:#12403f;color:#fff"><div style="font-size:28px;font-weight:700;line-height:1.15">${E(D.name || 'Your Name')}</div><div style="margin:8px 0 26px;color:#d4e6e4">${E(D.headline)}</div>`
+                + (D.phone || D.email ? sh('CONTACT') + `<div style="margin-bottom:24px;word-break:break-all">${E(D.phone)}<br/>${E(D.email)}</div>` : '')
+                + (D.skills.length ? sh('SKILLS') + `<div style="margin-bottom:24px">${D.skills.map(x => E(x)).join('<br/>')}</div>` : '')
+                + (D.langs ? sh('LANGUAGES') + `<div>${E(D.langs)}</div>` : '') + '</div>';
+            const main = `<div style="flex:1;box-sizing:border-box;padding:56px 40px">`
+                + (D.summary ? mh('SUMMARY') + `<p style="margin:0 0 20px">${E(D.summary)}</p>` : '')
+                + (D.exp.length ? mh('EXPERIENCE') + expBlock(D, '') : '')
+                + (D.cred.length ? mh('EDUCATION') + `<div style="margin-bottom:16px">${D.cred.map(x => E(x)).join('<br/>')}</div>` : '') + extrasBlock(D, mh) + '</div>';
+            return `<div style="width:794px;min-height:1123px;box-sizing:border-box;display:flex;background:#fff;font:13px/1.55 Helvetica,Arial,sans-serif;color:#1f2937">${side}${main}</div>`;
+        }
+        function cvModern(D) {   // layout 3: Modern
+            const E = escapeHtml, hd = t => `<div style="margin:0 0 6px;font-weight:700;font-size:11.5px;letter-spacing:1.5px;color:#1d4ed8">${t}</div>`;
+            const band = `<div style="box-sizing:border-box;padding:40px 54px;background:#1d4ed8;color:#fff"><div style="font-size:40px;font-weight:700;line-height:1.1">${E(D.name || 'Your Name')}</div><div style="margin-top:6px">${[D.headline, D.phone, D.email].filter(Boolean).map(x => E(x)).join(' \u2022 ')}</div></div>`;
+            const left = `<div style="flex:3">${D.exp.length ? hd('EXPERIENCE') + expBlock(D, '') : ''}${D.cred.length ? hd('EDUCATION') + `<div style="margin-bottom:16px">${D.cred.map(x => E(x)).join('<br/>')}</div>` : ''}${extrasBlock(D, hd)}</div>`;
+            const right = `<div style="flex:2">${D.summary ? hd('SUMMARY') + `<p style="margin:0 0 18px">${E(D.summary)}</p>` : ''}${D.skills.length ? hd('SKILLS') + `<div style="margin-bottom:18px">${pillList(D.skills, 'border:1.5px solid #1d4ed8;border-radius:99px;padding:2px 12px')}</div>` : ''}${D.langs ? hd('LANGUAGES') + `<div>${E(D.langs)}</div>` : ''}</div>`;
+            return `<div style="width:794px;min-height:1123px;box-sizing:border-box;background:#fff;font:13px/1.55 Helvetica,Arial,sans-serif;color:#1f2937">${band}<div style="display:flex;gap:34px;box-sizing:border-box;padding:30px 54px">${left}${right}</div></div>`;
+        }
+        const DOC_THEME = [{ bg: '#faf7f2', accent: '#c2410c', serif: true }, { bg: '#ffffff', accent: '#12403f', serif: false }, { bg: '#ffffff', accent: '#1d4ed8', band: true }];
+        function coverLayout(t, C, w) {
+            const E = escapeHtml, th = DOC_THEME[t], F = th.serif ? 'Georgia,serif' : 'Helvetica,Arial,sans-serif';
+            const contact = [w.phone, w.email].filter(Boolean).map(x => E(x)).join(' \u2022 ');
+            const head = th.band
+                ? `<div style="padding:22px 72px;background:${th.accent};color:#fff;font-weight:700;font-size:16px">${E(w.name)}${contact ? ' <span style="font-weight:400">\u2022 ' + contact + '</span>' : ''}</div>`
+                : `<div style="padding:72px 72px 0"><div style="font:600 30px ${F}">${E(w.name)}</div><div style="width:40px;height:4px;margin:10px 0 8px;border-radius:2px;background:${th.accent}"></div><div style="color:#57534e">${contact}</div></div>`;
+            return `<div style="width:794px;min-height:1123px;box-sizing:border-box;background:${th.bg};font:15px/1.75 Helvetica,Arial,sans-serif;color:#1c1917">${head}<div style="padding:${th.band ? 56 : 40}px 72px"><p style="margin:0 0 16px;font:italic 18px ${F}">${E(C.greeting)}</p>${C.paras.map(p => `<p style="margin:0 0 16px">${E(p)}</p>`).join('')}<p style="margin:24px 0 0">${E(C.closing)}</p><p style="margin:4px 0 0;font:600 20px ${F}">${E(C.name)}</p></div></div>`;
+        }
+
+        function pdfFromJpeg(bin, lines) {   // the picture is the page; the text sits invisibly on top so employers' systems can still read and search it
+            const esc = t => t.replace(/\u2022/g, '\x95').replace(/[\u2018\u2019]/g, '\x92').replace(/[\u201C\u201D]/g, '\x94').replace(/[\u2013\u2014]/g, '-').replace(/[^\x20-\xFF]/g, '?').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+            const content = `q 595 0 0 842 0 0 cm /Im1 Do Q\nBT 3 Tr /F1 8 Tf 9 TL 20 820 Td\n${lines.map(l => `(${esc(l)}) Tj T*`).join('\n')}\nET`;
+            const objs = [];
+            objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+            objs[2] = '<< /Type /Pages /Kids [3 0 R] /Count 1 >>';
+            objs[3] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> /XObject << /Im1 6 0 R >> >> /Contents 4 0 R >>';
+            objs[4] = `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
+            objs[5] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+            objs[6] = `<< /Type /XObject /Subtype /Image /Width 1588 /Height 2246 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bin.length} >>\nstream\n${bin}\nendstream`;
+            let pdf = '%PDF-1.4\n'; const off = [];
+            for (let i = 1; i < objs.length; i++) { off[i] = pdf.length; pdf += `${i} 0 obj\n${objs[i]}\nendobj\n`; }
+            const xref = pdf.length;
+            pdf += `xref\n0 ${objs.length}\n0000000000 65535 f \n`;
+            for (let i = 1; i < objs.length; i++) pdf += String(off[i]).padStart(10, '0') + ' 00000 n \n';
+            pdf += `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+            const bytes = new Uint8Array(pdf.length);
+            for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 255;
+            return new Blob([bytes], { type: 'application/pdf' });
+        }
+        async function designedPdf(kind, lines) {   // returns null when it cannot (too long for one page, or the browser refuses): the caller then uses the plain PDF
+            const d = curDocs || {}, t = [0, 1, 2].includes(d.template) ? d.template : 0;
+            let html;
+            if (kind === 'cv') html = [cvEditorial, cvSidebar, cvModern][t](parseCv(lines));
+            else {
+                const C = parseCover(lines); if (!C) return null;
+                html = coverLayout(t, C, parseCv(domToLines(document.querySelector('#content-cv .studio-editable'))));
+            }
+            const host = document.createElement('div');
+            host.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px';
+            host.innerHTML = html; document.body.appendChild(host);
+            let xml, h;
+            try { const el = host.firstElementChild; h = Math.max(1123, el.scrollHeight); xml = new XMLSerializer().serializeToString(el); } finally { host.remove(); }
+            const s = Math.min(1, 1123 / h);
+            if (s < 0.72) return null;
+            const img = new Image();
+            await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="794" height="${h}"><foreignObject width="100%" height="100%">${xml}</foreignObject></svg>`); });
+            const cv = document.createElement('canvas'); cv.width = 1588; cv.height = 2246;
+            const g = cv.getContext('2d'); g.fillStyle = DOC_THEME[t].bg; g.fillRect(0, 0, 1588, 2246);
+            g.drawImage(img, 0, 0, 1588 * s, h * 2 * s);
+            return pdfFromJpeg(atob(cv.toDataURL('image/jpeg', 0.92).split(',')[1]), lines);
+        }
+
+        async function downloadStudioPdf(kind) {
             const src = document.getElementById(kind === 'cv' ? 'content-cv' : 'content-cover').querySelector('.studio-editable');
-            const blob = buildPdfBlob(domToLines(src), kind === 'cv');
+            const lines = domToLines(src);
+            let blob = null;
+            try { blob = await designedPdf(kind, lines); } catch (e) { blob = null; }
+            if (!blob) blob = buildPdfBlob(lines, kind === 'cv');
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = kind === 'cv' ? 'Job CV.pdf' : 'Cover Letter.pdf';
@@ -2685,28 +2876,39 @@
             } catch (e) {}
         }
 
+        let lastMatchesAt = 0;   // when the list was last loaded; coming back to the app within 5 minutes does not load it again
         async function loadMyMatches() {
             if (!CHANIA_API || !localStorage.getItem('chania_profile')) return; // no profile yet: nothing to load
             try {
-                const r = await fetch(`${CHANIA_API}/matches?deviceId=${encodeURIComponent(deviceId)}`);
+                const st = insStore(), have = Object.keys(st.items).filter(k => !st.items[k].m).slice(0, 80).join(',');   // tell the worker which full copies this browser already holds
+                const r = await fetch(`${CHANIA_API}/matches?deviceId=${encodeURIComponent(deviceId)}&iv=${st.v}&have=${encodeURIComponent(have)}`);
                 if (!r.ok) return;
                 const data = await r.json();
+                lastMatchesAt = Date.now();
                 discoverState = { working: data.state === 'working', releaseAt: data.release_at || 0 };
                 clearTimeout(releaseTimer);
                 if (discoverState.working && discoverState.releaseAt) {
                     releaseTimer = setTimeout(loadMyMatches, Math.max(discoverState.releaseAt - Date.now(), 0) + 3000);   // fetch the matches as soon as they are released
                 }
                 const mapped = (data.matches || []).map(mapMatchToJob);
-                mapped.forEach(j => { const c = insightCache[j.serverId]; if (c) { j.insight = c; const s = salaryText(c); if (s) j.salary = s.est ? 'Est. ' + s.text : s.text; } });
+                insVersion(data.insight_v);
+                mapped.forEach((j, i) => {   // the worker sends each job's description and salary with the list; anything missing comes from the browser copy
+                    const m = (data.matches || [])[i];
+                    let c = m && m.insight && Array.isArray(m.insight.sections) ? m.insight : null;
+                    if (c) insPut(j, c, true); else c = insGet(j);
+                    if (c) { j.insight = c; const s = salaryText(c); if (s) j.salary = s.est ? 'Est. ' + s.text : s.text; }
+                });
+                insSave();
                 jobData.splice(0, jobData.length, ...mapped);
                 renderJobs();
                 if (!discoverState.working && mapped.length) playJobMatchSound();
                 renderAppliedJobs();
                 lucide.createIcons();
                 prefetchSalaries();
+                return discoverState.working ? 0 : mapped.length;   // held-back matches are not ready to open yet
             } catch (e) { /* offline or worker not ready: keep what is on screen */ }
         }
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMyMatches(); });
+        document.addEventListener('visibilitychange', () => { if (!document.hidden && (Date.now() - lastMatchesAt > 300000 || (discoverState.working && discoverState.releaseAt && Date.now() >= discoverState.releaseAt))) loadMyMatches(); });
 
         function openChatModal() {
             document.getElementById('chatModal').style.display = 'flex';
@@ -2932,7 +3134,7 @@
             flow = 'review';
             profile.headline = profile.headline || profile.job_title || profile.course || '';
             bot(warm() + ' Here is your career profile. Tap any detail to edit it 👇', () =>
-                bot(`<div class="pc" id="profileCard">${cardHtml()}</div>`, restoreReplies, 'wide', 300));
+                bot(`<div class="pc" id="profileCard">${cardHtml()}</div>`, () => { restoreReplies(); fitProfileText(); }, 'wide', 300));
         }
         function cardHtml(edit = true, tab = false) {
             const p = profile, E = escapeHtml;
@@ -2942,7 +3144,7 @@
             const img = p.gender ? `<img src="${p.gender === 'Female' ? 'female%20avatar.png' : 'male%20avatar.png'}" alt="" onerror="this.remove()">` : '';
             const sec = (h, body) => !edit && !body.trim() ? '' : tab === 'body' ? `<div class="pc" style="margin-bottom:12px"><div class="pc-sec" style="border-top:0"><div class="pc-h">${h}</div>${body}</div></div>` : `<div class="pc-sec"><div class="pc-h">${h}</div>${body}</div>`;
             const top = `<div class="pc-top"${tab === 'top' ? ' style="background:none;padding-right:100px"' : ''}><div class="pc-av">${ini}${img}</div><div style="min-width:0;flex:1"><div style="display:flex;align-items:center;gap:6px">${ed('full_name', p.full_name, 'Full name', undefined, 'pc-name')}${tab ? scallopedBadgeSVG.replace('Verified Employer', 'Verified Professional') : ''}</div>${ed('headline', p.headline, 'Job title', undefined, 'pc-pill')}</div></div>`;
-            const education = sec('Education', `<div class="pc-tl">${ed('course', p.course, 'Course', undefined, 'pc-t')}${ed('education', p.education, 'Education level')}${ed('institution', p.institution, 'Institution')}${ed('education_period', p.education_period, 'Period')}</div>`);
+            const education = sec('Education', `<div class="pc-tl">${ed('course', p.course, 'Course', undefined, 'pc-t pc-course')}${ed('education', p.education, 'Education level')}${ed('institution', p.institution, 'Institution')}${ed('education_period', p.education_period, 'Period')}</div>`);
             const work = we(p) ? sec('<span>Work Experience</span>' + (edit ? '<span class="pc-add" onclick="addPastJob()">+ Add past job</span>' : ''),
                     (cw(p) ? tl(p, 'job_title', 'workplace', 'work_period', 'responsibilities') : '') + p.past_jobs.map((j, i) => tl(j, 'title', 'company', 'period', 'resp', i)).join('')
                     + `<div style="font-size:11px;color:var(--text-muted)">Years of experience</div>${ed('years_experience', p.years_experience, 'e.g. 3')}`) : '';
@@ -2964,7 +3166,15 @@
             if (t.dataset.pj !== undefined) profile.past_jobs[+t.dataset.pj][f] = v; else profile[f] = v;
             if (t.closest('#profileView')) autosave();
         });
-        function refreshCard() { const c = byId('profileCard'); if (c) c.innerHTML = cardHtml(); if (pEdit) { renderProfile(); autosave(true); } }
+        function fitProfileText() {
+            document.querySelectorAll('.pc-name, .pc-course').forEach(el => {
+                el.style.whiteSpace = 'nowrap'; el.style.overflow = 'hidden'; el.style.textOverflow = 'ellipsis'; el.style.minWidth = '0'; el.style.fontSize = '';
+                let fs = parseFloat(getComputedStyle(el).fontSize);
+                while (el.scrollWidth > el.clientWidth + 1 && fs > 9) { fs -= 0.5; el.style.fontSize = fs + 'px'; }
+            });
+        }
+        document.addEventListener('input', e => { if (e.target && e.target.closest && e.target.closest('.pc-name, .pc-course')) fitProfileText(); });
+        function refreshCard() { const c = byId('profileCard'); if (c) { c.innerHTML = cardHtml(); fitProfileText(); } if (pEdit) { renderProfile(); autosave(true); } }
         function addPastJob() { profile.past_jobs.push({}); refreshCard(); }
         function removePastJob(i) { profile.past_jobs.splice(i, 1); refreshCard(); }
 
@@ -3002,6 +3212,7 @@
             v.innerHTML = `<div style="height:12px"></div>` + linkBox + cardHtml(pEdit, 'body');
             if (linkBox) mountGoogleButton('gLinkBtn');
             lucide.createIcons();
+            fitProfileText();
             setVibeVars();   // keeps --head-h current so the identity card sticks right under the app header
         }
         function editProfile() { pEdit = true; renderProfile(); }
@@ -3014,11 +3225,29 @@
             saveT = setTimeout(() => api('/profile', { deviceId, status: 'submitted', profile }), now ? 0 : 900);
         }
 
+        function openDiscoverTab() {
+            closeChatModal();
+            const nav = document.querySelector(".bottom-nav .nav-item[onclick*='discoverTab']");
+            if (nav) switchTab(nav, 'discoverTab');
+        }
+        function addMatchesNote(bubble, n) {   // the same bubble grows a line and a button when matches are already waiting
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'margin-top:12px;padding-top:10px;border-top:1px solid var(--border-subtle)';
+            wrap.innerHTML = `<div>${n > 1 ? 'I have already found several matches for your profile.' : 'I have already found a match for your profile.'} Would you like to explore ${n > 1 ? 'them' : 'it'}?</div><button class="chat-cta" style="margin-top:10px" onclick="openDiscoverTab()">View Opportunities</button>`;
+            bubble.insertBefore(wrap, bubble.lastElementChild);   // the time label stays last
+            const c = byId('chatMessages'); c.scrollTop = c.scrollHeight;
+        }
         function submitProfile() {
             flow = 'chat'; setQuickReplies([]);
             localStorage.setItem('chania_profile', JSON.stringify(profile));
-            api('/profile', { deviceId, status: 'submitted', profile }).then(() => setTimeout(loadMyMatches, 8000));
-            bot('Confirmed 🎉<br><br>You have successfully created your career profile! We shall notify you through SMS once we find a job opportunity that matches your profile. Until then, enjoy a nice time.<br><br>Chania AI 😊');
+            const saved = api('/profile', { deviceId, status: 'submitted', profile });
+            bot('Confirmed 🎉<br><br>You have successfully created your career profile! From 8:08 pm every day, we shall notify you through email once we find a job opportunity that matches your profile. Until then, enjoy a nice time.<br><br>Chania AI 😊', async () => {
+                const bubbles = document.querySelectorAll('#chatMessages .chat-bubble.assistant'), bubble = bubbles[bubbles.length - 1];
+                await saved;   // matching starts once the profile is saved, and takes a few seconds
+                let n = 0;
+                for (const wait of [3000, 5000, 7000]) { await new Promise(r => setTimeout(r, wait)); n = await loadMyMatches(); if (n) break; }
+                if (n && bubble && bubble.isConnected) addMatchesNote(bubble, n);
+            });
         }
         async function freeChat(text) {
             history.push({ role: 'user', content: text });
