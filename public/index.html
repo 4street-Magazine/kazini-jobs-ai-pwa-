@@ -1041,7 +1041,7 @@
         .pc-top{display:flex;gap:12px;align-items:center;padding:16px;background:linear-gradient(135deg,var(--accent-orange-light),var(--emerald-green-light))}
         .pc-av{position:relative;width:62px;height:62px;border-radius:50%;background:var(--premium-orange-gradient);color:#fff;font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:3px solid var(--bg-card);overflow:hidden}
         .pc-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-        .pc-name{font-size:15px;font-weight:800;line-height:1.2}
+        .pc-name{font-size:14px;font-weight:800;line-height:1.2}
         .pc-pill{display:inline-block;margin-top:6px;border:1.5px solid var(--accent-orange);color:var(--accent-orange);border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700}
         .pc-sec{padding:12px 16px;border-top:1px solid var(--border-color)}
         .pc-h{font-size:11px;font-weight:800;color:var(--accent-orange);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between}
@@ -1055,13 +1055,13 @@
         .pc-e:focus{background:var(--accent-orange-light)}
         .pc-e:empty::before{content:attr(data-ph);opacity:.45}
         /* Profile tab: one standard text size for all details (names and section headings only slightly different) */
-        #profileView .pc-name{font-size:13px}
+        #profileView .pc-name{font-size:12.5px}
         #profileView .pc-pill{font-size:11px}
         #profileView .pc-h{font-size:10.5px}
         #profileView .pc-sec,#profileView .pc-tl,#profileView .pc-t,#profileView .pc-chips,#profileView .pc-e{font-size:11px}
         #profileView .pc-t{font-weight:700}
-        .pc-course{font-size:11px}
-        #profileView .pc-course{font-size:10px}
+        .pc-course{font-size:10.5px}
+        #profileView .pc-course{font-size:9.5px}
         .chat-cta{display:inline-flex;align-items:center;background:var(--premium-orange-gradient);color:#fff;border:none;border-radius:14px;padding:9px 18px;font-size:12px;font-weight:800;cursor:pointer}
         .ai-mode{display:inline-flex;align-items:center;gap:7px;background:var(--emerald-green-light);color:var(--emerald-green);border:1px solid var(--emerald-green);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800}
         .live-dot{width:8px;height:8px;border-radius:50%;background:var(--emerald-green);animation:livePulse 1.3s infinite}
@@ -1776,36 +1776,53 @@
         const maskCompany = () => '*****';                       // short and fixed, so it doesn't reveal the name's length
         const cleanLoc = s => String(s || '').replace(/\s*County\b/i, '').trim();
         /* Locked jobs show a generic title (seniority + field + "Role") so the exact wording can't be searched elsewhere */
-        const TITLE_FIELDS = [
+        const TITLE_FIELDS = [   // the first line that matches wins, so the more specific fields come first
             [/artificial intelligence|\bai\b|machine learning|\bml\b|\bnlp\b|deep learning|computer vision/, 'Artificial Intelligence'],
+            [/data entry|typist/, 'Administration'],
             [/data scien|data analy|analytics|business intelligence|\bbi\b|data engineer|\bdata\b/, 'Data'],
             [/software|developer|programmer|full.?stack|front.?end|back.?end|\bweb\b|mobile app|devops|\bqa\b|tester/, 'Software'],
             [/\bit\b|network|systems? admin|help ?desk|cyber|cloud|infrastructure/, 'IT'],
+            [/security (guard|officer|supervisor)|\bguard\b|watchman|askari|\bsecurity\b/, 'Security'],
             [/design|\bux\b|\bui\b|graphic|creative|animator/, 'Design'],
             [/product/, 'Product'],
             [/marketing|\bseo\b|content|social media|brand|copywrit|communications|public relations/, 'Marketing'],
+            [/journalist|reporter|presenter|video|camera|editor|photograph|producer|radio|broadcast/, 'Media'],
+            [/cashier|retail|shop (attendant|assistant|keeper)|store (attendant|assistant)|sales (associate|assistant|attendant)|supermarket|merchandis|till operator|shelf/, 'Retail'],
+            [/insurance|underwrit|claims|actuar/, 'Insurance'],
+            [/bank|teller|loan officer|relationship manager|credit (officer|analyst)|microfinance|sacco|mobile money|agent banking/, 'Banking'],
             [/sales|business development|account executive|\bbd\b/, 'Sales'],
             [/account|finance|audit|\btax\b|payroll|treasury|bookkeep|credit/, 'Finance'],
             [/\bhr\b|human resource|recruit|talent|people (partner|operations)/, 'People'],
             [/customer|client service|call cent|support/, 'Customer Support'],
+            [/driver|rider|boda|chauffeur|truck|matatu|conductor|courier|dispatch/, 'Transport'],
             [/operations|logistics|supply|procurement|warehouse|fleet|store ?keeper/, 'Operations'],
+            [/factory|machine operator|production (operator|worker|supervisor|assistant)|plant operator|manufactur|packer|packaging|assembly/, 'Manufacturing'],
             [/project|programme|program manager|scrum|delivery manager/, 'Project Management'],
             [/teacher|lecturer|tutor|instructor|trainer|education/, 'Education'],
+            [/agronom|farm|agricultur|horticultur|livestock|veterinar|crop|greenhouse|agribusiness/, 'Agriculture'],
             [/nurse|clinical|medical|doctor|pharma|health|lab tech|clinician/, 'Healthcare'],
             [/legal|lawyer|advocate|compliance|paralegal|counsel/, 'Legal'],
+            [/electrician|plumber|mason|carpenter|welder|painter|builder|construction|foreman|site (supervisor|manager)|fundi|tiler/, 'Construction'],
             [/engineer|technician|mechanic|electrical|civil|mechanical|surveyor|architect/, 'Engineering'],
-            [/admin|secretary|receptionist|assistant|clerk|office/, 'Administration'],
+            [/real estate|property (manager|agent|consultant)|estate agent|leasing/, 'Real Estate'],
+            [/social worker|case ?worker|community (development|mobili[sz]|organi[sz])|child protection|youth worker|programme officer|program officer/, 'Community Development'],
+            [/field (officer|worker|agent|assistant|coordinator)/, 'Field'],
+            [/tailor|seamstress|fashion|hair ?(dresser|stylist)|barber|salon|beautician|make ?up artist/, 'Fashion and Beauty'],
+            [/cleaner|janitor|laundry|gardener|nanny|house ?help|domestic|caretaker/, 'Cleaning'],
+            [/admin|secretary|receptionist|assistant|clerk|\boffice\b/, 'Administration'],
+            [/tour|travel agent|safari|ticketing|reservation/, 'Tourism'],
             [/chef|hotel|waiter|hospitality|cook|barista|housekeep/, 'Hospitality'],
             [/research|monitoring and evaluation|\bm&e\b|policy/, 'Research'],
+            [/branch manager|store manager|shop manager|area manager|general manager|operations manager/, 'Management'],
         ];
         function genericTitle(title) {
             const s = String(title || '').toLowerCase();
             const field = (TITLE_FIELDS.find(f => f[0].test(s)) || [null, ''])[1];
             if (/\b(intern|internship|attach[eé]|attachment|trainee)\b/.test(s)) return `${field || 'Open'} Internship`;
-            const level = /\b(junior|jr\.?|entry|graduate|associate)\b/.test(s) ? 'Entry-level' : /\b(senior|sr\.?|lead|principal|head|director|chief|vp)\b/.test(s) ? 'Senior' : '';
+            const level = /\b(junior|jr\.?|entry[ -]level|graduate)\b/.test(s) ? 'Entry-level' : /\b(senior|sr\.?|lead|principal|head|director|chief|vp)\b/.test(s) ? 'Senior' : '';
             return `${level ? level + ' ' : ''}${field ? field + ' ' : ''}Role`.replace(/^Role$/, 'Open Role');
         }
-        const displayTitle = job => isUnlocked(job) ? job.title : genericTitle(job.title);
+        const displayTitle = job => isUnlocked(job) ? job.title : ((job.insight && job.insight.role_label) || genericTitle(job.title));   // the AI's label comes with the description and salary; the word list is the fallback
 
 
         function startApply(id) {
@@ -3001,7 +3018,7 @@
             try { r = await api('/auth/google', { credential: resp && resp.credential, deviceId }, 20000); } catch (e) { r = null; }
             if (inChat) typingOff();
             if (!r || r.ok === false) {
-                const msg = r && r.error === 'device_linked' ? `This phone is already linked to ${escapeHtml(r.email || 'another Google account')}. Please sign in with that account 🙏` : "Google sign-in didn't work. Please try again 🙏";
+                const msg = r && r.error === 'device_linked' ? `This phone is already linked to ${escapeHtml(r.email || 'another Google account')}. Please sign in with that account 🙏` : "Google sign-in did not work. Please check your internet and try again 🙏";
                 return say(msg, restoreReplies);
             }
             localStorage.setItem('chania_email', r.email);
@@ -3012,11 +3029,11 @@
                 localStorage.setItem('chania_profile', JSON.stringify(profile));
                 flow = 'chat'; setQuickReplies([]);
                 loadMyMatches(); renderProfile();
-                return say(`Welcome back${first ? ' ' + first : ''} 🎉 Your profile and matches are restored.`);
+                return say(`Welcome back${first ? ' ' + first : ''} 🎉 I found your profile and restored your matches.`);
             }
-            if (r.status === 'attached') { renderProfile(); return say(`Done ✅ Your profile is now linked to ${escapeHtml(r.email)}.`); }
+            if (r.status === 'attached') { renderProfile(); return say(`Done ✅ Your profile is now linked to ${escapeHtml(r.email)}, so you will not lose it, and we will email your match alerts there.`); }
             flow = 'ask_help';
-            say(`Signed in as ${escapeHtml(r.email)} ✅ How can I help you today?`, restoreReplies);
+            say(`You are signed in as ${escapeHtml(r.email)} ✅ We will email your match alerts there. How can I help you today?`, restoreReplies);
         }
         const bot = (html, cb, cls, delay) => showTypingAndReply(html, cb, cls, delay);
         const stepReplies = s => s ? (s.singleLineOpts || (s.yn ? ['Yes', 'No'] : (s.opts || []))) : [];
@@ -3062,7 +3079,7 @@
             if (GOOGLE_CLIENT_ID && !localStorage.getItem('chania_email')) {
                 flow = 'google_gate';
                 const id = 'gbtn' + Date.now();
-                return bot(`Hi 😊 Sign in with Google to keep your profile safe, even if you change phones or clear your browser. If you have used Chania AI before, signing in brings your profile back.<div id="${id}" style="margin-top:10px;min-height:44px"></div>`, () => { mountGoogleButton(id); restoreReplies(); });
+                return bot(`Hi 😊 Welcome to Chania AI!<br><br>Sign in with Google to keep your profile safe if you change phones or clear your browser. It is also where we email you when your matches are ready.<br><br>Used Chania AI before? Signing in brings your profile back.<div id="${id}" style="margin-top:10px;min-height:44px"></div>`, () => { mountGoogleButton(id); restoreReplies(); });
             }
             flow = 'ask_help';
             bot('Hi 😊, how can I help you today?', restoreReplies);
@@ -3088,7 +3105,7 @@
             c.scrollTop = c.scrollHeight;
             setQuickReplies([]);
             if (flow === 'google_gate') {
-                if (/^\s*continue without google\s*$/i.test(text)) { flow = 'ask_help'; return bot('No problem 😊 You can link Google later from your Profile tab. How can I help you today?', restoreReplies); }
+                if (/^\s*continue without google\s*$/i.test(text)) { flow = 'ask_help'; return bot('No problem 😊 You can link Google later from your Profile tab. Without it we cannot email you when your matches are ready. How can I help you today?', restoreReplies); }
                 return freeChat(text);
             }
             if (flow === 'ask_help' && AGREE.test(text)) return askProfile();
@@ -3174,6 +3191,8 @@
             });
         }
         document.addEventListener('input', e => { if (e.target && e.target.closest && e.target.closest('.pc-name, .pc-course')) fitProfileText(); });
+        window.addEventListener('resize', fitProfileText);   // turning the phone, or the keyboard opening, changes the width
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitProfileText);   // the web font changes the text width once it loads
         function refreshCard() { const c = byId('profileCard'); if (c) { c.innerHTML = cardHtml(); fitProfileText(); } if (pEdit) { renderProfile(); autosave(true); } }
         function addPastJob() { profile.past_jobs.push({}); refreshCard(); }
         function removePastJob(i) { profile.past_jobs.splice(i, 1); refreshCard(); }
@@ -3208,7 +3227,7 @@
             const hdr = document.getElementById('headerContextContainer');
             if (hdr && document.getElementById('profileTab').classList.contains('active')) { hdr.classList.remove('hidden'); hdr.innerHTML = pinned; }
             const linkBox = (GOOGLE_CLIENT_ID && !localStorage.getItem('chania_email'))
-                ? `<div class="glass-panel" id="gLinkBox" style="margin-bottom:10px;text-align:center"><div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:4px">Keep your profile safe</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">Link your Google account so you never lose your profile, even if you clear your browser or change phones.</div><div id="gLinkBtn" style="display:flex;justify-content:center;min-height:44px"></div></div>` : '';
+                ? `<div class="glass-panel" id="gLinkBox" style="margin-bottom:10px;text-align:center"><div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:4px">Keep your profile safe</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">Link your Google account so you never lose your profile if you clear your browser or change phones. We will also email your match alerts there.</div><div id="gLinkBtn" style="display:flex;justify-content:center;min-height:44px"></div></div>` : '';
             v.innerHTML = `<div style="height:12px"></div>` + linkBox + cardHtml(pEdit, 'body');
             if (linkBox) mountGoogleButton('gLinkBtn');
             lucide.createIcons();
