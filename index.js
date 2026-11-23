@@ -752,6 +752,16 @@ const INSIGHT_VERSION = 4;   // bump to re-arrange saved descriptions in the new
 const cleanBullets = (a, n, max, srcLow) => (Array.isArray(a) ? a : []).map(x => clean(x).replace(/^[-\u2013\u2022]\s*/, '').slice(0, max))
   .filter(x => x.length > 3 && (x.match(/\d[\d,.%]*/g) || []).every(d => srcLow.includes(d.replace(/[.,]+$/, '')))).slice(0, n);
 
+// The generic label shown on a locked card ("Retail Role"). It must not give away the employer or the exact title, so anything that does is dropped and the app falls back to its own word list.
+function cleanRoleLabel(raw, job) {
+  let t = clean(raw).replace(/["{}\[\]\\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!t || t.split(' ').length > 5 || !/\b(role|internship)$/i.test(t)) return '';
+  t = t.charAt(0).toUpperCase() + t.slice(1);
+  const low = t.toLowerCase(), company = clean(job.company).toLowerCase(), title = clean(job.title).toLowerCase();
+  if (company.length > 2 && low.includes(company)) return '';
+  if (title.length >= 4 && low.includes(title)) return '';
+  return t;
+}
 async function buildInsight(env, job) {
   const text = clean(job.description).slice(0, 6000);
   const loc = clean(job.location).slice(0, 80) || 'Kenya';
@@ -775,7 +785,8 @@ Task 1: rewrite the posting into these fields, in plain simple English:
 "company": one sentence about the employer if the posting says anything about it, otherwise "".
 Task 2: "listed_salary": the pay exactly as the posting states it, only if it contains an amount in numbers, otherwise "" (words like competitive or negotiable do not count).
 Task 3: "salary": if listed_salary is empty, your best estimate of typical pay for this role in ${loc} as {"min":number,"max":number,"currency":"KES","period":"month"}, or null only if the job title is completely unclear. Always give an estimate when you can. Use KES per month for jobs in Kenya.
-Reply as {"about":"","responsibilities":[],"requirements":[],"benefits":[],"company":"","listed_salary":"","salary":null}` },
+Task 4: "role_label": a short generic label for the kind of role that hides the real title and the employer: 2 to 4 words in the form [Entry-level or Senior] [field] Role, or [field] Internship for internships. Examples: Retail Role, Entry-level Finance Role, Senior Transport Role, Healthcare Role. Never include the company name or the exact job title.
+Reply as {"about":"","responsibilities":[],"requirements":[],"benefits":[],"company":"","listed_salary":"","salary":null,"role_label":""}` },
       ] });
       let r = res && res.response;
       if (typeof r === 'string') {
@@ -786,6 +797,7 @@ Reply as {"about":"","responsibilities":[],"requirements":[],"benefits":[],"comp
     } catch (e) { console.error('job insight:', String((e && e.message) || e)); }
   }
   const pay = normalizePay(data);
+  const role_label = data ? cleanRoleLabel(data.role_label, job) : '';
   const sections = [];
   if (data) {
     const about = clean(data.about).slice(0, 700);
@@ -802,11 +814,11 @@ Reply as {"about":"","responsibilities":[],"requirements":[],"benefits":[],"comp
   // AI gave too little: fall back to the original text, cut into headed sections or plain paragraphs
   if (sections.length < 2) {
     const alt = text ? splitByPlan(text, data && data.sections) : null;
-    if (alt) return { v: INSIGHT_VERSION, ai: !!data, at: Date.now(), sections: alt, listed_salary: pay.listed_salary, salary: pay.salary };
+    if (alt) return { v: INSIGHT_VERSION, ai: !!data, at: Date.now(), sections: alt, listed_salary: pay.listed_salary, salary: pay.salary, role_label };
     sections.length = 0;
     if (text) sections.push({ title: 'About the job', paragraphs: paragraphsOf(text) });
   }
-  return { v: INSIGHT_VERSION, ai: !!data && sections.length >= 2, at: Date.now(), sections, listed_salary: pay.listed_salary, salary: pay.salary };
+  return { v: INSIGHT_VERSION, ai: !!data && sections.length >= 2, at: Date.now(), sections, listed_salary: pay.listed_salary, salary: pay.salary, role_label };
 }
 
 /* ---------- Descriptions and salary summaries are prepared in the hunting window, before the matches are released ---------- */
