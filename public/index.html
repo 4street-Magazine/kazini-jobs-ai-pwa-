@@ -826,16 +826,16 @@
         .agent-eyebrow { font-size: 9.5px; font-weight: 800; letter-spacing: 1.2px; color: var(--accent-orange); }
         .agent-switch { width: 44px; height: 44px; border-radius: 14px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .agent-nav { display: flex; justify-content: space-around; background: var(--bg-card); border-top: 1px solid var(--border-subtle); padding: 8px 0 calc(env(safe-area-inset-bottom, 0px) + 10px); }
-        .agent-nav-item { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); font: 600 10px inherit; font-family: inherit; cursor: pointer; padding: 2px 8px; min-width: 60px; }
+        .agent-nav-item { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); font-size: 10px; font-weight: 600; font-family: inherit; cursor: pointer; padding: 2px 8px; min-width: 60px; }
         .agent-nav-item.on { color: var(--accent-orange); }
         .aff-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
         .aff-label { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; color: var(--text-muted); }
         .aff-money { color: #16a34a; }
-        .aff-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 20px; border-radius: 14px; border: none; background: var(--accent-orange); color: #fff; font: 800 14px inherit; font-family: inherit; cursor: pointer; }
+        .aff-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 20px; border-radius: 14px; border: none; background: var(--accent-orange); color: #fff; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; }
         .aff-btn:disabled { opacity: .5; }
         .aff-btn.ghost { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-subtle); }
         .lp-bar { display: flex; gap: 6px; margin-bottom: 10px; }
-        .lp-bar button { flex: 1; display: flex; align-items: center; justify-content: center; padding: 9px 0; border-radius: 99px; border: 1px solid var(--border-subtle); background: var(--bg-surface); color: var(--text-muted); font: 700 12px inherit; font-family: inherit; cursor: pointer; }
+        .lp-bar button { flex: 1; display: flex; align-items: center; justify-content: center; padding: 9px 0; border-radius: 99px; border: 1px solid var(--border-subtle); background: var(--bg-surface); color: var(--text-muted); font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; }
         .lp-bar button.on { background: var(--accent-orange); border-color: var(--accent-orange); color: #fff; }
         .lp-fit { width: 100%; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 8px; background: #fff; }
         .lp-page { transform-origin: 0 0; width: 794px; }
@@ -1646,9 +1646,9 @@
         <!-- AFFILIATE: business mode (the agent section, with its own tabs) -->
         <div id="agentMode" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 600; background: var(--bg-app); flex-direction: column;">
             <div class="agent-head">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="agent-logo"><i data-lucide="briefcase" style="width: 22px; height: 22px;"></i></div>
-                    <div><div style="font-size: 17px; font-weight: 800; letter-spacing: -0.3px; color: var(--text-primary);">Chania <span style="color: var(--accent-orange);">AI</span></div><div class="agent-eyebrow">AGENT MODE</div></div>
+                <div class="brand-logo">
+                    <div class="svg-logo-icon"><svg width="34" height="34" aria-hidden="true"><use href="#chania-logo"/></svg></div>
+                    <div><div class="brand-text">Chania <span>AI</span></div><div class="agent-eyebrow">AGENT MODE</div></div>
                 </div>
                 <button class="agent-switch" onclick="exitBusinessMode()" title="Switch to user mode" aria-label="Switch to user mode"><i data-lucide="arrow-left-right" style="width: 20px; height: 20px;"></i></button>
             </div>
@@ -3190,7 +3190,7 @@
             byId('agentMode').style.display = 'none'; document.body.classList.remove('agent-on');
             switchTab(document.querySelector('.bottom-nav .nav-item'), 'discoverTab');
         }
-        const AFF_POSTER = 'poster.jpg';   // the poster image, uploaded next to index.html
+        const AFF_POSTER = 'https://chaniajobsai.co.ke/poster.jpg';   // the poster image, served from the live site
         const AFF_LEVELS = [['Silver', 100], ['Gold', 300], ['Platinum', 1000]];   // people who applied to a job opportunity
         function agentTab(name) {
             agentTabName = name;
