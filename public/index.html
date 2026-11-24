@@ -3190,7 +3190,8 @@
             byId('agentMode').style.display = 'none'; document.body.classList.remove('agent-on');
             switchTab(document.querySelector('.bottom-nav .nav-item'), 'discoverTab');
         }
-        const AFF_POSTER = 'https://chaniajobsai.co.ke/poster.jpg';   // the poster image, served from the live site
+        const AFF_SITE = 'https://chaniajobsai.co.ke';
+        const AFF_POSTER = AFF_SITE + '/poster.jpg';   // the poster image, served from the live site
         const AFF_LEVELS = [['Silver', 100], ['Gold', 300], ['Platinum', 1000]];   // people who applied to a job opportunity
         function agentTab(name) {
             agentTabName = name;
@@ -3200,7 +3201,7 @@
         }
         async function affRefresh() {
             const r = await api('/affiliate/dashboard', { deviceId }, 20000);
-            if (r && r.ok && r.isAffiliate) { affData = r; renderAgent(); }
+            if (r && r.ok && r.isAffiliate) { r.link = AFF_SITE + '/a/' + r.code; affData = r; renderAgent(); }
             else if (r && r.ok) { localStorage.removeItem(AFF_KEY); affSyncSwitch(); exitBusinessMode(); }   // no longer an agent on the server
             else if (!affData) byId('agentBody').innerHTML = '<div class="aff-card" style="text-align:center"><div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">We could not load your dashboard. Check your connection.</div><button class="aff-btn" onclick="affRefresh()">Retry</button></div>';
         }
