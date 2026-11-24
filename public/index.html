@@ -326,7 +326,7 @@
         /* Immersive: the feed fills the screen above the bottom nav. The header slides away while a video plays
            and slides back (pushing the feed down, never covering it) while the user swipes. */
         body.vibe-on { overflow: hidden; }
-        body.vibe-on .fab-kazini { display: none; }
+        body.vibe-on .fab-kazini, body.agent-on .fab-kazini { display: none; }
         body.vibe-on .app-body { padding: 0; max-width: none; }
         body.vibe-on .sticky-top-section {
             position: fixed; top: 0; left: 0; right: 0;
@@ -821,6 +821,17 @@
             outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
+        .agent-head { background: linear-gradient(135deg, #00A651, #007a3d); color: #fff; padding: max(14px, env(safe-area-inset-top)) 18px 14px; display: flex; align-items: center; justify-content: space-between; }
+        .agent-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: 1.4px; opacity: .8; }
+        .agent-title { font-size: 19px; font-weight: 800; }
+        .agent-switch, .mode-switch { width: 38px; height: 38px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .agent-switch { background: rgba(255,255,255,.2); color: #fff; }
+        .agent-nav { display: flex; justify-content: space-around; background: var(--bg-sticky); border-top: 1px solid var(--border-subtle); padding: 8px 8px max(12px, env(safe-area-inset-bottom)); }
+        .agent-nav-item { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-muted); font: 600 10.5px inherit; font-family: inherit; cursor: pointer; padding: 2px 14px; }
+        .agent-nav-item.on { color: #00A651; }
+        .aff-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+        .aff-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 20px; border-radius: 99px; border: none; background: #00A651; color: #fff; font: 800 13.5px inherit; font-family: inherit; cursor: pointer; }
+        .aff-btn.ghost { background: transparent; color: #00A651; border: 1.5px solid #00A651; }
         .lp-bar { display: flex; gap: 6px; margin-bottom: 10px; }
         .lp-bar button { flex: 1; display: flex; align-items: center; justify-content: center; padding: 9px 0; border-radius: 99px; border: 1px solid var(--border-subtle); background: var(--bg-surface); color: var(--text-muted); font: 700 12px inherit; font-family: inherit; cursor: pointer; }
         .lp-bar button.on { background: var(--accent-orange); border-color: var(--accent-orange); color: #fff; }
@@ -1257,9 +1268,14 @@
                     </div>
                     <div class="brand-text">Chania <span>AI</span></div>
                 </div>
-                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
-                    <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
-                </button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="theme-toggle" id="modeSwitchBtn" onclick="enterBusinessMode()" title="Switch to business mode" aria-label="Switch to business mode" style="display:none;">
+                        <i data-lucide="arrow-left-right" style="width:18px; height:18px;"></i>
+                    </button>
+                    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
+                        <i data-lucide="sun" id="themeIcon" style="width:18px; height:18px;"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Header Filter Bar -->
@@ -1299,6 +1315,9 @@
             <div class="tab-view" id="profileTab"><div id="profileView"></div>
             </div>
 
+            <!-- TAB 5: AFFILIATE (user mode shows the sign-in; business mode is the full-screen agent section) -->
+            <div class="tab-view" id="affiliateTab"><div id="affiliateView"></div></div>
+
         </div>
 
         <!-- FIXED FLOATING ACTION BUTTON (FAB) - OPENS CHAT UI -->
@@ -1324,6 +1343,10 @@
                 <div class="nav-item" onclick="switchTab(this, 'profileTab')">
                     <i data-lucide="user" style="width:20px; height:20px;"></i>
                     <span>Profile</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(this, 'affiliateTab')">
+                    <i data-lucide="wallet" style="width:20px; height:20px;"></i>
+                    <span>Affiliate</span>
                 </div>
             </div>
         </div>
@@ -1607,6 +1630,32 @@
         </div>
 
         <!-- M-PESA STK PUSH (green branded) -->
+        <!-- AFFILIATE: small sign-in popup -->
+        <div class="modal-overlay" id="affPop" style="z-index: 1100; justify-content: center; padding: 20px;" onclick="closeAffPop()">
+            <div role="dialog" aria-modal="true" onclick="event.stopPropagation()" style="background: var(--bg-card); width: 100%; max-width: 340px; border-radius: 18px; overflow: hidden; border: 1px solid var(--border-subtle); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeIn 0.2s ease;">
+                <div style="background: linear-gradient(135deg, #00A651, #007a3d); padding: 14px 18px; display: flex; align-items: center; gap: 10px; color: #fff;">
+                    <i data-lucide="wallet" style="width: 20px; height: 20px;"></i>
+                    <div style="font-size: 15px; font-weight: 800;">Affiliate program</div>
+                </div>
+                <div id="affPopBody" style="padding: 18px;"></div>
+            </div>
+        </div>
+
+        <!-- AFFILIATE: business mode (the agent section, with its own tabs) -->
+        <div id="agentMode" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 600; background: var(--bg-app); flex-direction: column;">
+            <div class="agent-head">
+                <div><div class="agent-eyebrow">BUSINESS MODE</div><div class="agent-title" id="agentTitle">Home</div></div>
+                <button class="agent-switch" onclick="exitBusinessMode()" title="Switch to user mode" aria-label="Switch to user mode"><i data-lucide="arrow-left-right" style="width: 18px; height: 18px;"></i></button>
+            </div>
+            <div id="agentBody" style="flex: 1; overflow-y: auto; padding: 16px 18px 24px; width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box;"></div>
+            <div class="agent-nav">
+                <button class="agent-nav-item on" data-t="home" onclick="agentTab('home')"><i data-lucide="layout-dashboard" style="width: 20px; height: 20px;"></i><span>Home</span></button>
+                <button class="agent-nav-item" data-t="earnings" onclick="agentTab('earnings')"><i data-lucide="banknote" style="width: 20px; height: 20px;"></i><span>Earnings</span></button>
+                <button class="agent-nav-item" data-t="share" onclick="agentTab('share')"><i data-lucide="share-2" style="width: 20px; height: 20px;"></i><span>Share</span></button>
+                <button class="agent-nav-item" data-t="account" onclick="agentTab('account')"><i data-lucide="user-cog" style="width: 20px; height: 20px;"></i><span>Account</span></button>
+            </div>
+        </div>
+
         <div class="modal-overlay" id="mpesaModal" style="z-index: 1100; justify-content: center; padding: 20px;">
             <div role="dialog" aria-modal="true" aria-labelledby="mpesaTitle" style="background: var(--bg-card); width: 100%; max-width: 340px; border-radius: 18px; overflow: hidden; border: 1px solid var(--border-subtle); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeIn 0.2s ease;">
                 <div style="background: #00A651; padding: 14px 18px; display: flex; align-items: center; gap: 10px;">
@@ -1615,13 +1664,13 @@
                 </div>
 
                 <div id="mpesaStepPhone" style="padding: 18px;">
-                    <p style="font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.5; margin-bottom: 6px;">Pay KSH 30 to CHANIA AI for this job application?</p>
+                    <p style="font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.5; margin-bottom: 6px;">Pay KSH 35 to CHANIA AI for this job application?</p>
                     <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 14px;">An M-PESA prompt will appear on your phone. Enter your M-PESA PIN there to approve it.</p>
                     <label for="mpesaPhone" style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">M-PESA phone number</label>
                     <input id="mpesaPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712 345 678" oninput="document.getElementById('mpesaSendBtn').disabled = !mpesaPhoneOk();" style="width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border-subtle); background: var(--bg-main, transparent); color: var(--text-primary); font-size: 16px; font-weight: 700; margin-bottom: 14px; outline: none;">
                     <div style="display: flex; gap: 10px;">
                         <button onclick="cancelMpesa()" style="flex: 1; min-height: 46px; border-radius: 12px; border: 1.5px solid #00A651; background: transparent; color: #00A651; font-size: 13px; font-weight: 800; cursor: pointer;">Cancel</button>
-                        <button id="mpesaSendBtn" onclick="confirmMpesa()" disabled style="flex: 1; min-height: 46px; border-radius: 12px; border: none; background: #00A651; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; opacity: 1;">Pay KSh 30</button>
+                        <button id="mpesaSendBtn" onclick="confirmMpesa()" disabled style="flex: 1; min-height: 46px; border-radius: 12px; border: none; background: #00A651; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; opacity: 1;">Pay KSh 35</button>
                     </div>
                 </div>
 
@@ -1751,9 +1800,8 @@
             }, ms || SKELETON_MS);
         }
 
-        /* ===== Pay-to-apply: the first job is free, every other job costs KSh 30 (stars hide company and location until paid) ===== */
-        const FEES = [['Job matching', 10], ['Application CV', 10], ['Application cover letter', 10]];   // total KSh 30
-        const jobKey = j => String(j.serverId || j.id);
+        /* ===== Pay-to-apply: the first job is free, every other job costs KSh 35 (stars hide company and location until paid) ===== */
+                const jobKey = j => String(j.serverId || j.id);
         const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
         const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
         const isFreeJob = job => !!job.free;
@@ -1942,8 +1990,12 @@
         function updateHeaderContext(tabId) {
             const container = document.getElementById('headerContextContainer');
             const appliedCount = jobData.filter(j => j.status !== 'none').length;
+            container.classList.remove('hidden');
 
-            if (tabId === 'discoverTab') {
+            if (tabId === 'affiliateTab') {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+            } else if (tabId === 'discoverTab') {
                 container.classList.remove('hidden');
                 container.innerHTML = `
                     <div class="chip-bar">
@@ -2008,6 +2060,7 @@
             if (tabId !== 'vibeTab') vibeStop();
             if (tabId === 'vibeTab') { renderVibe(); return; }
 
+            if (tabId === 'affiliateTab') { openAffiliateTab(); lucide.createIcons(); return; }
             const renderers = { discoverTab: renderJobs, insightsTab: renderInsights, appliedTab: renderAppliedJobs, profileTab: renderProfile };
             const fn = renderers[tabId];
             if (!fn) return;
@@ -2272,7 +2325,7 @@
         }
 
         /* ===== M-PESA PAYMENT (Paystack STK push). The worker asks Paystack to send the prompt, confirms the payment itself, and only then unlocks the job. ===== */
-        const MPESA_AMOUNT = FEES.reduce((s, f) => s + f[1], 0);   // KSh 30. Display only: the worker sets the real price (CONTRIBUTION_KES)
+        const MPESA_AMOUNT = 35;   // KSh 35. Display only: the worker sets the real price (CONTRIBUTION_KES)
         let payRun = 0;
         const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -2312,7 +2365,7 @@
             const run = ++payRun;
             document.getElementById('mpesaWaitText').innerText = 'Sending the M-PESA prompt to your phone…';
             mpesaStep('Wait');
-            const start = await api('/pay/start', { deviceId, jobId: job.serverId, phone: document.getElementById('mpesaPhone').value }, 30000);
+            const start = await api('/pay/start', { deviceId, jobId: job.serverId, phone: document.getElementById('mpesaPhone').value, ref: localStorage.getItem('chania_ref') || '' }, 30000);
             if (run !== payRun) return;
             if (!start || !start.ok) return payFail(start && start.message);
             let status = start.status;
@@ -3067,6 +3120,131 @@
             } catch (e) { return null; }
         }
 
+        /* ===== AFFILIATE: user mode and business mode. Agents earn only when someone they referred unlocks a job match. ===== */
+        const AFF_KEY = 'chania_aff', MODE_KEY = 'chania_mode';
+        let affData = null, agentTabName = 'home';
+        const affCode = () => localStorage.getItem(AFF_KEY) || '';
+        const affKes = n => 'KSh ' + (Math.round(Number(n || 0) * 100) / 100).toLocaleString('en-KE', { maximumFractionDigits: 2 });
+        try { const r = new URLSearchParams(location.search).get('ref'); if (r) localStorage.setItem('chania_ref', String(r).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12)); } catch (e) {}
+        function claimRef() { const c = localStorage.getItem('chania_ref'); if (c && localStorage.getItem('chania_email')) api('/referral/claim', { deviceId, code: c }); }
+        const affPhoneOk = v => { const d = String(v || '').replace(/\D/g, ''); const n = d.startsWith('254') ? d.slice(3) : d.startsWith('0') ? d.slice(1) : d; return /^[17]\d{8}$/.test(n); };
+        function affSyncSwitch() { const b = byId('modeSwitchBtn'); if (b) b.style.display = affCode() ? 'flex' : 'none'; }
+        const AFF_G = '<span style="width:20px;height:20px;border-radius:50%;background:#fff;color:#4285F4;font-weight:900;font-size:13px;display:inline-flex;align-items:center;justify-content:center">G</span>';
+
+        function openAffiliateTab() {   // the Affiliate tab: agents go straight to business mode, everyone else sees the sign-in
+            if (affCode()) { enterBusinessMode(); return; }
+            byId('affiliateView').innerHTML = `
+                <div style="text-align:center;padding:30px 8px 10px">
+                    <div style="width:68px;height:68px;border-radius:20px;margin:0 auto 14px;background:linear-gradient(135deg,#00C853,#00963f);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="wallet" style="width:32px;height:32px"></i></div>
+                    <div style="font-size:19px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Earn with Chania AI</div>
+                    <div style="font-size:13px;color:var(--text-secondary);line-height:1.55;max-width:300px;margin:0 auto 22px">Become an affiliate agent and get paid straight to your M-Pesa.</div>
+                    <button class="aff-btn" onclick="openAffPop()">${AFF_G} Login / Sign up with Google</button>
+                </div>`;
+            lucide.createIcons();
+        }
+
+        /* the small popup: earning message, Google, then the M-Pesa number */
+        const affBody = h => { byId('affPopBody').innerHTML = h; lucide.createIcons(); };
+        function openAffPop() { byId('affPop').style.display = 'flex'; if (localStorage.getItem('chania_email')) affCheckExisting(); else affStepSignIn(); }
+        function closeAffPop() { window.affPending = false; byId('affPop').style.display = 'none'; }
+        function affStepSignIn() {
+            window.affPending = true;
+            affBody(`<p style="font-size:14px;font-weight:700;color:var(--text-primary);line-height:1.5;margin:0 0 6px">Earn about KSh 7.74 every time someone you refer unlocks a job match.</p>
+                <p style="font-size:12px;color:var(--text-secondary);line-height:1.55;margin:0 0 12px">You are paid only when a referral unlocks a match. No signup bonuses, no click payments. Your share goes straight to your M-Pesa.</p>
+                <div id="affGBtn" style="display:flex;justify-content:center;min-height:44px;margin:10px 0 4px"></div>
+                <button onclick="closeAffPop()" style="display:block;margin:6px auto 0;background:none;border:none;color:var(--text-secondary);font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline">Not now</button>`);
+            mountGoogleButton('affGBtn');
+        }
+        async function affCheckExisting() {
+            affBody('<div style="padding:22px 0;text-align:center;font-size:13px;color:var(--text-secondary)">One moment…</div>');
+            const r = await api('/affiliate/dashboard', { deviceId }, 20000);
+            if (r && r.ok && r.isAffiliate) return affDone(r.code);
+            if (r && r.ok) return affStepPhone();
+            affStepSignIn();   // no reply, or no profile on this phone yet
+        }
+        function affStepPhone() {
+            affBody(`<p style="font-size:14px;font-weight:700;color:var(--text-primary);line-height:1.5;margin:0 0 6px">Where should we send your earnings?</p>
+                <p style="font-size:12px;color:var(--text-secondary);line-height:1.55;margin:0 0 12px">Enter the Safaricom number that receives your M-Pesa.</p>
+                <input id="affPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712 345 678" oninput="byId('affGo').disabled = !affPhoneOk(this.value)" style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border-subtle);background:var(--bg-surface);color:var(--text-primary);font-size:15px;outline:none">
+                <div id="affErr" style="min-height:16px;font-size:11.5px;color:#dc2626;margin:6px 0"></div>
+                <button class="aff-btn" id="affGo" disabled onclick="affJoin()" style="width:100%">Start earning</button>`);
+        }
+        async function affJoin() {
+            const btn = byId('affGo'), err = byId('affErr'); btn.disabled = true; btn.textContent = 'Setting up…'; err.textContent = '';
+            const r = await api('/affiliate/join', { deviceId, phone: byId('affPhone').value }, 40000);
+            if (!r || !r.ok) { err.textContent = (r && r.message) || 'Something went wrong. Please try again.'; btn.disabled = false; btn.textContent = 'Start earning'; return; }
+            affDone(r.code);
+        }
+        function affFail(msg) { affBody(`<p style="font-size:13px;color:var(--text-primary);line-height:1.55;margin:0 0 14px">${msg}</p><button class="aff-btn" onclick="affStepSignIn()" style="width:100%">Try again</button>`); }
+        function affDone(code) { localStorage.setItem(AFF_KEY, code); affSyncSwitch(); closeAffPop(); enterBusinessMode(); }
+
+        /* business mode: its own full-screen section with four tabs, and a switch icon back to user mode */
+        function enterBusinessMode() {
+            if (!affCode()) { switchTab(document.querySelector('.bottom-nav .nav-item:last-child'), 'affiliateTab'); return; }
+            localStorage.setItem(MODE_KEY, 'agent');
+            byId('agentMode').style.display = 'flex'; document.body.classList.add('agent-on');   // the chat button is a user-mode thing
+            agentTab(agentTabName); affRefresh(); lucide.createIcons();
+        }
+        function exitBusinessMode() {
+            localStorage.setItem(MODE_KEY, 'user');
+            byId('agentMode').style.display = 'none'; document.body.classList.remove('agent-on');
+            switchTab(document.querySelector('.bottom-nav .nav-item'), 'discoverTab');
+        }
+        const AGENT_TITLES = { home: 'Home', earnings: 'Earnings', share: 'Share', account: 'Account' };
+        function agentTab(name) {
+            agentTabName = name;
+            document.querySelectorAll('#agentMode .agent-nav-item').forEach(b => b.classList.toggle('on', b.dataset.t === name));
+            byId('agentTitle').textContent = AGENT_TITLES[name];
+            renderAgent();
+        }
+        async function affRefresh() {
+            const r = await api('/affiliate/dashboard', { deviceId }, 20000);
+            if (r && r.ok && r.isAffiliate) { affData = r; renderAgent(); }
+            else if (r && r.ok) { localStorage.removeItem(AFF_KEY); affSyncSwitch(); exitBusinessMode(); }   // no longer an agent on the server
+            else if (!affData) byId('agentBody').innerHTML = '<div class="aff-card" style="text-align:center"><div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">We could not load your dashboard. Check your connection.</div><button class="aff-btn" onclick="affRefresh()">Retry</button></div>';
+        }
+        function renderAgent() {
+            const el = byId('agentBody'), d = affData;
+            if (!d) { el.innerHTML = '<div class="aff-card" style="text-align:center;font-size:13px;color:var(--text-secondary)">Loading your dashboard…</div>'; return; }
+            const E = escapeHtml, net = Math.max(0, d.per_unlock_kes - 0.26);   // Paystack's fee is shared 50-50, so a little under the full amount
+            const linkRow = `<div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0;padding:11px 12px;border-radius:12px;background:var(--bg-surface);font-size:12.5px;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(d.link)}</div><button class="aff-btn" style="min-height:42px;padding:0 16px" onclick="affCopy(this)">Copy</button></div>`;
+            let h = '';
+            if (agentTabName === 'home') {
+                h = `<div class="aff-card" style="background:linear-gradient(135deg,#00A651,#007a3d);border:none;color:#fff"><div style="font-size:11px;font-weight:800;letter-spacing:1.2px;opacity:.85">TOTAL EARNED</div><div style="font-size:32px;font-weight:800;margin:4px 0">${affKes(d.earned_kes)}</div><div style="font-size:12px;opacity:.85">from ${d.paid_unlocks} unlock${d.paid_unlocks === 1 ? '' : 's'} by people you referred</div></div>
+                    <div style="display:flex;gap:12px"><div class="aff-card" style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text-muted)">THIS WEEK</div><div style="font-size:18px;font-weight:800;color:var(--text-primary);margin-top:4px">${affKes(d.week_kes)}</div><div style="font-size:11.5px;color:var(--text-secondary)">${d.week_unlocks} unlock${d.week_unlocks === 1 ? '' : 's'}</div></div>
+                    <div class="aff-card" style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text-muted)">PER UNLOCK</div><div style="font-size:18px;font-weight:800;color:var(--text-primary);margin-top:4px">${affKes(net)}</div><div style="font-size:11.5px;color:var(--text-secondary)">about</div></div></div>
+                    ${d.owed_by_hand_kes > 0 ? `<div class="aff-card" style="border-color:#f59e0b"><div style="font-size:12.5px;color:var(--text-primary);line-height:1.5"><b>${affKes(d.owed_by_hand_kes)}</b> of your earnings will be paid to you by hand.</div></div>` : ''}
+                    <div class="aff-card"><div style="font-size:12px;font-weight:800;color:var(--text-primary);margin-bottom:8px">Your referral link</div>${linkRow}<div style="font-size:11.5px;color:var(--text-secondary);line-height:1.5;margin-top:10px">You earn only when someone you referred unlocks a job match.</div></div>`;
+            } else if (agentTabName === 'earnings') {
+                h = d.recent.length ? d.recent.map(x => `<div class="aff-card" style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px"><div><div style="font-size:13px;font-weight:700;color:var(--text-primary)">Job match unlocked</div><div style="font-size:11.5px;color:var(--text-secondary);margin-top:2px">${new Date(x.at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })} · ${x.auto ? 'Sent to your M-Pesa' : 'Paid by hand'}</div></div><div style="font-size:15px;font-weight:800;color:#00A651">+${affKes(x.kes)}</div></div>`).join('')
+                    : '<div class="aff-card" style="text-align:center;font-size:13px;color:var(--text-secondary);line-height:1.55">No earnings yet. Share your link. You earn when someone you referred unlocks a job match.</div>';
+            } else if (agentTabName === 'share') {
+                h = `<div class="aff-card"><div style="font-size:12px;font-weight:800;color:var(--text-primary);margin-bottom:8px">Your referral link</div>${linkRow}</div>
+                    <div class="aff-card"><div style="font-size:12px;font-weight:800;color:var(--text-primary);margin-bottom:10px">Send it to people looking for jobs</div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="aff-btn" onclick="affShare()"><i data-lucide="share-2" style="width:16px;height:16px"></i> Share</button>
+                    <a class="aff-btn ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('Find jobs that match you with Chania AI: ' + d.link)}">WhatsApp</a></div></div>`;
+            } else {
+                h = `<div class="aff-card"><div style="font-size:11px;font-weight:700;color:var(--text-muted)">YOUR CODE</div><div style="font-size:18px;font-weight:800;color:var(--text-primary);margin:4px 0 12px;letter-spacing:1px">${E(d.code)}</div>
+                    <div style="font-size:11px;font-weight:700;color:var(--text-muted)">PAID TO</div><div style="font-size:15px;font-weight:700;color:var(--text-primary);margin:4px 0 12px">${E(d.pay_phone)}</div>
+                    <div style="font-size:11px;font-weight:700;color:var(--text-muted)">PAYMENT</div><div style="font-size:12.5px;color:var(--text-primary);line-height:1.5;margin-top:4px">${d.auto_pay ? 'Automatic. Your share goes to your M-Pesa when a referral pays.' : 'Paid by hand. Automatic payment is not active on your account yet.'}</div></div>
+                    <div class="aff-card"><div style="font-size:12px;color:var(--text-secondary);line-height:1.6">You earn KSh ${d.per_unlock_kes} each time someone you referred unlocks a job match. Paystack's small fee is shared equally, so you receive about ${affKes(net)}.</div></div>
+                    <button class="aff-btn ghost" style="width:100%" onclick="exitBusinessMode()"><i data-lucide="arrow-left-right" style="width:16px;height:16px"></i> Switch to user mode</button>`;
+            }
+            el.innerHTML = h; lucide.createIcons();
+        }
+        function affCopy(btn) {
+            const link = affData && affData.link; if (!link) return;
+            const done = () => { const t = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = t; }, 1500); };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, () => {});
+            else { const ta = document.createElement('textarea'); ta.value = link; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) {} ta.remove(); }
+        }
+        function affShare() {
+            const link = affData && affData.link; if (!link) return;
+            if (navigator.share) navigator.share({ title: 'Chania AI', text: 'Find jobs that match you with Chania AI:', url: link }).catch(() => {});
+            else affCopy(document.querySelector('#agentBody .aff-btn'));
+        }
+        setTimeout(() => { affSyncSwitch(); claimRef(); if (affCode() && localStorage.getItem(MODE_KEY) === 'agent') enterBusinessMode(); }, 0);
+
         /* ===== GOOGLE SIGN-IN: the verified Gmail is attached to the profile on the server, so clearing site data no longer loses it ===== */
         const GOOGLE_CLIENT_ID = '174493910551-1b0fjgrjppsd2mt2d4khg3h3oltits8s.apps.googleusercontent.com';   // Google OAuth Web client id (public). Empty = Google sign-in stays off.
         let gsiInit = false;
@@ -3090,9 +3268,12 @@
             if (inChat) typingOff();
             if (!r || r.ok === false) {
                 const msg = r && r.error === 'device_linked' ? `This phone is already linked to ${escapeHtml(r.email || 'another Google account')}. Please sign in with that account 🙏` : "Google sign-in did not work. Please check your internet and try again 🙏";
+                if (window.affPending) { window.affPending = false; return affFail(msg); }
                 return say(msg, restoreReplies);
             }
             localStorage.setItem('chania_email', r.email);
+            const wasAff = !!window.affPending; window.affPending = false; claimRef();
+            if (wasAff) { affCheckExisting(); if (r.status !== 'restored') return; }   // signed in from the Affiliate tab: carry on there
             const first = escapeHtml(((r.profile && r.profile.full_name) || r.name || '').split(' ')[0]);
             if (r.status === 'restored' && r.profile) {
                 profile = Object.assign({ past_jobs: [] }, r.profile);
