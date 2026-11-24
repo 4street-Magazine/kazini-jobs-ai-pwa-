@@ -1622,7 +1622,7 @@ async function ensureAffTables(env) {
   catch (e) { await env.DB.prepare('ALTER TABLE profiles ADD COLUMN referred_by INTEGER').run(); }   // first use only
   affTablesReady = true;
 }
-const affLink = (env, code) => (env.APP_URL || 'https://chaniajobsai.co.ke').replace(/\/$/, '') + '/a/' + code;
+const affLink = (env, code) => 'https://chaniajobsai.co.ke/a/' + code;   // always the live site
 const kesOf = k => Math.round(Number(k || 0)) / 100;
 
 // Ties a person to the affiliate whose link they used. The first affiliate wins for good; nobody can refer themselves. Returns the affiliate's profile id, or 0.
