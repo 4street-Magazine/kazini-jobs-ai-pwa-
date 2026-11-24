@@ -1622,7 +1622,7 @@ async function ensureAffTables(env) {
   catch (e) { await env.DB.prepare('ALTER TABLE profiles ADD COLUMN referred_by INTEGER').run(); }   // first use only
   affTablesReady = true;
 }
-const affLink = (env, code) => (env.APP_URL || 'https://chaniajobsai.co.ke').replace(/\/$/, '') + '/?ref=' + code;
+const affLink = (env, code) => (env.APP_URL || 'https://chaniajobsai.co.ke').replace(/\/$/, '') + '/a/' + code;
 const kesOf = k => Math.round(Number(k || 0)) / 100;
 
 // Ties a person to the affiliate whose link they used. The first affiliate wins for good; nobody can refer themselves. Returns the affiliate's profile id, or 0.
@@ -1672,7 +1672,7 @@ async function handleAffiliateJoin(req, env) {
     const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
     let code = '';
     for (let i = 0; i < 6 && !a; i++) {
-      code = [...crypto.getRandomValues(new Uint8Array(7))].map(x => alphabet[x % alphabet.length]).join('');
+      code = [...crypto.getRandomValues(new Uint8Array(5))].map(x => alphabet[x % alphabet.length]).join('');
       try {
         await env.DB.prepare('INSERT INTO affiliates (profile_id, code, phone, created_at) VALUES (?, ?, ?, ?)').bind(prow.id, code, phone, Date.now()).run();
         a = { code, phone, subaccount_code: null, split_code: null };
@@ -1704,13 +1704,13 @@ async function handleAffiliateDashboard(req, env) {
   const a = await env.DB.prepare('SELECT code, phone, split_code FROM affiliates WHERE profile_id = ?').bind(prow.id).first();
   if (!a) return json(env, { ok: true, isAffiliate: false, per_unlock_kes: kesOf(affShareKobo(env)) });
   const now = Date.now();
-  const t = await env.DB.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(net), 0) AS net, COALESCE(SUM(CASE WHEN split_applied = 0 THEN net END), 0) AS owed, COALESCE(SUM(CASE WHEN created_at > ? THEN net END), 0) AS wk_net, COALESCE(SUM(CASE WHEN created_at > ? THEN 1 END), 0) AS wk_n FROM affiliate_earnings WHERE affiliate_id = ? AND status = 'earned'").bind(now - 7 * 86400000, now - 7 * 86400000, prow.id).first();
+  const t = await env.DB.prepare("SELECT COUNT(*) AS n, COUNT(DISTINCT referred_profile_id) AS people, COALESCE(SUM(net), 0) AS net, COALESCE(SUM(CASE WHEN split_applied = 0 THEN net END), 0) AS owed, COALESCE(SUM(CASE WHEN created_at > ? THEN net END), 0) AS wk_net, COALESCE(SUM(CASE WHEN created_at > ? THEN 1 END), 0) AS wk_n FROM affiliate_earnings WHERE affiliate_id = ? AND status = 'earned'").bind(now - 7 * 86400000, now - 7 * 86400000, prow.id).first();
   const rec = await env.DB.prepare("SELECT net, created_at, split_applied FROM affiliate_earnings WHERE affiliate_id = ? AND status = 'earned' ORDER BY created_at DESC LIMIT 30").bind(prow.id).all();
   return json(env, {
     ok: true, isAffiliate: true, code: a.code, link: affLink(env, a.code), auto_pay: !!a.split_code,
     pay_phone: a.phone.slice(0, 7) + '***' + a.phone.slice(-3),
     per_unlock_kes: kesOf(affShareKobo(env)),
-    paid_unlocks: t.n, earned_kes: kesOf(t.net), owed_by_hand_kes: kesOf(t.owed), week_unlocks: t.wk_n, week_kes: kesOf(t.wk_net),
+    paid_unlocks: t.n, people: t.people, earned_kes: kesOf(t.net), owed_by_hand_kes: kesOf(t.owed), week_unlocks: t.wk_n, week_kes: kesOf(t.wk_net),
     recent: (rec.results || []).map(r => ({ kes: kesOf(r.net), at: r.created_at, auto: !!r.split_applied })),
   });
 }
