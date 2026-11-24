@@ -308,9 +308,11 @@ async function ingestJobs(env, records) {
     jobs.push(j);
   }
   // Insert; meta.changes === 1 means the job is new (duplicates are ignored)
+  await ensureJobsCreatedCol(env);   // created_at = when we fetched it, for the admin dashboard
+  const fetchedAt = Date.now();
   const results = await env.DB.batch(jobs.map(j =>
-    env.DB.prepare('INSERT OR IGNORE INTO jobs (id, title, company, location, description, apply_url, posted_at, employment_type, remote) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(j.id, j.title, j.company, j.location, j.description, j.apply_url, j.posted_at, j.employment_type, j.remote)));
+    env.DB.prepare('INSERT OR IGNORE INTO jobs (id, title, company, location, description, apply_url, posted_at, employment_type, remote, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(j.id, j.title, j.company, j.location, j.description, j.apply_url, j.posted_at, j.employment_type, j.remote, fetchedAt)));
   const fresh = jobs.filter((_, i) => results[i].meta.changes === 1);
   await embedAndMatchJobs(env, fresh);
 }
@@ -1910,6 +1912,320 @@ async function handleAdminPayCheck(url, env) {
   return json(env, { ok: true, status, paystack: { ok: v.ok, message: v.message, status: d.status, gateway_response: d.gateway_response, amount: d.amount, currency: d.currency, channel: d.channel } });
 }
 
+// ===== Admin dashboard (GET /admin/dashboard is the page, GET /admin/overview is the data, both for the admin password only) =====
+let adminJobsColReady = false, adminOvCache = null;
+async function ensureJobsCreatedCol(env) {   // jobs had no "fetched at" time: new jobs get one from now on, so the dashboard can count jobs fetched per day
+  if (adminJobsColReady) return;
+  try { await env.DB.prepare('ALTER TABLE jobs ADD COLUMN created_at INTEGER').run(); } catch (e) { /* column already exists */ }
+  adminJobsColReady = true;
+}
+const nbMidnight = ms => { const d = new Date(ms + 3 * 3600000); d.setUTCHours(0, 0, 0, 0); return d.getTime() - 3 * 3600000; };   // start of that day in Nairobi (UTC+3)
+const nbDay = ms => new Date(ms + 3 * 3600000).toISOString().slice(0, 10);
+// Matches are deleted after 24 hours, so a daily snapshot is kept to build weekly history. It only ever raises a day's figure (a later cleanup cannot lower it).
+async function snapshotDaily(env) {
+  try {
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS stats_daily (day TEXT PRIMARY KEY, matches INTEGER, matched_profiles INTEGER, profiles INTEGER, submitted INTEGER)').run();
+    await ensureMatchCols(env);
+    const t0 = nbMidnight(Date.now());
+    const prof = await env.DB.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) AS s FROM profiles").first();
+    for (const [from, to, today] of [[t0 - 86400000, t0, false], [t0, t0 + 86400000, true]]) {
+      const r = await env.DB.prepare('SELECT COUNT(*) AS n, COUNT(DISTINCT profile_id) AS p FROM matches WHERE created_at >= ? AND created_at < ?').bind(from, to).first();
+      await env.DB.prepare('INSERT INTO stats_daily (day, matches, matched_profiles, profiles, submitted) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(day) DO UPDATE SET matches = MAX(matches, ?2), matched_profiles = MAX(matched_profiles, ?3), profiles = COALESCE(?4, profiles), submitted = COALESCE(?5, submitted)')
+        .bind(nbDay(from), r ? r.n : 0, r ? r.p : 0, today ? prof.n : null, today ? (prof.s || 0) : null).run();
+    }
+  } catch (e) { console.log('daily snapshot failed', String((e && e.message) || e)); }
+}
+async function handleAdminOverview(env) {
+  if (adminOvCache && Date.now() - adminOvCache.at < 45000) return json(env, adminOvCache.data);   // many people refreshing cost the database one read pass a minute at most
+  await ensurePayTables(env); await ensureAffTables(env); await ensureMatchCols(env); await ensureJobsCreatedCol(env);
+  await snapshotDaily(env);
+  const num = async (sql, ...b) => { try { const r = await env.DB.prepare(sql).bind(...b).first(); return r && r.n != null ? Number(r.n) : 0; } catch (e) { return null; } };
+  const rows = async (sql, ...b) => { try { const r = await env.DB.prepare(sql).bind(...b).all(); return r.results || []; } catch (e) { return []; } };
+  const now = Date.now(), DAY = 86400000, today0 = nbMidnight(now), wk0 = today0 - 6 * DAY, prev0 = today0 - 13 * DAY;
+  const real = " AND job_id != '__test__'";
+  const dayExpr = col => "strftime('%Y-%m-%d', (" + col + " + 10800000) / 1000, 'unixepoch')";
+  const dayMap = async sql => { const m = {}; (await rows(sql, prev0)).forEach(r => { m[r.d] = Number(r.n); }); return m; };
+  const [profiles, submitted, withEmail, referred, pushDevices,
+    jobs, jobsToday, jobs7, jobsPrev7, jobsUntracked,
+    matchesNow, matchedNow, matchesToday, matchedToday, avgScore,
+    unlockFree, unlockPaid, profUnlocked, profPaid, repeatPayers, freeUsed, free7, freePrev7,
+    applications, apps24, appsPeople,
+    payOk, payFailed, payPending, paidAll, paidToday, paid7, paidPrev7, payCount7, payCountPrev7,
+    affCount, affEarned, affOwed, aff7, affPrev7,
+    waitP, waitJ] = await Promise.all([
+    num('SELECT COUNT(*) AS n FROM profiles'),
+    num("SELECT COUNT(*) AS n FROM profiles WHERE status = 'submitted'"),
+    num("SELECT COUNT(*) AS n FROM profiles WHERE email IS NOT NULL AND email != ''"),
+    num('SELECT COUNT(*) AS n FROM profiles WHERE referred_by IS NOT NULL'),
+    num('SELECT COUNT(*) AS n FROM push_tokens'),
+    num('SELECT COUNT(*) AS n FROM jobs'),
+    num('SELECT COUNT(*) AS n FROM jobs WHERE created_at >= ?', today0),
+    num('SELECT COUNT(*) AS n FROM jobs WHERE created_at >= ?', wk0),
+    num('SELECT COUNT(*) AS n FROM jobs WHERE created_at >= ? AND created_at < ?', prev0, wk0),
+    num('SELECT COUNT(*) AS n FROM jobs WHERE created_at IS NULL'),
+    num('SELECT COUNT(*) AS n FROM matches'),
+    num('SELECT COUNT(DISTINCT profile_id) AS n FROM matches'),
+    num('SELECT COUNT(*) AS n FROM matches WHERE created_at >= ?', today0),
+    num('SELECT COUNT(DISTINCT profile_id) AS n FROM matches WHERE created_at >= ?', today0),
+    num('SELECT AVG(score) AS n FROM matches'),
+    num("SELECT COUNT(*) AS n FROM unlocks WHERE kind = 'free'"),
+    num("SELECT COUNT(*) AS n FROM unlocks WHERE kind = 'paid'"),
+    num('SELECT COUNT(DISTINCT profile_id) AS n FROM unlocks'),
+    num("SELECT COUNT(DISTINCT profile_id) AS n FROM unlocks WHERE kind = 'paid'"),
+    num("SELECT COUNT(*) AS n FROM (SELECT profile_id FROM unlocks WHERE kind = 'paid' GROUP BY profile_id HAVING COUNT(*) >= 2)"),
+    num("SELECT COUNT(*) AS n FROM unlocks WHERE kind = 'free' AND used = 1"),
+    num("SELECT COUNT(*) AS n FROM unlocks WHERE kind = 'free' AND created_at >= ?", wk0),
+    num("SELECT COUNT(*) AS n FROM unlocks WHERE kind = 'free' AND created_at >= ? AND created_at < ?", prev0, wk0),
+    num('SELECT COUNT(*) AS n FROM applications'),
+    num('SELECT COUNT(*) AS n FROM applications WHERE applied_at >= ?', now - DAY),
+    num('SELECT COUNT(DISTINCT profile_id) AS n FROM applications'),
+    num("SELECT COUNT(*) AS n FROM payments WHERE status = 'success'" + real),
+    num("SELECT COUNT(*) AS n FROM payments WHERE status = 'failed'" + real),
+    num("SELECT COUNT(*) AS n FROM payments WHERE status NOT IN ('success','failed')" + real),
+    num("SELECT COALESCE(SUM(amount),0) AS n FROM payments WHERE status = 'success'" + real),
+    num("SELECT COALESCE(SUM(amount),0) AS n FROM payments WHERE status = 'success'" + real + ' AND paid_at >= ?', today0),
+    num("SELECT COALESCE(SUM(amount),0) AS n FROM payments WHERE status = 'success'" + real + ' AND paid_at >= ?', wk0),
+    num("SELECT COALESCE(SUM(amount),0) AS n FROM payments WHERE status = 'success'" + real + ' AND paid_at >= ? AND paid_at < ?', prev0, wk0),
+    num("SELECT COUNT(*) AS n FROM payments WHERE status = 'success'" + real + ' AND paid_at >= ?', wk0),
+    num("SELECT COUNT(*) AS n FROM payments WHERE status = 'success'" + real + ' AND paid_at >= ? AND paid_at < ?', prev0, wk0),
+    num('SELECT COUNT(*) AS n FROM affiliates'),
+    num("SELECT COALESCE(SUM(net),0) AS n FROM affiliate_earnings WHERE status = 'earned'"),
+    num("SELECT COALESCE(SUM(net),0) AS n FROM affiliate_earnings WHERE status = 'earned' AND split_applied = 0"),
+    num("SELECT COALESCE(SUM(net),0) AS n FROM affiliate_earnings WHERE status = 'earned' AND created_at >= ?", wk0),
+    num("SELECT COALESCE(SUM(net),0) AS n FROM affiliate_earnings WHERE status = 'earned' AND created_at >= ? AND created_at < ?", prev0, wk0),
+    num("SELECT COUNT(*) AS n FROM profiles WHERE status = 'submitted' AND embedded = 0"),
+    num('SELECT COUNT(*) AS n FROM jobs WHERE embedded = 0'),
+  ]);
+  const [jobsDay, appsDay, payDay, revDay, statRows, recentPay, topAff, appStatus] = await Promise.all([
+    dayMap('SELECT ' + dayExpr('created_at') + ' AS d, COUNT(*) AS n FROM jobs WHERE created_at >= ? GROUP BY d'),
+    dayMap('SELECT ' + dayExpr('applied_at') + ' AS d, COUNT(*) AS n FROM applications WHERE applied_at >= ? GROUP BY d'),
+    dayMap("SELECT " + dayExpr('paid_at') + " AS d, COUNT(*) AS n FROM payments WHERE status = 'success'" + real + " AND paid_at >= ? GROUP BY d"),
+    dayMap("SELECT " + dayExpr('paid_at') + " AS d, COALESCE(SUM(amount),0) AS n FROM payments WHERE status = 'success'" + real + " AND paid_at >= ? GROUP BY d"),
+    rows('SELECT day, matches, matched_profiles, profiles FROM stats_daily WHERE day >= ?', nbDay(prev0)),
+    rows("SELECT reference, amount, status, created_at FROM payments WHERE job_id != '__test__' ORDER BY created_at DESC LIMIT 10"),
+    rows("SELECT a.code, COUNT(e.reference) AS unlocks, COALESCE(SUM(e.net),0) AS earned, COALESCE(SUM(CASE WHEN e.split_applied = 0 THEN e.net END),0) AS owed, CASE WHEN a.split_code IS NULL THEN 0 ELSE 1 END AS auto_pay, (SELECT COUNT(*) FROM profiles p WHERE p.referred_by = a.profile_id) AS people FROM affiliates a LEFT JOIN affiliate_earnings e ON e.affiliate_id = a.profile_id AND e.status = 'earned' GROUP BY a.profile_id ORDER BY earned DESC, people DESC LIMIT 15"),
+    rows("SELECT COALESCE(status, 'unknown') AS s, COUNT(*) AS n FROM applications GROUP BY s ORDER BY n DESC"),
+  ]);
+  const stat = {}; statRows.forEach(r => { stat[r.day] = r; });
+  const kes = x => x == null ? null : kesOf(x);
+  const div = (a, b, dp) => (a == null || !b) ? null : Math.round(a / b * Math.pow(10, dp == null ? 1 : dp)) / Math.pow(10, dp == null ? 1 : dp);
+  const daily = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = nbDay(today0 - i * DAY), s = stat[d];
+    daily.push({ day: d, jobs: jobsDay[d] || 0, apps: appsDay[d] || 0, paid: payDay[d] || 0, revenue_kes: kesOf(revDay[d] || 0), matches: s ? s.matches : null, matched_profiles: s ? s.matched_profiles : null, profiles: s ? s.profiles : null });
+  }
+  const sum = (arr, f) => { let t = 0, seen = false; arr.forEach(x => { const v = f(x); if (v != null) { t += v; seen = true; } }); return seen ? t : null; };
+  const prevD = daily.slice(0, 7), thisD = daily.slice(7);
+  const growth = (a, b) => (a != null && b != null) ? Math.max(0, a - b) : null;   // new profiles = change between two daily totals, so it starts counting from the first snapshot
+  const week = (d, free, aff, p0, p1) => ({ jobs_fetched: sum(d, x => x.jobs), matches_created: sum(d, x => x.matches), applications: sum(d, x => x.apps), paid_unlocks: sum(d, x => x.paid), revenue_kes: sum(d, x => x.revenue_kes), free_unlocks: free, agent_earned_kes: kes(aff), new_profiles: growth(p1, p0) });
+  const key = String(env.PAYSTACK_SECRET_KEY || '').trim();
+  const firstStat = statRows.map(r => r.day).sort()[0] || null;
+  const data = {
+    ok: true, at: now, snapshot_since: firstStat, jobs_tracked_since_note: jobsUntracked,
+    people: { profiles, submitted, with_email: withEmail, referred, push_devices: pushDevices },
+    funnel: [['Profiles created', profiles], ['Profiles submitted', submitted], ['Have live matches', matchedNow], ['Unlocked a job', profUnlocked], ['Paid for a job', profPaid], ['Applied to a job', appsPeople]],
+    jobs: { total: jobs, today: jobsToday, week: jobs7, prev_week: jobsPrev7, untracked: jobsUntracked },
+    matching: { matches_now: matchesNow, profiles_with_matches: matchedNow, avg_per_matched_profile: div(matchesNow, matchedNow), avg_per_submitted_profile: div(matchesNow, submitted), matches_today: matchesToday, profiles_matched_today: matchedToday, avg_score: avgScore == null ? null : Math.round(avgScore * 100) },
+    unlocks: { free: unlockFree, paid: unlockPaid, free_used: freeUsed, profiles_unlocked: profUnlocked, profiles_paid: profPaid, repeat_payers: repeatPayers, avg_per_profile: div((unlockFree || 0) + (unlockPaid || 0), submitted, 2), avg_per_unlocking_profile: div((unlockFree || 0) + (unlockPaid || 0), profUnlocked, 2), unlock_rate_pct: div(profUnlocked, submitted, 0) == null ? null : Math.round(profUnlocked / submitted * 100), paid_rate_pct: submitted ? Math.round(profPaid / submitted * 100) : null },
+    revenue: { today_kes: kes(paidToday), week_kes: kes(paid7), prev_week_kes: kes(paidPrev7), all_kes: kes(paidAll), per_paying_profile_kes: div(kes(paidAll), profPaid, 0), paid_unlocks: unlockPaid, payments_ok: payOk, payments_failed: payFailed, payments_pending: payPending, price_kes: contributionKes(env) },
+    activity: { applications, applications_24h: apps24, applicants: appsPeople, apps_per_applicant: div(applications, appsPeople), apps_by_status: appStatus.map(r => ({ status: r.s, n: r.n })) },
+    daily,
+    weekly: { this: week(thisD, free7, aff7, daily[6].profiles, daily[13].profiles), prev: week(prevD, freePrev7, affPrev7, daily[0].profiles, daily[6].profiles) },
+    agents: { count: affCount, earned_kes: kes(affEarned), owed_by_hand_kes: kes(affOwed), top: topAff.map(r => ({ code: r.code, people: r.people, unlocks: r.unlocks, earned_kes: kesOf(r.earned), owed_kes: kesOf(r.owed), auto_pay: !!r.auto_pay })) },
+    recent_payments: recentPay.map(r => ({ ref: String(r.reference || '').slice(-8), kes: kesOf(r.amount), status: r.status, at: r.created_at })),
+    system: { profiles_waiting_to_embed: waitP, jobs_waiting_to_embed: waitJ, paystack: !key ? 'NOT SET' : /^sk_live_/.test(key) ? 'live' : /^sk_test_/.test(key) ? 'TEST' : 'check key', pay_debug: env.PAY_DEBUG === '1' },
+  };
+  adminOvCache = { at: now, data };
+  return json(env, data);
+}
+
+const ADMIN_DASH_HTML = String.raw`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FF5500">
+<title>Chania AI Admin</title>
+<style>
+:root{--bg:#f1f5f9;--card:#fff;--surface:#f8fafc;--fg:#0f172a;--muted:#64748b;--line:#e2e8f0;--or:#FF5500;--or2:#E04B00;--orl:rgba(255,85,0,.10);--good:#16a34a;--bad:#dc2626;--warn:#d97706}
+@media (prefers-color-scheme:dark){:root{--bg:#050505;--card:#0f0f0f;--surface:#161616;--fg:#fff;--muted:#9ca3af;--line:#24242a;--good:#22c55e;--bad:#f87171;--warn:#fbbf24}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.top{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.bar{max-width:1040px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.logo{width:34px;height:34px;flex:none}
+.brand{font-weight:800;font-size:19px;letter-spacing:-.02em;white-space:nowrap}.brand b{color:var(--or)}
+.tag{font-size:10.5px;font-weight:800;letter-spacing:.08em;background:var(--orl);color:var(--or);padding:3px 9px;border-radius:99px;margin-left:8px}
+.sp{flex:1}
+@media (max-width:560px){#upd{display:none}.bar{gap:8px}.tag{margin-left:6px}}
+button{min-height:42px;padding:0 18px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(255,85,0,.25)}
+button.alt{background:transparent;color:var(--or);border:1.5px solid var(--or);box-shadow:none}
+nav{max-width:1040px;margin:0 auto;display:flex;gap:4px;padding:0 12px 10px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav a{flex:none;padding:9px 16px;border-radius:99px;font-size:13.5px;font-weight:700;color:var(--muted);text-decoration:none;cursor:pointer}
+nav a.on{background:var(--or);color:#fff}
+.w{max-width:1040px;margin:0 auto;padding:6px 16px 70px}
+h2{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:24px 0 10px;font-weight:800}
+.muted{color:var(--muted);font-size:12.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.card.hot{background:linear-gradient(150deg,var(--orl),var(--card));border-color:rgba(255,85,0,.35)}
+.l{font-size:11.5px;color:var(--muted);font-weight:700}
+.v{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:2px;font-variant-numeric:tabular-nums}
+.s{font-size:12px;color:var(--muted);margin-top:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.bars{display:flex;align-items:flex-end;gap:4px;height:110px;margin-top:10px}
+.b{flex:1;background:linear-gradient(180deg,var(--or),var(--or2));border-radius:4px 4px 0 0;min-height:2px}.b.z{background:var(--line)}
+.ax{display:flex;gap:4px;margin-top:4px}.ax span{flex:1;text-align:center;font-size:10px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:10px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}td.r{white-space:nowrap}
+.pill{white-space:nowrap;display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;background:var(--surface);border:1px solid var(--line)}
+.ok{color:var(--good)}.no{color:var(--bad)}.wait{color:var(--warn)}
+.sc{overflow-x:auto}
+.fun{display:flex;flex-direction:column;gap:8px}
+.fr{display:grid;grid-template-columns:130px 1fr 92px;gap:10px;align-items:center;font-size:13px}
+@media (max-width:480px){.fr{grid-template-columns:96px 1fr 76px;font-size:12px}}
+.ft{height:22px;background:var(--surface);border-radius:8px;overflow:hidden}.ff{height:100%;background:linear-gradient(90deg,var(--or),#ff8a4d);border-radius:8px;min-width:3px}
+.fr .n{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.note{background:var(--orl);border:1px solid rgba(255,85,0,.25);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--fg);margin-top:12px}
+.login{max-width:420px;margin:60px auto;text-align:center}
+.login .logo{width:64px;height:64px;margin-bottom:8px}
+.login .row{display:flex;gap:8px;margin-top:14px}
+input{flex:1;min-width:0;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--fg);font-size:16px}
+#err{color:var(--bad);font-size:13px;text-align:center;margin-top:10px}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="lg" viewBox="14 8 80 80"><rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/><path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/></symbol></svg>
+<div id="gate" class="login">
+  <svg class="logo"><use href="#lg"/></svg>
+  <div class="brand" style="font-size:26px">Chania <b>AI</b> <span class="tag">ADMIN</span></div>
+  <p class="muted">Type your admin password. It stays on this screen and is never saved.</p>
+  <div class="row"><input id="k" type="password" placeholder="Admin password" autocomplete="off"><button id="go">Open</button></div>
+  <div id="err"></div>
+</div>
+<div id="app" style="display:none">
+  <div class="top"><div class="bar"><svg class="logo"><use href="#lg"/></svg><div class="brand">Chania <b>AI</b><span class="tag">ADMIN</span></div><div class="sp"></div><span class="muted" id="upd"></span><button class="alt" id="rf">Refresh</button></div>
+  <nav id="tabs"></nav></div>
+  <div class="w" id="main"></div>
+</div>
+<script>
+(function () {
+  var key = "", timer = null, DATA = null, TAB = "overview";
+  var TABS = [["overview", "Overview"], ["matching", "Matching"], ["money", "Money"], ["agents", "Agents"], ["weekly", "Weekly report"], ["system", "System"]];
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function kes(n) { return n == null ? "-" : "KSh " + Number(n).toLocaleString("en-KE", { maximumFractionDigits: 2 }); }
+  function num(n) { return n == null ? "-" : Number(n).toLocaleString("en-KE", { maximumFractionDigits: 2 }); }
+  function pct(a, b) { return (a == null || !b) ? "-" : Math.round(a / b * 100) + "%"; }
+  function card(l, v, s, hot) { return '<div class="card' + (hot ? ' hot' : '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div>' + (s ? '<div class="s">' + s + '</div>' : '') + '</div>'; }
+  function bars(list, label, fmt) {
+    fmt = fmt || num;
+    var have = list.filter(function (x) { return x.n != null; });
+    var max = Math.max.apply(null, have.map(function (x) { return x.n; }).concat([1]));
+    var b = list.map(function (x) { var n = x.n == null ? 0 : x.n; return '<div class="b' + (n ? '' : ' z') + '" style="height:' + Math.max(2, Math.round(n / max * 100)) + '%" title="' + esc(x.day) + ': ' + (x.n == null ? "no data" : fmt(x.n)) + '"></div>'; }).join("");
+    var a = list.map(function (x) { return '<span>' + esc(x.day.slice(8)) + '</span>'; }).join("");
+    var total = have.reduce(function (t, x) { return t + x.n; }, 0);
+    return '<div class="card"><div class="l">' + esc(label) + ' &middot; last 14 days</div><div class="v">' + (have.length ? fmt(total) : "-") + '</div><div class="bars">' + b + '</div><div class="ax">' + a + '</div></div>';
+  }
+  function series(k) { return DATA.daily.map(function (x) { return { day: x.day, n: x[k] }; }); }
+  function ago(ms) {
+    if (!ms) return "-"; var s = Math.round((Date.now() - ms) / 1000);
+    if (s < 90) return "just now"; if (s < 5400) return Math.round(s / 60) + " min ago";
+    if (s < 129600) return Math.round(s / 3600) + " h ago"; return new Date(ms).toLocaleDateString("en-KE", { day: "numeric", month: "short" });
+  }
+  function delta(a, b) {
+    if (a == null || b == null) return '<span class="muted">-</span>';
+    if (b === 0) return a > 0 ? '<span class="ok">new</span>' : '<span class="muted">0%</span>';
+    var p = Math.round((a - b) / b * 100); if (p === 0) return '<span class="muted">0%</span>';
+    return '<span class="' + (p > 0 ? 'ok' : 'no') + '">' + (p > 0 ? "&#9650; " : "&#9660; ") + Math.abs(p) + '%</span>';
+  }
+  var VIEWS = {
+    overview: function (d) {
+      var p = d.people, r = d.revenue, a = d.activity, m = d.matching;
+      var h = '<h2>Today</h2><div class="grid">' + card("Earned today", kes(r.today_kes), "", true) + card("Jobs fetched today", num(d.jobs.today), num(d.jobs.week) + " this week") + card("Profiles matched today", num(m.profiles_matched_today), num(m.matches_today) + " new matches") + card("Applications (24 h)", num(a.applications_24h)) + '</div>';
+      h += '<h2>People</h2><div class="grid">' + card("Profiles", num(p.profiles), num(p.submitted) + " submitted") + card("Signed in with Google", num(p.with_email)) + card("Referred by agents", num(p.referred)) + card("Push devices", num(p.push_devices)) + '</div>';
+      var top = d.funnel[0][1] || 1;
+      h += '<h2>Journey: from sign-up to paying</h2><div class="card"><div class="fun">' + d.funnel.map(function (f, i) {
+        var w = Math.max(0, Math.min(100, Math.round((f[1] || 0) / top * 100))), of = i === 1 ? pct(f[1], d.funnel[0][1]) + " of created" : i > 1 ? pct(f[1], d.funnel[1][1]) + " of submitted" : "";
+        return '<div class="fr"><div>' + esc(f[0]) + '</div><div class="ft"><div class="ff" style="width:' + w + '%"></div></div><div class="n">' + num(f[1]) + '<div class="muted" style="font-weight:400;font-size:10.5px">' + of + '</div></div></div>';
+      }).join("") + '</div></div>';
+      h += '<div class="two">' + bars(series("jobs"), "Jobs fetched") + bars(series("apps"), "Applications") + '</div>';
+      return h;
+    },
+    matching: function (d) {
+      var m = d.matching, u = d.unlocks, j = d.jobs;
+      var h = '<h2>Jobs fetched</h2><div class="grid">' + card("Jobs in database", num(j.total), num(j.untracked) + " added before tracking began") + card("Fetched today", num(j.today), "", true) + card("Fetched, last 7 days", num(j.week), "before that: " + num(j.prev_week)) + '</div>';
+      h += '<h2>Matches</h2><div class="grid">' + card("Profiles matched today", num(m.profiles_matched_today), num(m.matches_today) + " matches created", true) + card("Avg matches per profile", num(m.avg_per_matched_profile), "among the " + num(m.profiles_with_matches) + " profiles with live matches") + card("Avg per submitted profile", num(m.avg_per_submitted_profile), "all " + num(d.people.submitted) + " submitted profiles") + card("Live matches", num(m.matches_now), "matches expire after 24 h") + card("Avg match score", m.avg_score == null ? "-" : m.avg_score + "%") + '</div>';
+      h += '<h2>Unlocks</h2><div class="grid">' + card("Avg unlocks per profile", num(u.avg_per_profile), "free + paid, over all submitted profiles", true) + card("Per unlocking profile", num(u.avg_per_unlocking_profile), num(u.profiles_unlocked) + " profiles unlocked at least 1") + card("Profiles that unlocked", u.unlock_rate_pct == null ? "-" : u.unlock_rate_pct + "%", "of submitted profiles") + card("Free unlocks", num(u.free), num(u.free_used) + " used") + card("Paid unlocks", num(u.paid), num(u.profiles_paid) + " paying profiles") + card("Repeat payers", num(u.repeat_payers), "paid for 2 or more jobs") + '</div>';
+      h += '<div class="two">' + bars(series("matches"), "Matches created") + bars(series("matched_profiles"), "Profiles matched") + '</div>';
+      h += '<div class="note">Matches are deleted after 24 hours, so match history is kept as a daily snapshot' + (d.snapshot_since ? ' that began on ' + esc(d.snapshot_since) : '') + '. Earlier days show no data. Each day is the highest figure seen that day.</div>';
+      return h;
+    },
+    money: function (d) {
+      var r = d.revenue, u = d.unlocks;
+      var h = '<h2>Revenue</h2><div class="grid">' + card("Earned today", kes(r.today_kes), "", true) + card("Last 7 days", kes(r.week_kes), "week before: " + kes(r.prev_week_kes)) + card("All time", kes(r.all_kes), num(r.paid_unlocks) + (r.paid_unlocks === 1 ? " paid unlock" : " paid unlocks") + " at " + kes(r.price_kes)) + card("Per paying profile", kes(r.per_paying_profile_kes), num(u.profiles_paid) + " paying profiles") + '</div>';
+      h += '<h2>Payments</h2><div class="grid">' + card("Successful", '<span class="ok">' + num(r.payments_ok) + '</span>') + card("Failed", '<span class="no">' + num(r.payments_failed) + '</span>') + card("Pending", '<span class="wait">' + num(r.payments_pending) + '</span>') + card("Paid conversion", u.paid_rate_pct == null ? "-" : u.paid_rate_pct + "%", "of submitted profiles") + '</div>';
+      h += '<div class="two">' + bars(series("revenue_kes"), "Revenue", kes) + bars(series("paid"), "Paid unlocks") + '</div>';
+      h += '<h2>Latest payments</h2><div class="card sc" style="padding:6px"><table><tr><th>When</th><th>Ref</th><th class="r">Amount</th><th>Status</th></tr>' +
+        (d.recent_payments.length ? d.recent_payments.map(function (x) { var c = x.status === "success" ? "ok" : x.status === "failed" ? "no" : "wait"; return '<tr><td>' + ago(x.at) + '</td><td>&hellip;' + esc(x.ref) + '</td><td class="r">' + kes(x.kes) + '</td><td class="' + c + '">' + esc(x.status) + '</td></tr>'; }).join("") : '<tr><td colspan="4" class="muted">No payments yet.</td></tr>') + '</table></div>';
+      return h;
+    },
+    agents: function (d) {
+      var g = d.agents;
+      var h = '<h2>Agents</h2><div class="grid">' + card("Agents", num(g.count), "", true) + card("People they referred", num(d.people.referred)) + card("Earned by agents", kes(g.earned_kes)) + card("Owed by hand", '<span class="' + (g.owed_by_hand_kes > 0 ? 'wait' : '') + '">' + kes(g.owed_by_hand_kes) + '</span>', "not auto-paid to M-Pesa") + '</div>';
+      h += '<h2>Leaderboard</h2><div class="card sc" style="padding:6px"><table><tr><th>Code</th><th class="r">People</th><th class="r">Applied</th><th class="r">Earned</th><th class="r">Owed</th><th>Pay</th></tr>' +
+        (g.top.length ? g.top.map(function (x) { return '<tr><td><b>' + esc(x.code) + '</b></td><td class="r">' + num(x.people) + '</td><td class="r">' + num(x.unlocks) + '</td><td class="r">' + kes(x.earned_kes) + '</td><td class="r">' + (x.owed_kes > 0 ? '<span class="wait">' + kes(x.owed_kes) + '</span>' : '-') + '</td><td>' + (x.auto_pay ? '<span class="pill ok">auto</span>' : '<span class="pill wait">by hand</span>') + '</td></tr>'; }).join("") : '<tr><td colspan="6" class="muted">No agents yet.</td></tr>') + '</table></div>';
+      return h;
+    },
+    weekly: function (d) {
+      var t = d.weekly.this, p = d.weekly.prev;
+      var R = [["New profiles", "new_profiles", num], ["Jobs fetched", "jobs_fetched", num], ["Matches created", "matches_created", num], ["Free unlocks", "free_unlocks", num], ["Paid unlocks", "paid_unlocks", num], ["Applications", "applications", num], ["Revenue", "revenue_kes", kes], ["Agent earnings", "agent_earned_kes", kes]];
+      var h = '<h2>Weekly report</h2><div class="card sc" style="padding:6px"><table><tr><th>Metric</th><th class="r">Last 7 days</th><th class="r">Week before</th><th class="r">Change</th></tr>' + R.map(function (x) { return '<tr><td>' + x[0] + '</td><td class="r"><b>' + x[2](t[x[1]]) + '</b></td><td class="r">' + x[2](p[x[1]]) + '</td><td class="r">' + delta(t[x[1]], p[x[1]]) + '</td></tr>'; }).join("") + '</table></div>';
+      h += '<p style="margin-top:12px"><button id="cp">Copy report for WhatsApp</button></p><div class="note">Last 7 days means today and the 6 days before it, in Nairobi time. Jobs fetched, matches and new profiles only count from when tracking began' + (d.snapshot_since ? ' (' + esc(d.snapshot_since) + ')' : '') + ', so the first weeks will look low. A dash means there is no data yet.</div>';
+      return h;
+    },
+    system: function (d) {
+      var s = d.system;
+      var h = '<h2>System</h2><div class="grid">' + card("Paystack key", '<span class="' + (s.paystack === "live" ? "ok" : "no") + '">' + esc(s.paystack) + '</span>', s.paystack === "TEST" ? "no real M-Pesa prompts" : "") + card("Profiles to embed", num(s.profiles_waiting_to_embed)) + card("Jobs to embed", num(s.jobs_waiting_to_embed)) + card("Pay debug", s.pay_debug ? '<span class="no">on</span>' : "off", s.pay_debug ? "turn off before launch" : "") + '</div>';
+      if (d.activity.apps_by_status.length) h += '<h2>Applications by status</h2><div class="card">' + d.activity.apps_by_status.map(function (x) { return '<span class="pill" style="margin:2px">' + esc(x.status) + ' &middot; ' + num(x.n) + '</span>'; }).join("") + '</div>';
+      return h;
+    }
+  };
+  function reportText(d) {
+    var t = d.weekly.this, p = d.weekly.prev;
+    function ln(l, k, f) { var a = t[k], b = p[k]; return "- " + l + ": " + (a == null ? "-" : f(a)) + (b == null ? "" : " (before: " + f(b) + ")"); }
+    return ["*Chania AI weekly report*", "Last 7 days to " + d.daily[13].day, "",
+      ln("New profiles", "new_profiles", num), ln("Jobs fetched", "jobs_fetched", num), ln("Matches created", "matches_created", num), ln("Free unlocks", "free_unlocks", num), ln("Paid unlocks", "paid_unlocks", num), ln("Applications", "applications", num), ln("Revenue", "revenue_kes", kes), ln("Agent earnings", "agent_earned_kes", kes), "",
+      "Totals: " + num(d.people.profiles) + " profiles, " + num(d.agents.count) + " agents, " + num(d.jobs.total) + " jobs.",
+      "Avg matches per profile: " + num(d.matching.avg_per_matched_profile) + ". Avg unlocks per profile: " + num(d.unlocks.avg_per_profile) + "."].join("\n");
+  }
+  function show() {
+    $("tabs").innerHTML = TABS.map(function (t) { return '<a data-t="' + t[0] + '" class="' + (t[0] === TAB ? "on" : "") + '">' + t[1] + '</a>'; }).join("");
+    $("main").innerHTML = VIEWS[TAB](DATA);
+    var cp = $("cp"); if (cp) cp.onclick = function () {
+      var txt = reportText(DATA);
+      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { cp.textContent = "Copied"; }, function () { window.prompt("Copy this report:", txt); });
+    };
+  }
+  $("tabs").onclick = function (e) { var t = e.target && e.target.getAttribute && e.target.getAttribute("data-t"); if (t && DATA) { TAB = t; try { location.hash = t; } catch (x) {} show(); window.scrollTo(0, 0); } };
+  async function load() {
+    $("err").textContent = "";
+    try {
+      var r = await fetch("/admin/overview", { headers: { Authorization: "Bearer " + key }, cache: "no-store" });
+      if (r.status === 401) { stop(); $("app").style.display = "none"; $("gate").style.display = ""; $("err").textContent = "Wrong admin password."; return; }
+      var d = await r.json(); if (!d.ok) throw new Error(d.error || "failed");
+      DATA = d; $("gate").style.display = "none"; $("app").style.display = ""; $("upd").textContent = "Updated " + new Date(d.at).toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" }); show();
+    } catch (e) { $("err").textContent = "Could not load: " + (e && e.message || e); if (DATA) $("upd").textContent = "Offline"; }
+  }
+  function stop() { if (timer) clearInterval(timer); timer = null; key = ""; DATA = null; }
+  function start() { key = $("k").value.trim(); if (!key) { $("err").textContent = "Enter your admin password first."; return; } $("k").value = ""; var h = (location.hash || "").slice(1); if (VIEWS[h]) TAB = h; if (timer) clearInterval(timer); load(); timer = setInterval(load, 300000); }
+  $("go").onclick = start; $("k").onkeydown = function (e) { if (e.key === "Enter") start(); }; $("rf").onclick = load;
+})();
+</script></body></html>`;
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -2125,6 +2441,14 @@ export default {
       }
 
       // Phone-friendly admin page: it holds no secret. Every action sends the password you type as a header to the routes below.
+      // Admin dashboard: the page holds no secret; it sends the password you type to /admin/overview.
+      if (url.pathname === '/admin/dashboard' && req.method === 'GET') {
+        return new Response(ADMIN_DASH_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Robots-Tag': 'noindex', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'" } });
+      }
+      if (url.pathname === '/admin/overview' && req.method === 'GET') {
+        if (!env.ADMIN_SECRET || req.headers.get('Authorization') !== `Bearer ${env.ADMIN_SECRET}`) return json(env, { error: 'unauthorized' }, 401);
+        return handleAdminOverview(env);
+      }
       if (url.pathname === '/admin/panel' && req.method === 'GET') {
         return new Response(ADMIN_PANEL_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Robots-Tag': 'noindex', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'" } });
       }
@@ -2226,7 +2550,7 @@ export default {
     }
     // Each step runs on its own: fetching new jobs goes first, and a failing cleanup can no longer stop it. Every outcome is written to the logs.
     ctx.waitUntil((async () => {
-      for (const [name, step] of [['fetch new jobs', () => triggerBrightData(env)], ['retry embedding', () => retryUnembedded(env)], ['cleanup', () => pruneExpired(env)]]) {
+      for (const [name, step] of [['fetch new jobs', () => triggerBrightData(env)], ['retry embedding', () => retryUnembedded(env)], ['daily snapshot', () => snapshotDaily(env)], ['cleanup', () => pruneExpired(env)]]) {
         try { console.log('cron', name, 'ok', JSON.stringify((await step()) || 'done').slice(0, 300)); }
         catch (e) { console.log('cron', name, 'FAILED', String((e && e.message) || e)); }
       }
