@@ -1291,27 +1291,6 @@
 
             <!-- TAB 4: PROFILE -->
             <div class="tab-view" id="profileTab"><div id="profileView"></div>
-                <div id="profileShield"><div class="glass-panel">
-                    <div class="section-label-modal">
-                        <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Chania Verification Shield
-                    </div>
-                    <div class="detail-block" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="scalloped-badge lg">
-                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M12 0L14.59 2.05L17.89 1.62L19.34 4.61L22.47 5.76L22.42 9.09L24.8 11.45L23.27 14.41L24.32 17.57L21.13 18.52L20.8 21.84L17.51 21.28L15.3 23.78L12.01 22.88L9.57 24.8L7.38 22.25L4.1 22.7L3.65 19.39L0.5 18.33L1.44 15.14L0 12.13L2.27 9.68L2.11 6.35L5.27 5.32L6.82 2.38L10.08 2.92L12 0Z" fill="#0052FF"/>
-                                    <path d="M7.5 12L10.5 15L16.5 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </span>
-                            <div>
-                                <div style="font-size: 12.5px; font-weight: 700; color: var(--text-primary);">Smartika Trust Network</div>
-                                <div style="font-size: 10.5px; color: var(--text-muted);">Verified Credentials Active</div>
-                            </div>
-                        </div>
-                        <span style="font-size: 11px; font-weight: 800; color: var(--emerald-green);">VERIFIED</span>
-                    </div>
-                </div>
-                </div>
             </div>
 
         </div>
@@ -1560,14 +1539,14 @@
                         <div class="detail-block" onclick="downloadStudioPdf('cv')" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer;">
                             <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
                                 <i data-lucide="file-text" style="width: 15px; height: 15px; color: var(--accent-orange); flex-shrink: 0;"></i>
-                                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Job CV.pdf</span>
+                                <span id="studioCvFileName" style="font-size: 12px; font-weight: 700; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Job CV.pdf</span>
                             </div>
                             <i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--emerald-green); flex-shrink: 0;"></i>
                         </div>
                         <div class="detail-block" onclick="downloadStudioPdf('cover')" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 0; cursor: pointer;">
                             <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
                                 <i data-lucide="file-text" style="width: 15px; height: 15px; color: var(--accent-orange); flex-shrink: 0;"></i>
-                                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Cover Letter.pdf</span>
+                                <span id="studioCoverFileName" style="font-size: 12px; font-weight: 700; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Cover Letter.pdf</span>
                             </div>
                             <i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--emerald-green); flex-shrink: 0;"></i>
                         </div>
@@ -1724,7 +1703,8 @@
             </span>`;
 
         let activeJobId = null;
-        let studioAttachments = ['Job CV attachment.pdf'];
+        let studioCvName = 'Job CV attachment.pdf';
+        let studioAttachments = [studioCvName];
 
         let discoverState = { working: false, releaseAt: 0 };   // set from /matches: the worker holds matches back until the release time
         let releaseTimer = null;
@@ -2308,6 +2288,13 @@
             document.getElementById('mpesaModal').style.display = 'none';
         }
 
+        function closeMpesaFade() {
+            const m = document.getElementById('mpesaModal');
+            m.style.transition = 'opacity .3s';
+            m.style.opacity = '0';
+            setTimeout(() => { m.style.display = 'none'; m.style.opacity = ''; m.style.transition = ''; }, 300);
+        }
+
         function payFail(msg) {
             document.getElementById('mpesaFailMsg').innerText = msg || 'We could not confirm your payment. Please try again.';
             mpesaStep('Fail');
@@ -2335,8 +2322,10 @@
             }
             if (run !== payRun) return;
             if (status !== 'success') return payFail(status === 'pending' || status === 'expired' ? "We didn't get your payment confirmation yet. If money was taken, the job will unlock by itself within a minute." : 'The payment was not completed. Please try again.');
-            await loadMyMatches();   // the server now sends this job with its company, location and apply link
-            document.getElementById('mpesaModal').style.display = 'none';
+            document.getElementById('mpesaWaitText').innerText = 'Payment received \u2713';
+            closeMpesaFade();
+            switchTab(document.querySelector('.bottom-nav .nav-item'), 'discoverTab');
+            await Promise.race([loadMyMatches(), sleep(8000)]);   // the server now sends this job with its company, location and apply link; never block on a slow fetch
             const fresh = jobData.find(j => j.serverId === job.serverId);
             if (fresh) openModal(fresh.id);
         }
@@ -2440,6 +2429,8 @@
             const job = jobData.find(j => j.id === activeJobId);
             if (job) {
                 document.getElementById('studioJobTitle').innerText = job.title;
+                document.getElementById('studioCvFileName').innerText = docFileName('cv');
+                document.getElementById('studioCoverFileName').innerText = docFileName('cover');
                 document.getElementById('studioJobCompany').innerHTML = `${job.company} ${job.verified ? scallopedBadgeSVG : ''}`;
                 document.getElementById('emailPreviewSubject').innerText = `Application: ${job.title} – ${(profile && profile.full_name) || 'Applicant'}`;
             }
@@ -2532,9 +2523,10 @@
         }
 
         function renderStudioAttachments() {
-            if (!studioAttachments.includes('Job CV attachment.pdf')) {
-                studioAttachments.unshift('Job CV attachment.pdf');
-            }
+            const cvName = docFileName('cv');
+            studioAttachments = studioAttachments.filter(n => n !== studioCvName && n !== cvName);   // swap the old job's CV name for this job's
+            studioAttachments.unshift(cvName);
+            studioCvName = cvName;
             const fileIcon = `<i data-lucide="file-text" style="width: 13px; height: 13px; color: var(--accent-orange); flex-shrink: 0;"></i>`;
             const clipIcon = `<i data-lucide="paperclip" style="width: 13px; height: 13px; color: var(--accent-orange); flex-shrink: 0;"></i>`;
             const row = (name, icon, showStatus) => `
@@ -2760,6 +2752,14 @@
             return pdfFromJpeg(atob(cv.toDataURL('image/jpeg', 0.92).split(',')[1]), lines);
         }
 
+        // "<Job title> CV.pdf" / "<Job title> Cover Letter.pdf": one name per job, so downloads never become CV (1), Cover Letter (1)
+        function docFileName(kind) {
+            const job = jobData.find(j => j.id === activeJobId);
+            const title = String((job && job.title) || '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60).trim();
+            const label = kind === 'cv' ? 'CV' : 'Cover Letter';
+            return (title ? title + ' ' : 'Job ') + label + '.pdf';
+        }
+
         async function downloadStudioPdf(kind) {
             const src = document.getElementById(kind === 'cv' ? 'content-cv' : 'content-cover').querySelector('.studio-editable');
             const lines = domToLines(src);
@@ -2768,7 +2768,7 @@
             if (!blob) blob = buildPdfBlob(lines, kind === 'cv');
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = kind === 'cv' ? 'Job CV.pdf' : 'Cover Letter.pdf';
+            a.download = docFileName(kind);
             document.body.appendChild(a); a.click(); a.remove();
             setTimeout(() => URL.revokeObjectURL(a.href), 1500);
         }
@@ -3079,7 +3079,7 @@
             if (GOOGLE_CLIENT_ID && !localStorage.getItem('chania_email')) {
                 flow = 'google_gate';
                 const id = 'gbtn' + Date.now();
-                return bot(`Hi 😊 Welcome to Chania AI!<br><br>Sign in with Google to keep your profile safe if you change phones or clear your browser. It is also where we email you when your matches are ready.<br><br>Used Chania AI before? Signing in brings your profile back.<div id="${id}" style="margin-top:10px;min-height:44px"></div>`, () => { mountGoogleButton(id); restoreReplies(); });
+                return bot(`Hi 😊 Welcome to Chania AI!<br><br>Sign in with Google to keep your profile safe if you change phones or clear your browser. It is also where we email you when your matches are ready.<div id="${id}" style="margin-top:10px;min-height:44px"></div>`, () => { mountGoogleButton(id); restoreReplies(); });
             }
             flow = 'ask_help';
             bot('Hi 😊, how can I help you today?', restoreReplies);
