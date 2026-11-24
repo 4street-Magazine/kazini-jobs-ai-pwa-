@@ -3265,7 +3265,22 @@
         }
         function promoteDeal(btn) {
             const link = affData && affData.link; if (!link) return;
-            const text = 'Discover job opportunities that match your career profile on Chania AI. Sign up today: ' + link;
+            const text = [
+                'You studied. You graduated. You have skills.',
+                'So why are you still jobless?',
+                'Sometimes, it’s not about your qualifications. It’s about seeing the right opportunity at the right time.',
+                'The jobs that match your skills could be posted while you’re busy, offline, or simply unaware.',
+                'And by the time you discover them, applications may already be closed.',
+                'That’s where Chania AI comes in.',
+                'At Chania AI, we hunt for jobs that match YOUR career profile every day.',
+                'We notify you when relevant opportunities are posted, helping you discover them early enough to take action.',
+                'No more endlessly searching through hundreds of random job listings.',
+                'No more missing relevant opportunities simply because you didn’t know they existed.',
+                'You deserve a chance to find the RIGHT job at the RIGHT time.',
+                'Your dreams deserve a chance. Your career deserves a start.',
+                'Don’t let another opportunity pass you by.',
+                'SIGN UP FREE TODAY!\n' + link
+            ].join('\n\n');
             if (navigator.share) {
                 const withPoster = !!(affPosterFile && navigator.canShare && navigator.canShare({ files: [affPosterFile] }));
                 navigator.share(withPoster ? { files: [affPosterFile], text } : { text }).catch(e => { if (!e || e.name !== 'AbortError') navigator.share({ text }).catch(() => {}); });
