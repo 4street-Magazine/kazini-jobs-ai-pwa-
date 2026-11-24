@@ -1432,7 +1432,7 @@ async function handleGoogleAuth(req, env) {
 }
 
 /* ---------- Paystack M-Pesa payments. The phone never decides what is unlocked: a job opens only after Paystack confirms the payment here.
-   Secret: PAYSTACK_SECRET_KEY (Cloudflare secret). Optional variable: CONTRIBUTION_KES (default 30). Webhook URL for the Paystack dashboard: <this worker>/pay/webhook ---------- */
+   Secret: PAYSTACK_SECRET_KEY (Cloudflare secret). Optional variable: CONTRIBUTION_KES (default 35). Webhook URL for the Paystack dashboard: <this worker>/pay/webhook ---------- */
 let payTablesReady = false;
 async function ensurePayTables(env) {
   if (payTablesReady) return;
@@ -1441,9 +1441,13 @@ async function ensurePayTables(env) {
     env.DB.prepare('CREATE INDEX IF NOT EXISTS payments_profile_job ON payments(profile_id, job_id)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS unlocks (profile_id INTEGER NOT NULL, job_id TEXT NOT NULL, kind TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, PRIMARY KEY (profile_id, job_id))'),
   ]);
+  for (const col of ['aff_id INTEGER', 'split_on INTEGER DEFAULT 0']) {   // affiliate who referred the payer, and whether the Paystack split was attached
+    try { await env.DB.prepare('SELECT ' + col.split(' ')[0] + ' FROM payments LIMIT 1').first(); }
+    catch (e) { await env.DB.prepare('ALTER TABLE payments ADD COLUMN ' + col).run(); }   // first use only
+  }
   payTablesReady = true;
 }
-const contributionKes = env => Math.max(1, parseInt(env.CONTRIBUTION_KES || '30', 10) || 30);
+const contributionKes = env => Math.max(1, parseInt(env.CONTRIBUTION_KES || '35', 10) || 35);
 
 async function paystack(env, path, method, body) {
   try {
@@ -1480,7 +1484,8 @@ async function markFreeUsed(env, profileId, jobId) {
 
 // Checks the payment with Paystack itself (never trusts the caller) and unlocks the job once it is confirmed and the amount is right.
 async function settlePayment(env, ref) {
-  const p = await env.DB.prepare('SELECT reference, profile_id, job_id, amount, currency, status, created_at FROM payments WHERE reference = ?').bind(ref).first();
+  await ensureAffTables(env);
+  const p = await env.DB.prepare('SELECT reference, profile_id, job_id, amount, currency, status, created_at, aff_id, split_on FROM payments WHERE reference = ?').bind(ref).first();
   if (!p) return null;
   if (p.status === 'success' || p.status === 'failed') return p.status;
   const v = await paystack(env, '/transaction/verify/' + encodeURIComponent(ref), 'GET');
@@ -1490,6 +1495,13 @@ async function settlePayment(env, ref) {
       const now = Date.now();
       const stmts = [env.DB.prepare("UPDATE payments SET status = 'success', paid_at = ? WHERE reference = ?").bind(now, ref)];
       if (p.job_id !== '__test__') stmts.push(env.DB.prepare("INSERT OR IGNORE INTO unlocks (profile_id, job_id, kind, used, created_at) VALUES (?, ?, 'paid', 0, ?)").bind(p.profile_id, p.job_id, now));   // admin test payments unlock nothing
+      if (p.job_id !== '__test__' && p.aff_id) {   // a referred person paid: the affiliate earns on this payment (INSERT OR IGNORE: a repeated check can never pay twice)
+        const a = await env.DB.prepare('SELECT split_share FROM affiliates WHERE profile_id = ?').bind(p.aff_id).first();
+        const share = (p.split_on && a && a.split_share) ? a.split_share : affShareKobo(env);
+        const fee = Number(d.fees) > 0 ? Number(d.fees) : Math.round(p.amount * 0.015);   // Paystack's own fee when it reports one, else the 1.5% M-PESA rate
+        const net = Math.max(0, share - Math.round(fee / 2));   // the fee is shared 50-50 with the affiliate
+        stmts.push(env.DB.prepare("INSERT OR IGNORE INTO affiliate_earnings (reference, affiliate_id, referred_profile_id, job_id, gross, share, net, split_applied, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'earned', ?)").bind(ref, p.aff_id, p.profile_id, p.job_id, p.amount, share, net, p.split_on ? 1 : 0, now));
+      }
       await env.DB.batch(stmts);
       return 'success';
     }
@@ -1516,8 +1528,8 @@ async function handlePayStart(req, env) {
   const phone = kePhone(b.phone);
   if (!deviceId || !jobId) return json(env, { ok: false, error: 'bad_request', message: 'Something went wrong. Please try again.' }, 400);
   if (!phone) return fail('Please enter a valid Safaricom number, like 0712 345 678.', 'bad_phone');
-  await ensurePayTables(env); await ensureEmailCol(env);
-  const prow = await env.DB.prepare('SELECT id, email FROM profiles WHERE device_id = ?').bind(deviceId).first();
+  await ensureAffTables(env);
+  const prow = await env.DB.prepare('SELECT id, email, referred_by FROM profiles WHERE device_id = ?').bind(deviceId).first();
   if (!prow) return fail('We could not find your profile. Please sign in again.', 'no_profile');
   const job = await env.DB.prepare('SELECT id FROM jobs WHERE id = ?').bind(jobId).first();
   if (!job) return fail('That job is no longer available.', 'job_not_found');
@@ -1529,13 +1541,29 @@ async function handlePayStart(req, env) {
   const recent = await env.DB.prepare('SELECT COUNT(*) AS n FROM payments WHERE profile_id = ? AND created_at > ?').bind(prow.id, now - 600000).first();
   if (recent && recent.n >= (env.PAY_DEBUG === '1' ? 30 : 5)) return fail('Too many attempts. Please wait a few minutes and try again.', 'too_many');
 
+  if (b.ref && !prow.referred_by) prow.referred_by = await claimReferral(env, prow.id, prow.email, b.ref);   // a link that was opened but never claimed still counts, as long as nothing has been paid yet
+  let aff = null;
+  if (prow.referred_by) {
+    aff = await env.DB.prepare('SELECT a.profile_id, a.phone, a.split_code, p.email FROM affiliates a JOIN profiles p ON p.id = a.profile_id WHERE a.profile_id = ?').bind(prow.referred_by).first();
+    if (aff && (aff.phone === phone || (aff.email && prow.email && String(aff.email).toLowerCase() === String(prow.email).toLowerCase()))) aff = null;   // paying for yourself earns nothing
+  }
+  const useSplit = !!(aff && aff.split_code);
   const kes = contributionKes(env);
-  const ref = 'chn_' + now.toString(36) + [...crypto.getRandomValues(new Uint8Array(6))].map(x => x.toString(16).padStart(2, '0')).join('');
-  await env.DB.prepare("INSERT INTO payments (reference, profile_id, job_id, amount, currency, status, created_at) VALUES (?, ?, ?, ?, 'KES', 'pending', ?)").bind(ref, prow.id, jobId, kes * 100, now).run();
-  const ch = await paystack(env, '/charge', 'POST', {
+  let ref = 'chn_' + now.toString(36) + [...crypto.getRandomValues(new Uint8Array(6))].map(x => x.toString(16).padStart(2, '0')).join('');
+  await env.DB.prepare("INSERT INTO payments (reference, profile_id, job_id, amount, currency, status, created_at, aff_id, split_on) VALUES (?, ?, ?, ?, 'KES', 'pending', ?, ?, ?)").bind(ref, prow.id, jobId, kes * 100, now, aff ? aff.profile_id : null, useSplit ? 1 : 0).run();
+  const body = {
     email: prow.email || `p${prow.id}@chaniajobsai.co.ke`, amount: kes * 100, currency: 'KES', reference: ref,
     mobile_money: { phone, provider: 'mpesa' }, metadata: { profile_id: prow.id, job_id: jobId },
-  });
+  };
+  if (useSplit) body.split_code = aff.split_code;   // Paystack divides the payment itself: the affiliate's share goes straight to their M-Pesa
+  let ch = await paystack(env, '/charge', 'POST', body);
+  if (!ch.ok && useSplit) {   // Paystack refused the split: never block the person from paying. Charge normally; the affiliate's share is recorded as owed and paid by hand
+    console.log('pay: charge with split refused, retrying without it', ref, ch.message);
+    const ref2 = ref + 'b';
+    await env.DB.prepare('UPDATE payments SET reference = ?, split_on = 0 WHERE reference = ?').bind(ref2, ref).run();
+    ref = ref2; body.reference = ref2; delete body.split_code;
+    ch = await paystack(env, '/charge', 'POST', body);
+  }
   const st = String((ch.data && ch.data.status) || '');
   console.log('pay: Paystack charge reply', ref, 'ok=' + ch.ok, 'status=' + st, 'message=' + ch.message, 'display=' + String((ch.data && ch.data.display_text) || ''), 'gateway=' + String((ch.data && ch.data.gateway_response) || ''));   // what Paystack said: no secrets in here
   if (!ch.ok || st === 'failed') {
@@ -1565,11 +1593,151 @@ async function handlePayWebhook(req, env) {
   if (!safeEqual(req.headers.get('x-paystack-signature') || '', expected)) return new Response('bad signature', { status: 401 });
   let ev = {}; try { ev = JSON.parse(raw); } catch (e) {}
   const ref = ev && ev.data && ev.data.reference;
+  if (String(ev.event || '').startsWith('refund')) {   // a refunded payment takes the affiliate's commission back
+    const orig = ev.data && (ev.data.transaction_reference || ev.data.reference);
+    if (orig) { try { await ensureAffTables(env); await env.DB.prepare("UPDATE affiliate_earnings SET status = 'reversed' WHERE reference = ?").bind(String(orig)).run(); } catch (e) { console.log('refund webhook error', String((e && e.message) || e)); } }
+  }
   if (ref && (ev.event === 'charge.success' || ev.event === 'charge.failed')) {
     await ensurePayTables(env);
     try { await settlePayment(env, String(ref)); } catch (e) { console.log('pay webhook error', String((e && e.message) || e)); }
   }
   return new Response('ok', { status: 200 });
+}
+
+/* ---------- Affiliates. An affiliate earns only when someone they referred pays to unlock a match: nothing for signups or clicks.
+   Each affiliate gets a Paystack subaccount (their M-Pesa) and a saved flat split, so Paystack pays their share automatically when a referred person pays.
+   The Paystack fee is shared 50-50 (bearer_type "all"). Optional variables: AFFILIATE_SHARE_KES (default 8), AFFILIATE_SETTLEMENT_BANK (default MPESA),
+   APP_URL (used in the referral link). Open /admin/affiliate-banks?key=ADMIN_SECRET to see the exact bank code Paystack uses for M-PESA. ---------- */
+const affShareKobo = env => Math.max(1, parseInt(env.AFFILIATE_SHARE_KES || '8', 10) || 8) * 100;
+let affTablesReady = false;
+async function ensureAffTables(env) {
+  if (affTablesReady) return;
+  await ensurePayTables(env); await ensureEmailCol(env);
+  await env.DB.batch([
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS affiliates (profile_id INTEGER PRIMARY KEY, code TEXT NOT NULL UNIQUE, phone TEXT NOT NULL, subaccount_code TEXT, split_code TEXT, split_share INTEGER, created_at INTEGER NOT NULL)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS affiliate_earnings (reference TEXT PRIMARY KEY, affiliate_id INTEGER NOT NULL, referred_profile_id INTEGER NOT NULL, job_id TEXT, gross INTEGER NOT NULL, share INTEGER NOT NULL, net INTEGER NOT NULL, split_applied INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT \'earned\', created_at INTEGER NOT NULL)'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS aff_earn_aff ON affiliate_earnings(affiliate_id, created_at)'),
+  ]);
+  try { await env.DB.prepare('SELECT referred_by FROM profiles LIMIT 1').first(); }
+  catch (e) { await env.DB.prepare('ALTER TABLE profiles ADD COLUMN referred_by INTEGER').run(); }   // first use only
+  affTablesReady = true;
+}
+const affLink = (env, code) => (env.APP_URL || 'https://chaniajobsai.co.ke').replace(/\/$/, '') + '/?ref=' + code;
+const kesOf = k => Math.round(Number(k || 0)) / 100;
+
+// Ties a person to the affiliate whose link they used. The first affiliate wins for good; nobody can refer themselves. Returns the affiliate's profile id, or 0.
+async function claimReferral(env, profileId, email, rawCode) {
+  const code = String(rawCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  if (!code) return 0;
+  const a = await env.DB.prepare('SELECT a.profile_id, p.email FROM affiliates a JOIN profiles p ON p.id = a.profile_id WHERE a.code = ?').bind(code).first();
+  if (!a || a.profile_id === profileId) return 0;
+  if (a.email && email && String(a.email).toLowerCase() === String(email).toLowerCase()) return 0;
+  const me = await env.DB.prepare('SELECT referred_by FROM profiles WHERE id = ?').bind(profileId).first();
+  if (me && me.referred_by) return me.referred_by;
+  await env.DB.prepare('UPDATE profiles SET referred_by = ? WHERE id = ? AND referred_by IS NULL').bind(a.profile_id, profileId).run();
+  return a.profile_id;
+}
+
+// Creates the affiliate's Paystack subaccount (their M-Pesa) and the saved flat split that pays them the fixed share.
+async function setupAffiliatePay(env, code, name, phone) {
+  if (!env.PAYSTACK_SECRET_KEY) return { sub: null, split: null, why: 'Paystack is not configured' };
+  const s = await paystack(env, '/subaccount', 'POST', {
+    business_name: (String(name || 'Affiliate').slice(0, 40) + ' ' + code).trim(),
+    settlement_bank: env.AFFILIATE_SETTLEMENT_BANK || 'MPESA',
+    account_number: '0' + phone.slice(4),   // +254712345678 -> 0712345678
+    percentage_charge: 0,   // the split below decides the amounts; this only has to be present
+  });
+  const sub = s.ok && s.data && s.data.subaccount_code;
+  if (!sub) return { sub: null, split: null, why: 'subaccount: ' + s.message };
+  const sp = await paystack(env, '/split', 'POST', {
+    name: 'aff_' + code, type: 'flat', currency: 'KES', bearer_type: 'all',   // "all": the main account and the affiliate each pay half of Paystack's fee
+    subaccounts: [{ subaccount: sub, share: affShareKobo(env) }],
+  });
+  const split = sp.ok && sp.data && sp.data.split_code;
+  return { sub, split: split || null, why: split ? '' : 'split: ' + sp.message };
+}
+
+async function handleAffiliateJoin(req, env) {
+  let b = {}; try { b = await req.json(); } catch (e) {}
+  const deviceId = String(b.deviceId || '').slice(0, 100), phone = kePhone(b.phone);
+  if (!deviceId) return json(env, { ok: false, error: 'bad_request' }, 400);
+  if (!phone) return json(env, { ok: false, error: 'bad_phone', message: 'Please enter the Safaricom number where you want to be paid, like 0712 345 678.' });
+  await ensureAffTables(env);
+  const prow = await env.DB.prepare('SELECT id, email, full_name FROM profiles WHERE device_id = ?').bind(deviceId).first();
+  if (!prow) return json(env, { ok: false, error: 'no_profile', message: 'We could not find your profile. Please sign in again.' });
+  if (!prow.email) return json(env, { ok: false, error: 'sign_in_required', message: 'Please sign in with Google first.' });
+  let a = await env.DB.prepare('SELECT code, phone, subaccount_code, split_code FROM affiliates WHERE profile_id = ?').bind(prow.id).first();
+  let why = '';
+  if (!a) {
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6 && !a; i++) {
+      code = [...crypto.getRandomValues(new Uint8Array(7))].map(x => alphabet[x % alphabet.length]).join('');
+      try {
+        await env.DB.prepare('INSERT INTO affiliates (profile_id, code, phone, created_at) VALUES (?, ?, ?, ?)').bind(prow.id, code, phone, Date.now()).run();
+        a = { code, phone, subaccount_code: null, split_code: null };
+      } catch (e) { /* code already taken: try another */ }
+    }
+    if (!a) return json(env, { ok: false, error: 'failed', message: 'Something went wrong. Please try again.' });
+  }
+  if (!a.split_code) {   // new affiliate, or an earlier setup that Paystack refused: try again
+    const r = await setupAffiliatePay(env, a.code, prow.full_name, a.phone);
+    why = r.why;
+    if (r.split) {
+      a.split_code = r.split; a.subaccount_code = r.sub;
+      await env.DB.prepare('UPDATE affiliates SET subaccount_code = ?, split_code = ?, split_share = ? WHERE profile_id = ?').bind(r.sub, r.split, affShareKobo(env), prow.id).run();
+    } else console.log('affiliate: Paystack setup failed for', a.code, why);
+  }
+  const out = { ok: true, code: a.code, link: affLink(env, a.code), auto_pay: !!a.split_code };
+  if (!a.split_code) out.message = 'You are signed up and your link works. Automatic M-Pesa payment is not switched on for your account yet, so your earnings are kept and paid to you by hand.';
+  if (!a.split_code && env.PAY_DEBUG === '1') out.debug = why;
+  return json(env, out);
+}
+
+async function handleAffiliateDashboard(req, env) {
+  let b = {}; try { b = await req.json(); } catch (e) {}
+  const deviceId = String(b.deviceId || '').slice(0, 100);
+  if (!deviceId) return json(env, { ok: false, error: 'bad_request' }, 400);
+  await ensureAffTables(env);
+  const prow = await env.DB.prepare('SELECT id FROM profiles WHERE device_id = ?').bind(deviceId).first();
+  if (!prow) return json(env, { ok: false, error: 'no_profile' });
+  const a = await env.DB.prepare('SELECT code, phone, split_code FROM affiliates WHERE profile_id = ?').bind(prow.id).first();
+  if (!a) return json(env, { ok: true, isAffiliate: false, per_unlock_kes: kesOf(affShareKobo(env)) });
+  const now = Date.now();
+  const t = await env.DB.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(net), 0) AS net, COALESCE(SUM(CASE WHEN split_applied = 0 THEN net END), 0) AS owed, COALESCE(SUM(CASE WHEN created_at > ? THEN net END), 0) AS wk_net, COALESCE(SUM(CASE WHEN created_at > ? THEN 1 END), 0) AS wk_n FROM affiliate_earnings WHERE affiliate_id = ? AND status = 'earned'").bind(now - 7 * 86400000, now - 7 * 86400000, prow.id).first();
+  const rec = await env.DB.prepare("SELECT net, created_at, split_applied FROM affiliate_earnings WHERE affiliate_id = ? AND status = 'earned' ORDER BY created_at DESC LIMIT 30").bind(prow.id).all();
+  return json(env, {
+    ok: true, isAffiliate: true, code: a.code, link: affLink(env, a.code), auto_pay: !!a.split_code,
+    pay_phone: a.phone.slice(0, 7) + '***' + a.phone.slice(-3),
+    per_unlock_kes: kesOf(affShareKobo(env)),
+    paid_unlocks: t.n, earned_kes: kesOf(t.net), owed_by_hand_kes: kesOf(t.owed), week_unlocks: t.wk_n, week_kes: kesOf(t.wk_net),
+    recent: (rec.results || []).map(r => ({ kes: kesOf(r.net), at: r.created_at, auto: !!r.split_applied })),
+  });
+}
+
+async function handleReferralClaim(req, env) {
+  let b = {}; try { b = await req.json(); } catch (e) {}
+  const deviceId = String(b.deviceId || '').slice(0, 100);
+  if (!deviceId || !b.code) return json(env, { ok: false, error: 'bad_request' }, 400);
+  await ensureAffTables(env);
+  const prow = await env.DB.prepare('SELECT id, email FROM profiles WHERE device_id = ?').bind(deviceId).first();
+  if (!prow) return json(env, { ok: true, claimed: false });
+  return json(env, { ok: true, claimed: !!(await claimReferral(env, prow.id, prow.email, b.code)) });
+}
+
+// Owner view: every affiliate, what they earned, and how much of it still has to be paid by hand (earnings whose Paystack split was not applied).
+async function handleAdminAffiliates(env) {
+  await ensureAffTables(env);
+  const r = await env.DB.prepare("SELECT a.code, a.phone, CASE WHEN a.split_code IS NULL THEN 0 ELSE 1 END AS auto_pay, COUNT(e.reference) AS unlocks, COALESCE(SUM(e.net), 0) AS earned, COALESCE(SUM(CASE WHEN e.split_applied = 0 THEN e.net END), 0) AS owed FROM affiliates a LEFT JOIN affiliate_earnings e ON e.affiliate_id = a.profile_id AND e.status = 'earned' GROUP BY a.profile_id ORDER BY earned DESC").all();
+  return json(env, { ok: true, affiliates: (r.results || []).map(x => ({ code: x.code, phone: x.phone, auto_pay: !!x.auto_pay, unlocks: x.unlocks, earned_kes: kesOf(x.earned), owed_by_hand_kes: kesOf(x.owed) })) });
+}
+async function handleAdminAffiliateBanks(env) {
+  const out = {};
+  for (const q of ['/bank?country=kenya&perPage=100', '/bank?currency=KES&type=mobile_money&perPage=100']) {
+    const r = await paystack(env, q, 'GET');
+    out[q] = r.ok && Array.isArray(r.data) ? r.data.map(x => ({ name: x.name, code: x.code, type: x.type })) : { error: r.message };
+  }
+  return json(env, out);
 }
 
 // Jobs the person has not unlocked keep their company, location and apply link on the server. Their first job is free.
@@ -1763,6 +1931,13 @@ export default {
       if (url.pathname === '/pay/start' && req.method === 'POST') return handlePayStart(req, env);
       if (url.pathname === '/pay/status' && req.method === 'POST') return handlePayStatus(req, env);
       if (url.pathname === '/pay/webhook' && req.method === 'POST') return handlePayWebhook(req, env);
+      if (url.pathname === '/affiliate/join' && req.method === 'POST') return handleAffiliateJoin(req, env);
+      if (url.pathname === '/affiliate/dashboard' && req.method === 'POST') return handleAffiliateDashboard(req, env);
+      if (url.pathname === '/referral/claim' && req.method === 'POST') return handleReferralClaim(req, env);
+      if ((url.pathname === '/admin/affiliates' || url.pathname === '/admin/affiliate-banks') && req.method === 'GET') {
+        if (!env.ADMIN_SECRET || url.searchParams.get('key') !== env.ADMIN_SECRET) return json(env, { error: 'unauthorized' }, 401);
+        return url.pathname === '/admin/affiliates' ? handleAdminAffiliates(env) : handleAdminAffiliateBanks(env);
+      }
 
       if (url.pathname === '/profile' && req.method === 'POST') {
         const r = await saveProfile(env, ctx, await req.json());
