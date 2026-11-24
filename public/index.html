@@ -2421,6 +2421,7 @@
 
         function renderStudioDocs(d) {
             curDocs = d;
+            if (!d.palette) d.palette = makePalette();   // CV and cover letter share it, so the pair always matches
             document.querySelector('#content-cv .studio-editable').innerHTML = cvHtml(d);
             document.querySelector('#content-cover .studio-editable').innerHTML = coverHtml(d);
         }
@@ -2669,20 +2670,20 @@
         }
         const pillList = (a, st) => a.map(t => `<span style="display:inline-block;margin:0 5px 6px 0;${st}">${escapeHtml(t)}</span>`).join('');
 
-        function cvEditorial(D) {   // layout 1: Editorial
-            const E = escapeHtml, hd = t => `<div style="margin:0 0 10px;font:700 11.5px Helvetica,Arial,sans-serif;letter-spacing:1.5px;color:#c2410c">${t}</div>`;
+        function cvEditorial(D, P) {   // layout 1: Editorial
+            const E = escapeHtml, hd = t => `<div style="margin:0 0 10px;font:700 11.5px Helvetica,Arial,sans-serif;letter-spacing:1.5px;color:${P.accent}">${t}</div>`;
             const nm = (D.name || 'Your Name').split(/\s+/), first = nm.shift();
-            const dot = '<span style="position:absolute;left:-29px;top:5px;width:10px;height:10px;border-radius:50%;background:#c2410c"></span>';
-            return `<div style="width:794px;min-height:1123px;box-sizing:border-box;padding:56px 54px;background:#faf7f2;font:13px/1.55 Helvetica,Arial,sans-serif;color:#1c1917">`
+            const dot = `<span style="position:absolute;left:-29px;top:5px;width:10px;height:10px;border-radius:50%;background:${P.accent}"></span>`;
+            return `<div style="width:794px;min-height:1123px;box-sizing:border-box;padding:56px 54px;background:${P.paper};font:13px/1.55 Helvetica,Arial,sans-serif;color:#1c1917">`
                 + `<div style="display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:16px;border-bottom:3px solid #1c1917"><div style="font:600 44px/1.02 Georgia,serif;letter-spacing:-1px">${E(first)}${nm.length ? '<br/>' + E(nm.join(' ')) : ''}</div>`
-                + `<div style="text-align:right">${D.headline ? `<span style="display:inline-block;background:#c2410c;color:#fff;border-radius:99px;padding:4px 16px;font-weight:700">${E(D.headline)}</span>` : ''}<div style="margin-top:8px;color:#57534e">${E(D.phone)}</div><div style="color:#57534e">${E(D.email)}</div></div></div>`
+                + `<div style="text-align:right">${D.headline ? `<span style="display:inline-block;background:${P.accent};color:#fff;border-radius:99px;padding:4px 16px;font-weight:700">${E(D.headline)}</span>` : ''}<div style="margin-top:8px;color:#57534e">${E(D.phone)}</div><div style="color:#57534e">${E(D.email)}</div></div></div>`
                 + (D.summary ? `<p style="margin:20px 0;font:italic 17px/1.45 Georgia,serif">${E(D.summary)}</p>` : '<div style="height:20px"></div>')
-                + `<div style="display:flex;gap:30px"><div style="flex:2">${D.exp.length ? hd('EXPERIENCE') + `<div style="margin-left:6px;padding-left:22px;border-left:2px solid #d6c7ba">${expBlock(D, dot)}</div>` : ''}${extrasBlock(D, hd)}</div>`
-                + `<div style="flex:1">${D.skills.length ? hd('SKILLS') + `<div style="margin-bottom:14px">${pillList(D.skills, 'background:#f3e3d6;color:#7c2d12;border-radius:99px;padding:3px 12px')}</div>` : ''}${D.cred.length ? hd('EDUCATION') + `<div style="background:#fff;border:1px solid #e7ddd3;border-radius:12px;padding:10px 12px;margin-bottom:16px">${D.cred.map(c => `<div style="margin-bottom:4px">${E(c)}</div>`).join('')}</div>` : ''}${D.langs ? hd('LANGUAGES') + `<div>${E(D.langs)}</div>` : ''}</div></div></div>`;
+                + `<div style="display:flex;gap:30px"><div style="flex:2">${D.exp.length ? hd('EXPERIENCE') + `<div style="margin-left:6px;padding-left:22px;border-left:2px solid ${P.line}">${expBlock(D, dot)}</div>` : ''}${extrasBlock(D, hd)}</div>`
+                + `<div style="flex:1">${D.skills.length ? hd('SKILLS') + `<div style="margin-bottom:14px">${pillList(D.skills, `background:${P.soft};color:${P.softText};border-radius:99px;padding:3px 12px`)}</div>` : ''}${D.cred.length ? hd('EDUCATION') + `<div style="background:#fff;border:1px solid ${P.edge};border-radius:12px;padding:10px 12px;margin-bottom:16px">${D.cred.map(c => `<div style="margin-bottom:4px">${E(c)}</div>`).join('')}</div>` : ''}${D.langs ? hd('LANGUAGES') + `<div>${E(D.langs)}</div>` : ''}</div></div></div>`;
         }
-        function cvSidebar(D) {   // layout 2: Sidebar
-            const E = escapeHtml, h = c => t => `<div style="margin:0 0 6px;font-weight:700;font-size:11.5px;letter-spacing:1.5px;${c}">${t}</div>`, sh = h(''), mh = h('color:#12403f');
-            const side = `<div style="width:250px;flex:none;box-sizing:border-box;padding:56px 26px;background:#12403f;color:#fff"><div style="font-size:28px;font-weight:700;line-height:1.15">${E(D.name || 'Your Name')}</div><div style="margin:8px 0 26px;color:#d4e6e4">${E(D.headline)}</div>`
+        function cvSidebar(D, P) {   // layout 2: Sidebar
+            const E = escapeHtml, h = c => t => `<div style="margin:0 0 6px;font-weight:700;font-size:11.5px;letter-spacing:1.5px;${c}">${t}</div>`, sh = h(''), mh = h('color:' + P.deep);
+            const side = `<div style="width:250px;flex:none;box-sizing:border-box;padding:56px 26px;background:${P.deep};color:#fff"><div style="font-size:28px;font-weight:700;line-height:1.15">${E(D.name || 'Your Name')}</div><div style="margin:8px 0 26px;color:${P.pale}">${E(D.headline)}</div>`
                 + (D.phone || D.email ? sh('CONTACT') + `<div style="margin-bottom:24px;word-break:break-all">${E(D.phone)}<br/>${E(D.email)}</div>` : '')
                 + (D.skills.length ? sh('SKILLS') + `<div style="margin-bottom:24px">${D.skills.map(x => E(x)).join('<br/>')}</div>` : '')
                 + (D.langs ? sh('LANGUAGES') + `<div>${E(D.langs)}</div>` : '') + '</div>';
@@ -2692,16 +2693,26 @@
                 + (D.cred.length ? mh('EDUCATION') + `<div style="margin-bottom:16px">${D.cred.map(x => E(x)).join('<br/>')}</div>` : '') + extrasBlock(D, mh) + '</div>';
             return `<div style="width:794px;min-height:1123px;box-sizing:border-box;display:flex;background:#fff;font:13px/1.55 Helvetica,Arial,sans-serif;color:#1f2937">${side}${main}</div>`;
         }
-        function cvModern(D) {   // layout 3: Modern
-            const E = escapeHtml, hd = t => `<div style="margin:0 0 6px;font-weight:700;font-size:11.5px;letter-spacing:1.5px;color:#1d4ed8">${t}</div>`;
-            const band = `<div style="box-sizing:border-box;padding:40px 54px;background:#1d4ed8;color:#fff"><div style="font-size:40px;font-weight:700;line-height:1.1">${E(D.name || 'Your Name')}</div><div style="margin-top:6px">${[D.headline, D.phone, D.email].filter(Boolean).map(x => E(x)).join(' \u2022 ')}</div></div>`;
+        function cvModern(D, P) {   // layout 3: Modern
+            const E = escapeHtml, hd = t => `<div style="margin:0 0 6px;font-weight:700;font-size:11.5px;letter-spacing:1.5px;color:${P.accent}">${t}</div>`;
+            const band = `<div style="box-sizing:border-box;padding:40px 54px;background:${P.accent};color:#fff"><div style="font-size:40px;font-weight:700;line-height:1.1">${E(D.name || 'Your Name')}</div><div style="margin-top:6px">${[D.headline, D.phone, D.email].filter(Boolean).map(x => E(x)).join(' \u2022 ')}</div></div>`;
             const left = `<div style="flex:3">${D.exp.length ? hd('EXPERIENCE') + expBlock(D, '') : ''}${D.cred.length ? hd('EDUCATION') + `<div style="margin-bottom:16px">${D.cred.map(x => E(x)).join('<br/>')}</div>` : ''}${extrasBlock(D, hd)}</div>`;
-            const right = `<div style="flex:2">${D.summary ? hd('SUMMARY') + `<p style="margin:0 0 18px">${E(D.summary)}</p>` : ''}${D.skills.length ? hd('SKILLS') + `<div style="margin-bottom:18px">${pillList(D.skills, 'border:1.5px solid #1d4ed8;border-radius:99px;padding:2px 12px')}</div>` : ''}${D.langs ? hd('LANGUAGES') + `<div>${E(D.langs)}</div>` : ''}</div>`;
+            const right = `<div style="flex:2">${D.summary ? hd('SUMMARY') + `<p style="margin:0 0 18px">${E(D.summary)}</p>` : ''}${D.skills.length ? hd('SKILLS') + `<div style="margin-bottom:18px">${pillList(D.skills, `border:1.5px solid ${P.accent};border-radius:99px;padding:2px 12px`)}</div>` : ''}${D.langs ? hd('LANGUAGES') + `<div>${E(D.langs)}</div>` : ''}</div>`;
             return `<div style="width:794px;min-height:1123px;box-sizing:border-box;background:#fff;font:13px/1.55 Helvetica,Arial,sans-serif;color:#1f2937">${band}<div style="display:flex;gap:34px;box-sizing:border-box;padding:30px 54px">${left}${right}</div></div>`;
         }
-        const DOC_THEME = [{ bg: '#faf7f2', accent: '#c2410c', serif: true }, { bg: '#ffffff', accent: '#12403f', serif: false }, { bg: '#ffffff', accent: '#1d4ed8', band: true }];
-        function coverLayout(t, C, w) {
-            const E = escapeHtml, th = DOC_THEME[t], F = th.serif ? 'Georgia,serif' : 'Helvetica,Arial,sans-serif';
+        const DOC_THEME = [{ serif: true }, { serif: false }, { band: true }];   // layout only; the colours come from a random palette
+        function hslHex(h, s, l) {
+            s /= 100; l /= 100;
+            const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+        }
+        function makePalette() {   // a fresh random colour family for each CV + cover letter pair (skips the muddy olive hues)
+            let h; do { h = Math.floor(Math.random() * 360); } while (h > 45 && h < 90);
+            return { accent: hslHex(h, 72, 34), deep: hslHex(h, 55, 20), soft: hslHex(h, 55, 90), softText: hslHex(h, 70, 24),
+                     paper: hslHex(h, 45, 97), line: hslHex(h, 30, 82), edge: hslHex(h, 25, 88), pale: hslHex(h, 40, 86) };
+        }
+        function coverLayout(t, C, w, P) {
+            const E = escapeHtml, th = { ...DOC_THEME[t], accent: P.accent, bg: t === 0 ? P.paper : '#ffffff' }, F = th.serif ? 'Georgia,serif' : 'Helvetica,Arial,sans-serif';
             const contact = [w.phone, w.email].filter(Boolean).map(x => E(x)).join(' \u2022 ');
             const head = th.band
                 ? `<div style="padding:22px 72px;background:${th.accent};color:#fff;font-weight:700;font-size:16px">${E(w.name)}${contact ? ' <span style="font-weight:400">\u2022 ' + contact + '</span>' : ''}</div>`
@@ -2730,12 +2741,12 @@
             return new Blob([bytes], { type: 'application/pdf' });
         }
         async function designedPdf(kind, lines) {   // returns null when it cannot (too long for one page, or the browser refuses): the caller then uses the plain PDF
-            const d = curDocs || {}, t = [0, 1, 2].includes(d.template) ? d.template : 0;
+            const d = curDocs || {}, t = [0, 1, 2].includes(d.template) ? d.template : 0, P = d.palette || makePalette();
             let html;
-            if (kind === 'cv') html = [cvEditorial, cvSidebar, cvModern][t](parseCv(lines));
+            if (kind === 'cv') html = [cvEditorial, cvSidebar, cvModern][t](parseCv(lines), P);
             else {
                 const C = parseCover(lines); if (!C) return null;
-                html = coverLayout(t, C, parseCv(domToLines(document.querySelector('#content-cv .studio-editable'))));
+                html = coverLayout(t, C, parseCv(domToLines(document.querySelector('#content-cv .studio-editable'))), P);
             }
             const host = document.createElement('div');
             host.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px';
@@ -2747,7 +2758,7 @@
             const img = new Image();
             await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="794" height="${h}"><foreignObject width="100%" height="100%">${xml}</foreignObject></svg>`); });
             const cv = document.createElement('canvas'); cv.width = 1588; cv.height = 2246;
-            const g = cv.getContext('2d'); g.fillStyle = DOC_THEME[t].bg; g.fillRect(0, 0, 1588, 2246);
+            const g = cv.getContext('2d'); g.fillStyle = t === 0 ? P.paper : '#ffffff'; g.fillRect(0, 0, 1588, 2246);
             g.drawImage(img, 0, 0, 1588 * s, h * 2 * s);
             return pdfFromJpeg(atob(cv.toDataURL('image/jpeg', 0.92).split(',')[1]), lines);
         }
