@@ -3245,6 +3245,7 @@
                     <button class="aff-btn ghost" style="width:100%" onclick="exitBusinessMode()"><i data-lucide="arrow-left-right" style="width:16px;height:16px"></i> Switch to user mode</button>`;
             }
             el.innerHTML = h; lucide.createIcons();
+            if (agentTabName === 'promote') affLoadPoster();
         }
         function affCopy(btn) {
             const link = affData && affData.link; if (!link) return;
@@ -3252,18 +3253,26 @@
             if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, () => {});
             else { const ta = document.createElement('textarea'); ta.value = link; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) {} ta.remove(); }
         }
-        // Promote Deal: shares the poster image (with the agent's link as the message, so every sign-up is credited to them); falls back to saving the poster
-        async function promoteDeal(btn) {
+        // Promote Deal opens the phone's share panel at once. The poster is fetched ahead of time (when the Promote tab shows), because phones only allow the panel
+        // straight after a tap. The message carries the agent's link, so every sign-up is credited to them. Without a share panel (a computer) the link is copied.
+        let affPosterFile = null, affPosterP = null;
+        function affLoadPoster() {
+            if (affPosterFile || affPosterP) return;
+            affPosterP = fetch(AFF_POSTER).then(async r => {
+                const b = await r.blob();
+                if (r.ok && /^image\//.test(b.type)) affPosterFile = new File([b], 'chania-ai-poster.' + b.type.split('/')[1].replace('jpeg', 'jpg'), { type: b.type });
+            }).catch(() => {}).finally(() => { affPosterP = null; });
+        }
+        function promoteDeal(btn) {
             const link = affData && affData.link; if (!link) return;
             const text = 'Discover job opportunities that match your career profile on Chania AI. Sign up today: ' + link;
-            const old = btn.innerHTML; btn.disabled = true;
-            try {
-                const blob = await (await fetch(AFF_POSTER)).blob();
-                const file = new File([blob], 'chania-ai-poster.' + (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg'), { type: blob.type || 'image/jpeg' });
-                if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text });
-                else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); btn.textContent = 'Poster saved ✓'; await new Promise(r => setTimeout(r, 1600)); }
-            } catch (e) { if (navigator.share) { try { await navigator.share({ text }); } catch (e2) {} } }
-            btn.disabled = false; btn.innerHTML = old; lucide.createIcons();
+            if (navigator.share) {
+                const withPoster = !!(affPosterFile && navigator.canShare && navigator.canShare({ files: [affPosterFile] }));
+                navigator.share(withPoster ? { files: [affPosterFile], text } : { text }).catch(e => { if (!e || e.name !== 'AbortError') navigator.share({ text }).catch(() => {}); });
+                return;
+            }
+            const done = () => { const t = btn.innerHTML; btn.textContent = 'Link copied ✓'; setTimeout(() => { btn.innerHTML = t; lucide.createIcons(); }, 1600); };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => {});
         }
         setTimeout(() => { affSyncSwitch(); claimRef(); if (affCode() && localStorage.getItem(MODE_KEY) === 'agent') enterBusinessMode(); }, 0);
 
