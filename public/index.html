@@ -821,6 +821,12 @@
             outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
+        .lp-bar { display: flex; gap: 6px; margin-bottom: 10px; }
+        .lp-bar button { flex: 1; padding: 8px 0; border-radius: 99px; border: 1px solid var(--border-subtle); background: var(--bg-surface); color: var(--text-muted); font: 700 12px inherit; font-family: inherit; cursor: pointer; }
+        .lp-bar button.on { background: var(--accent-orange); border-color: var(--accent-orange); color: #fff; }
+        .lp-fit { width: 100%; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 8px; background: #fff; }
+        .lp-page { transform-origin: 0 0; width: 794px; }
+        .lp-note { font-size: 12px; color: var(--text-secondary); padding: 14px; }
         .studio-editable:focus {
             border-color: var(--accent-orange);
             box-shadow: 0 0 0 3px var(--accent-orange-glow);
@@ -2422,6 +2428,7 @@
         function renderStudioDocs(d) {
             curDocs = d;
             if (!d.palette) d.palette = makePalette();   // CV and cover letter share it, so the pair always matches
+            renderDocPreview('cv'); renderDocPreview('cover');
             document.querySelector('#content-cv .studio-editable').innerHTML = cvHtml(d);
             document.querySelector('#content-cover .studio-editable').innerHTML = coverHtml(d);
         }
@@ -2493,6 +2500,7 @@
             });
 
             document.getElementById(`content-${tabName}`).style.display = 'block';
+            if (tabName === 'cv' || tabName === 'cover') renderDocPreview(tabName);
             const activeBtn = document.getElementById(`tab-${tabName}`);
             activeBtn.style.color = 'var(--accent-orange)';
             activeBtn.style.fontWeight = '700';
@@ -2701,6 +2709,56 @@
             return `<div style="width:794px;min-height:1123px;box-sizing:border-box;background:#fff;font:13px/1.55 Helvetica,Arial,sans-serif;color:#1f2937">${band}<div style="display:flex;gap:34px;box-sizing:border-box;padding:30px 54px">${left}${right}</div></div>`;
         }
         const DOC_THEME = [{ serif: true }, { serif: false }, { band: true }];   // layout only; the colours come from a random palette
+        // Preview / Edit: Preview draws the real layout and colours (same code as the PDF); Edit is the text box
+        const docMode = { cv: 'preview', cover: 'preview' };
+        function initDocPreview() {
+            ['cv', 'cover'].forEach(kind => {
+                const box = document.getElementById('content-' + kind), ed = box.querySelector('.studio-editable');
+                if (box.querySelector('.lp-bar')) return;
+                const bar = document.createElement('div'); bar.className = 'lp-bar';
+                bar.innerHTML = '<button type="button" data-m="preview">Preview</button><button type="button" data-m="edit">Edit</button>';
+                const pv = document.createElement('div'); pv.id = 'lp-' + kind;
+                box.insertBefore(pv, ed); box.insertBefore(bar, pv);
+                bar.addEventListener('click', e => { const m = e.target.dataset && e.target.dataset.m; if (m) setDocMode(kind, m); });
+                setDocMode(kind, 'preview');
+            });
+        }
+        function setDocMode(kind, mode) {
+            docMode[kind] = mode;
+            const box = document.getElementById('content-' + kind);
+            box.querySelector('.studio-editable').style.display = mode === 'edit' ? '' : 'none';
+            document.getElementById('lp-' + kind).style.display = mode === 'preview' ? 'block' : 'none';
+            box.querySelectorAll('.lp-bar button').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
+            if (mode === 'preview') renderDocPreview(kind);
+        }
+        function fitDocPreview(kind) {
+            const pv = document.getElementById('lp-' + kind), fit = pv && pv.querySelector('.lp-fit'), pg = fit && fit.querySelector('.lp-page');
+            if (!fit || !fit.clientWidth) return;
+            const sc = fit.clientWidth / 794;
+            pg.style.transform = 'scale(' + sc + ')';
+            fit.style.height = (pg.scrollHeight * sc) + 'px';
+        }
+        function renderDocPreview(kind) {
+            const pv = document.getElementById('lp-' + kind); if (!pv || docMode[kind] !== 'preview') return;
+            const d = curDocs || {}, t = [0, 1, 2].includes(d.template) ? d.template : 0;
+            const P = d.palette || (curDocs ? (curDocs.palette = makePalette()) : makePalette());
+            const cvLines = domToLines(document.querySelector('#content-cv .studio-editable'));
+            let html;
+            try {
+                if (kind === 'cv') html = [cvEditorial, cvSidebar, cvModern][t](parseCv(cvLines), P);
+                else {
+                    const C = parseCover(domToLines(document.querySelector('#content-cover .studio-editable')));
+                    html = C ? coverLayout(t, C, parseCv(cvLines), P) : null;
+                }
+            } catch (e) { html = null; }
+            pv.innerHTML = html ? '<div class="lp-fit"><div class="lp-page">' + html + '</div></div>'
+                                : '<div class="lp-note">The layout preview is not available yet. Tap Edit to see and change the text.</div>';
+            fitDocPreview(kind);
+            setTimeout(() => fitDocPreview(kind), 150);   // the studio may still be sliding in
+        }
+        addEventListener('resize', () => { fitDocPreview('cv'); fitDocPreview('cover'); });
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDocPreview); else initDocPreview();
+
         function hslHex(h, s, l) {
             s /= 100; l /= 100;
             const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
