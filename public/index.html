@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script>
+        /* Agent links look like chaniajobsai.co.ke/a/CODE. When a host serves this page for that address, hand the code to the app as ?ref=CODE */
+        (function () { var m = location.pathname.match(/^\/a\/([A-Za-z0-9]{3,16})\/?$/); if (m) location.replace('/?ref=' + m[1].toUpperCase()); })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CHANIA AI - Smart Job Matching</title>
 
