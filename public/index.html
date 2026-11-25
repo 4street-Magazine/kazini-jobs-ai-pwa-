@@ -3216,7 +3216,7 @@
                 <div style="text-align:center;padding:30px 8px 10px">
                     <div style="width:68px;height:68px;border-radius:20px;margin:0 auto 14px;background:var(--accent-orange);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="wallet" style="width:32px;height:32px"></i></div>
                     <div style="font-size:19px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Earn with Chania AI</div>
-                    <div style="font-size:13px;color:var(--text-secondary);line-height:1.55;max-width:300px;margin:0 auto 22px">Become an affiliate agent and get paid straight to your M-Pesa.</div>
+                    <div style="font-size:13px;color:var(--text-secondary);line-height:1.55;max-width:300px;margin:0 auto 22px">Become an affiliate agent and get paid to your M-Pesa through Paystack on a T+2 schedule (2 business days).</div>
                     <button class="aff-btn" onclick="openAffPop()">${AFF_G} Login / Sign up with Google</button>
                 </div>`;
             lucide.createIcons();
@@ -3243,7 +3243,7 @@
         function affStepSignIn() {
             window.affPending = true;
             affBody(`<p style="font-size:14px;font-weight:700;color:var(--text-primary);line-height:1.5;margin:0 0 6px">Earn about KSh 7.74 every time someone you refer applies to a job opportunity.</p>
-                <p style="font-size:12px;color:var(--text-secondary);line-height:1.55;margin:0 0 12px">You are paid only when a referral applies to a job opportunity. No signup bonuses, no click payments. Your share goes straight to your M-Pesa.</p>
+                <p style="font-size:12px;color:var(--text-secondary);line-height:1.55;margin:0 0 12px">You are paid only when a referral applies to a job opportunity. No signup bonuses, no click payments. Your earnings are paid to your M-Pesa through Paystack on a T+2 schedule (2 business days).</p>
                 <div id="affGBtn" style="display:flex;justify-content:center;min-height:44px;margin:10px 0 4px"></div>
                 <button onclick="closeAffPop()" style="display:block;margin:6px auto 0;background:none;border:none;color:var(--text-secondary);font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline">Not now</button>`);
             mountGoogleButton('affGBtn');
@@ -3326,7 +3326,7 @@
             let h = '';
             if (agentTabName === 'home') {
                 const days = agDays(d), act = days.filter(x => x.v).length;
-                const rows = (d.recent || []).slice(0, 6).map(x => `<div class="ag-row"><span class="ag-dot"></span><div><div class="ag-rt">Referral applied to a job</div><div class="ag-rs">${new Date(x.at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })} · ${x.auto ? 'Sent to M-Pesa' : 'Paid by hand'}</div></div><b class="aff-money">+ ${affKes(x.kes)}</b></div>`).join('');
+                const rows = (d.recent || []).slice(0, 6).map(x => `<div class="ag-row"><span class="ag-dot"></span><div><div class="ag-rt">Referral applied to a job</div><div class="ag-rs">${new Date(x.at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })} · ${x.auto ? 'Paystack payout, T+2' : 'Paid by hand'}</div></div><b class="aff-money">+ ${affKes(x.kes)}</b></div>`).join('');
                 h = `<div class="ag-hero"><div class="ag-l">Total earned</div><div class="ag-big">${affKes(d.earned_kes)}</div><div class="ag-sub">from ${d.paid_unlocks} job application${d.paid_unlocks === 1 ? '' : 's'} by people you referred</div>${agBars(days)}<div class="ag-axis"><span>14 days ago</span><span>${act} active day${act === 1 ? '' : 's'}</span><span>Today</span></div></div>
                     <div class="ag-stats"><div class="ag-st"><div class="ag-l">This week</div><b class="aff-money">${affKes(d.week_kes)}</b></div><div class="ag-st"><div class="ag-l">Per application</div><b>≈ ${affKes(net)}</b></div><div class="ag-st"><div class="ag-l">People referred</div><b>${people}</b></div></div>
                     ${d.owed_by_hand_kes > 0 ? `<div class="aff-card" style="border-color:#f59e0b"><div style="font-size:12.5px;color:var(--text-primary);line-height:1.5"><b>${affKes(d.owed_by_hand_kes)}</b> of your earnings will be paid to you by hand.</div></div>` : ''}
@@ -3346,8 +3346,8 @@
                     + '<div class="aff-card"><div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Good to know</div><div style="font-size:13px;line-height:1.6;color:var(--text-secondary)">You earn only when someone applies to a job opportunity. Joining alone does not pay. Want more people, faster? Boost your post on your social media.</div></div>';
             } else {
                 const kv = (k, v) => `<div class="ag-kv"><span>${k}</span><b>${v}</b></div>`;
-                h = head('Account', 'Your details') + `<div class="aff-card" style="padding:6px 16px">${kv('Level', lv.cur)}${kv('Paid to', E(d.pay_phone))}${kv('Payment', d.auto_pay ? 'Automatic' : 'By hand')}${kv('Referral code', E(d.code || ''))}</div>
-                    <div class="aff-card"><div style="font-size:12px;color:var(--text-secondary);line-height:1.6">${d.auto_pay ? 'Your share goes to your M-Pesa when someone you referred applies.' : 'Automatic payment is not active on your account yet, so earnings are paid to you by hand.'} You earn KSh ${d.per_unlock_kes} each time someone you referred applies to a job opportunity. Paystack's small fee is shared equally, so you receive about ${affKes(net)}.</div></div>
+                h = head('Account', 'Your details') + `<div class="aff-card" style="padding:6px 16px">${kv('Level', lv.cur)}${kv('Paid to', E(d.pay_phone))}${kv('Payment', d.auto_pay ? 'Paystack, T+2' : 'By hand')}${kv('Referral code', E(d.code || ''))}</div>
+                    <div class="aff-card"><div style="font-size:12px;color:var(--text-secondary);line-height:1.6">${d.auto_pay ? 'Your earnings are not paid instantly. They are paid to your M-Pesa through Paystack on a T+2 schedule, which means 2 business days after someone you referred applies.' : 'Your earnings are not paid instantly. Until your Paystack payout is set up on your account, they are paid to you by hand.'} You earn KSh ${d.per_unlock_kes} each time someone you referred applies to a job opportunity. Paystack's small fee is shared equally, so you receive about ${affKes(net)}.</div></div>
                     <button class="aff-btn ghost" style="width:100%" onclick="exitBusinessMode()"><i data-lucide="arrow-left-right" style="width:16px;height:16px"></i> Switch to user mode</button>`;
             }
             el.innerHTML = h; lucide.createIcons();
