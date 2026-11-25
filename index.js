@@ -1404,6 +1404,13 @@ async function bindProfile(env, keepId, deviceId, email) {
 }
 const profileOut = row => { try { const p = JSON.parse((row && row.data) || '{}'); return p && p.full_name ? p : null; } catch (e) { return null; } };
 
+let signinsReady = false;
+async function ensureSignins(env) {   // one row per Google sign-in, so the admin dashboard can count daily, weekly, monthly and yearly sign-ins
+  if (signinsReady) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS signins (email TEXT NOT NULL, at INTEGER NOT NULL)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS signins_at ON signins (at)').run();
+  signinsReady = true;
+}
 async function handleGoogleAuth(req, env) {
   if (!googleClientId(env)) return json(env, { ok: false, error: 'not_configured' }, 500);
   let b = {}; try { b = await req.json(); } catch (e) {}
@@ -1412,6 +1419,7 @@ async function handleGoogleAuth(req, env) {
   const g = await verifyGoogleToken(env, b.credential);
   if (!g) return json(env, { ok: false, error: 'invalid_token' });
   await ensureEmailCol(env);
+  try { await ensureSignins(env); await env.DB.prepare('INSERT INTO signins (email, at) VALUES (?, ?)').bind(g.email, Date.now()).run(); } catch (e) { /* never block a sign-in */ }
 
   const byEmail = await env.DB.prepare('SELECT id, status, data, email FROM profiles WHERE email = ?').bind(g.email).first();
   const byDev = await env.DB.prepare('SELECT id, status, data, email FROM profiles WHERE device_id = ?').bind(deviceId).first();
@@ -1691,7 +1699,7 @@ async function handleAffiliateJoin(req, env) {
     } else console.log('affiliate: Paystack setup failed for', a.code, why);
   }
   const out = { ok: true, code: a.code, link: affLink(env, a.code), auto_pay: !!a.split_code };
-  if (!a.split_code) out.message = 'You are signed up and your link works. Automatic M-Pesa payment is not switched on for your account yet, so your earnings are kept and paid to you by hand.';
+  if (!a.split_code) out.message = 'You are signed up and your link works. Your Paystack payout is not set up on your account yet, so your earnings are kept and paid to you by hand.';
   if (!a.split_code && env.PAY_DEBUG === '1') out.debug = why;
   return json(env, out);
 }
@@ -1937,7 +1945,7 @@ async function snapshotDaily(env) {
 }
 async function handleAdminOverview(env) {
   if (adminOvCache && Date.now() - adminOvCache.at < 45000) return json(env, adminOvCache.data);   // many people refreshing cost the database one read pass a minute at most
-  await ensurePayTables(env); await ensureAffTables(env); await ensureMatchCols(env); await ensureJobsCreatedCol(env);
+  await ensurePayTables(env); await ensureAffTables(env); await ensureMatchCols(env); await ensureJobsCreatedCol(env); await ensureSignins(env);
   await snapshotDaily(env);
   const num = async (sql, ...b) => { try { const r = await env.DB.prepare(sql).bind(...b).first(); return r && r.n != null ? Number(r.n) : 0; } catch (e) { return null; } };
   const rows = async (sql, ...b) => { try { const r = await env.DB.prepare(sql).bind(...b).all(); return r.results || []; } catch (e) { return []; } };
@@ -2018,10 +2026,17 @@ async function handleAdminOverview(env) {
   const prevD = daily.slice(0, 7), thisD = daily.slice(7);
   const growth = (a, b) => (a != null && b != null) ? Math.max(0, a - b) : null;   // new profiles = change between two daily totals, so it starts counting from the first snapshot
   const week = (d, free, aff, p0, p1) => ({ jobs_fetched: sum(d, x => x.jobs), matches_created: sum(d, x => x.matches), applications: sum(d, x => x.apps), paid_unlocks: sum(d, x => x.paid), revenue_kes: sum(d, x => x.revenue_kes), free_unlocks: free, agent_earned_kes: kes(aff), new_profiles: growth(p1, p0) });
+  const mo = new Date(today0 + 3 * 3600000), month0 = Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth(), 1) - 3 * 3600000, year0 = Date.UTC(mo.getUTCFullYear(), 0, 1) - 3 * 3600000;
+  const per = { today: today0, week: wk0, month: month0, year: year0 }, T = { money: {}, users: {} };
+  const paySql = "FROM payments WHERE status = 'success'" + real + ' AND paid_at >= ?';
+  await Promise.all(Object.keys(per).map(async k => {   // totals for today, last 7 days, this month and this year (Nairobi time)
+    const [amt, cnt, usr, sgn] = await Promise.all([num('SELECT COALESCE(SUM(amount),0) AS n ' + paySql, per[k]), num('SELECT COUNT(*) AS n ' + paySql, per[k]), num('SELECT COUNT(DISTINCT email) AS n FROM signins WHERE at >= ?', per[k]), num('SELECT COUNT(*) AS n FROM signins WHERE at >= ?', per[k])]);
+    T.money[k] = { kes: kes(amt), n: cnt }; T.users[k] = usr; T.signins = T.signins || {}; T.signins[k] = sgn;
+  }));
   const key = String(env.PAYSTACK_SECRET_KEY || '').trim();
   const firstStat = statRows.map(r => r.day).sort()[0] || null;
   const data = {
-    ok: true, at: now, snapshot_since: firstStat, jobs_tracked_since_note: jobsUntracked,
+    ok: true, at: now, totals: T, snapshot_since: firstStat, jobs_tracked_since_note: jobsUntracked,
     people: { profiles, submitted, with_email: withEmail, referred, push_devices: pushDevices },
     funnel: [['Profiles created', profiles], ['Profiles submitted', submitted], ['Have live matches', matchedNow], ['Unlocked a job', profUnlocked], ['Paid for a job', profPaid], ['Applied to a job', appsPeople]],
     jobs: { total: jobs, today: jobsToday, week: jobs7, prev_week: jobsPrev7, untracked: jobsUntracked },
@@ -2106,6 +2121,8 @@ button.pr{background:var(--or);border-color:var(--or);color:#fff}
 .lc{width:100%;max-width:400px;text-align:center}.lc svg{width:60px;height:60px}.lc h1{font-size:28px;margin:10px 0 4px}.lc p{color:var(--mu);margin:0 0 22px}
 .lc input{width:100%;height:50px;border-radius:12px;border:1px solid var(--ln);background:var(--pane);color:var(--ink);padding:0 16px;font-size:16px;margin-bottom:10px;outline:none}.lc input:focus{border-color:var(--or);box-shadow:0 0 0 3px rgba(255,85,0,.18)}
 .lc button{width:100%;height:50px;font-size:15px}#err{color:var(--rd);font-size:13px;margin-top:12px;min-height:18px}
+.seg{display:inline-flex;background:var(--p2);border:1px solid var(--ln);border-radius:11px;padding:3px;gap:2px}.seg button{height:32px;border:0;background:none;border-radius:8px;color:var(--mu);padding:0 14px;box-shadow:none}.seg button.on{background:var(--pane);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.tr{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--ln);color:var(--mu)}.tr:last-child{border:0;padding-bottom:0}.tr.on{color:var(--ink);font-weight:650}.tr.on span:last-child{color:var(--or)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head>
 <body>
@@ -2118,6 +2135,7 @@ button.pr{background:var(--or);border-color:var(--or);color:#fff}
 <script>
 (function () {
   var key = "", timer = null, D = null, TAB = "overview", CH = {};
+  var PER = "today";
   var OR = "#FF5500", BL = "#3b7bff", GR = "#22c55e", AM = "#f5b942", RD = "#ef4444", PL = ["#FF5500", "#3b7bff", "#22c55e", "#f5b942", "#a78bfa", "#8a8f99"];
   var IC = { overview: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>', matching: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8"/>', money: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h3"/>', agents: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 4.7a3.5 3.5 0 0 1 0 6.6M18 14.8c2 .7 3.2 2.4 3.5 5.2"/>', weekly: '<path d="M5 20v-8M12 20V5M19 20v-5"/>', system: '<path d="M3 12h4l3-8 4 16 3-8h4"/>' };
   var TABS = [["overview", "Overview", "Today at a glance"], ["matching", "Matching", "Jobs, matches and unlocks"], ["money", "Money", "Revenue and payments"], ["agents", "Agents", "Referral partners and payouts"], ["weekly", "Weekly report", "This week against last week"], ["system", "System", "Health and backlog"]];
@@ -2167,10 +2185,17 @@ button.pr{background:var(--or);border-color:var(--or);color:#fff}
     return '<div class="hero"><div class="c"><div class="hd"><div><div class="l">Revenue, last 14 days</div><div class="v xl">' + kes(tot(series("revenue_kes"))) + '</div></div><div style="text-align:right">' + chip(w.this.revenue_kes, w.prev.revenue_kes) + '<div class="s">vs previous 7 days</div></div></div>' + chart("rev", series("revenue_kes"), kes, "area", OR) + '</div><div class="c">' + side + "</div></div>";
   }
   function line(l, v) { return '<div class="row"><span class="l">' + l + "</span><b>" + v + "</b></div>"; }
+  var PERIODS = [["today", "Today"], ["week", "Last 7 days"], ["month", "This month"], ["year", "This year"]];
+  function totals(d) {
+    var T = d.totals; if (!T) return "";
+    var cur = PERIODS.filter(function (p) { return p[0] === PER; })[0];
+    function list(f) { return PERIODS.map(function (p) { return '<div class="tr' + (p[0] === PER ? " on" : "") + '"><span>' + p[1] + "</span><span>" + f(p[0]) + "</span></div>"; }).join(""); }
+    return '<div id="tot" style="margin-bottom:16px"><div class="ph" style="margin-bottom:14px"><div><div style="font-size:17px;font-weight:700;letter-spacing:-.02em">Totals</div><div class="s" style="margin:0">' + cur[1] + ' is shown by default</div></div><div class="seg">' + PERIODS.map(function (p) { return '<button data-p="' + p[0] + '" class="' + (p[0] === PER ? "on" : "") + '">' + p[1] + "</button>"; }).join("") + '</div></div><div class="g2" style="margin:0"><div class="c"><div class="l">Money collected</div><div class="v xl">' + kes(T.money[PER].kes) + '</div><div class="s">' + num(T.money[PER].n) + " paid unlock" + (T.money[PER].n === 1 ? "" : "s") + ' &middot; ' + cur[1].toLowerCase() + '</div><div style="margin-top:14px">' + list(function (k) { return kes(T.money[k].kes); }) + '</div></div><div class="c"><div class="l">Users signed in</div><div class="v xl">' + num(T.users[PER]) + '</div><div class="s">' + num(T.signins[PER]) + ' sign-in' + (T.signins[PER] === 1 ? '' : 's') + ' &middot; ' + cur[1].toLowerCase() + '</div><div style="margin-top:14px">' + list(function (k) { return num(T.users[k]); }) + "</div></div></div></div>";
+  }
   var VIEWS = {
     overview: function (d) {
       var r = d.revenue, p = d.people, a = d.activity, m = d.matching;
-      var h = revHero(d, '<div class="l" style="margin-bottom:4px">Today</div>' + line("Earned", kes(r.today_kes)) + line("Jobs fetched", num(d.jobs.today)) + line("Profiles matched", num(m.profiles_matched_today)) + line("Applications, 24 h", num(a.applications_24h)));
+      var h = totals(d) + revHero(d, '<div class="l" style="margin-bottom:4px">Today</div>' + line("Earned", kes(r.today_kes)) + line("Jobs fetched", num(d.jobs.today)) + line("Profiles matched", num(m.profiles_matched_today)) + line("Applications, 24 h", num(a.applications_24h)));
       h += '<div class="g4">' + kpi("Profiles", num(p.profiles), num(p.submitted) + " submitted", series("profiles"), BL) + kpi("Applications", num(a.applications), num(a.applicants) + " applicants", series("apps"), OR) + kpi("Paid unlocks", num(r.paid_unlocks), (d.unlocks.paid_rate_pct == null ? "-" : d.unlocks.paid_rate_pct + "%") + " of submitted", series("paid"), GR) + kpi("Jobs in database", num(d.jobs.total), num(d.jobs.week) + " fetched this week", series("jobs"), AM) + "</div>";
       h += '<div class="g2">' + card("Journey from sign-up to paying", funnel(d.funnel)) + card("Payment outcomes", donut(payParts(r), pct(r.payments_ok, r.payments_ok + r.payments_failed + r.payments_pending), "success rate")) + "</div>";
       h += '<div class="g2">' + card("Jobs fetched per day", chart("jb", series("jobs"), num, "bar", AM)) + card("Applications per day", chart("ap", series("apps"), num, "bar", OR)) + "</div>";
@@ -2185,7 +2210,7 @@ button.pr{background:var(--or);border-color:var(--or);color:#fff}
     },
     money: function (d) {
       var r = d.revenue, u = d.unlocks;
-      var h = revHero(d, '<div class="l" style="margin-bottom:4px">Summary</div>' + line("Earned today", kes(r.today_kes)) + line("Last 7 days", kes(r.week_kes)) + line("All time", kes(r.all_kes)) + line("Per paying profile", kes(r.per_paying_profile_kes)));
+      var h = totals(d) + revHero(d, '<div class="l" style="margin-bottom:4px">Summary</div>' + line("Earned today", kes(r.today_kes)) + line("Last 7 days", kes(r.week_kes)) + line("All time", kes(r.all_kes)) + line("Per paying profile", kes(r.per_paying_profile_kes)));
       h += '<div class="g2">' + card("Payment outcomes", donut(payParts(r), pct(r.payments_ok, r.payments_ok + r.payments_failed + r.payments_pending), "success rate")) + card("Paid unlocks per day", chart("pu", series("paid"), num, "bar", GR)) + "</div>";
       h += '<div class="c sc"><div class="l" style="margin-bottom:14px">Latest payments</div><table class="tb"><tr><th>When</th><th>Reference</th><th class="r">Amount</th><th>Status</th></tr>' + (d.recent_payments.length ? d.recent_payments.map(function (x) { var c = x.status === "success" ? "ok" : x.status === "failed" ? "no" : "wt"; return "<tr><td>" + ago(x.at) + "</td><td>&hellip;" + esc(x.ref) + '</td><td class="r">' + kes(x.kes) + '</td><td class="' + c + '"><b>' + esc(x.status) + "</b></td></tr>"; }).join("") : '<tr><td colspan="4" class="s">No payments yet.</td></tr>') + "</table></div>";
       return h;
@@ -2193,7 +2218,7 @@ button.pr{background:var(--or);border-color:var(--or);color:#fff}
     agents: function (d) {
       var g = d.agents, mx = Math.max.apply(null, g.top.map(function (x) { return x.earned_kes; }).concat([1])), auto = g.top.filter(function (x) { return x.auto_pay; }).length;
       var h = '<div class="g4">' + kpi("Agents", num(g.count)) + kpi("People referred", num(d.people.referred)) + kpi("Earned by agents", kes(g.earned_kes)) + kpi("Owed by hand", '<span class="' + (g.owed_by_hand_kes > 0 ? "wt" : "") + '">' + kes(g.owed_by_hand_kes) + "</span>", "not paid to M-Pesa automatically") + "</div>";
-      h += '<div class="hero"><div class="c sc"><div class="l" style="margin-bottom:14px">Leaderboard</div><table class="tb"><tr><th>Agent</th><th class="r">People</th><th class="r">Applied</th><th style="min-width:150px">Earned</th><th class="r">Owed</th><th>Payout</th></tr>' + (g.top.length ? g.top.map(function (x) { return "<tr><td><b>" + esc(x.code) + '</b></td><td class="r">' + num(x.people) + '</td><td class="r">' + num(x.unlocks) + "</td><td>" + kes(x.earned_kes) + '<div class="mb"><div style="width:' + Math.round(x.earned_kes / mx * 100) + '%"></div></div></td><td class="r">' + (x.owed_kes > 0 ? '<span class="wt">' + kes(x.owed_kes) + "</span>" : "-") + "</td><td>" + (x.auto_pay ? '<span class="pill ok">Automatic</span>' : '<span class="pill wt">By hand</span>') + "</td></tr>"; }).join("") : '<tr><td colspan="6" class="s">No agents yet.</td></tr>') + "</table></div>" + card("Payout method (top 15)", donut([{ l: "Automatic", v: auto, c: GR }, { l: "By hand", v: g.top.length - auto, c: AM }], num(auto) + "/" + num(g.top.length), "automatic")) + "</div>";
+      h += '<div class="hero"><div class="c sc"><div class="l" style="margin-bottom:14px">Leaderboard</div><table class="tb"><tr><th>Agent</th><th class="r">People</th><th class="r">Applied</th><th style="min-width:150px">Earned</th><th class="r">Owed</th><th>Payout</th></tr>' + (g.top.length ? g.top.map(function (x) { return "<tr><td><b>" + esc(x.code) + '</b></td><td class="r">' + num(x.people) + '</td><td class="r">' + num(x.unlocks) + "</td><td>" + kes(x.earned_kes) + '<div class="mb"><div style="width:' + Math.round(x.earned_kes / mx * 100) + '%"></div></div></td><td class="r">' + (x.owed_kes > 0 ? '<span class="wt">' + kes(x.owed_kes) + "</span>" : "-") + "</td><td>" + (x.auto_pay ? '<span class="pill ok">Paystack</span>' : '<span class="pill wt">By hand</span>') + "</td></tr>"; }).join("") : '<tr><td colspan="6" class="s">No agents yet.</td></tr>') + "</table></div>" + card("Payout method (top 15)", donut([{ l: "Paystack settlement", v: auto, c: GR }, { l: "By hand", v: g.top.length - auto, c: AM }], num(auto) + "/" + num(g.top.length), "on Paystack")) + "</div>";
       return h;
     },
     weekly: function (d) {
@@ -2223,6 +2248,7 @@ button.pr{background:var(--or);border-color:var(--or);color:#fff}
     var cp = $("cp"); if (cp) cp.onclick = function () { var txt = reportText(D); (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { cp.textContent = "Copied"; }, function () { window.prompt("Copy this report:", txt); }); };
   }
   $("tabs").onclick = function (e) { var a = e.target.closest && e.target.closest("a"), t = a && a.getAttribute("data-t"); if (t && D) { TAB = t; try { location.hash = t; } catch (x) {} show(); window.scrollTo(0, 0); } };
+  $("main").onclick = function (e) { var b = e.target.closest && e.target.closest("[data-p]"); if (b && D) { PER = b.getAttribute("data-p"); var t = $("tot"); if (t) t.outerHTML = totals(D); } };
   document.addEventListener("pointermove", hover); document.addEventListener("pointerdown", hover);
   async function load() {
     $("err").textContent = "";
