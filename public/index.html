@@ -5,6 +5,9 @@
     <script>
         /* Agent links look like chaniajobsai.co.ke/a/CODE. When a host serves this page for that address, hand the code to the app as ?ref=CODE */
         (function () { var m = location.pathname.match(/^\/a\/([A-Za-z0-9]{3,16})\/?$/); if (m) location.replace('/?ref=' + m[1].toUpperCase()); })();
+        /* Chrome fires this once the app can be installed; it is kept until the person taps Install App at the end of the career profile */
+        window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__installEv = e; });
+        window.addEventListener('appinstalled', function () { window.__installed = true; window.__installEv = null; });
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CHANIA AI - Smart Job Matching</title>
@@ -1744,11 +1747,38 @@
         const kaziniAudio = new Audio('kazini-ai-message.mp3');
         kaziniAudio.preload = 'auto';
 
-        function playKaziniMessageSound() {
+        /* Reply sound + vibration. Phones only allow sound after the person has touched the page, so the first tap "unlocks" it (iPhone needs this). If the sound file cannot play, a short beep is used instead. */
+        let kaziniUnlocked = false, kaziniCtx = null;
+        const kaziniAC = () => window.AudioContext || window.webkitAudioContext;
+        function unlockKaziniAudio() {
+            if (kaziniUnlocked) return; kaziniUnlocked = true;
             try {
-                kaziniAudio.currentTime = 0;
-                kaziniAudio.play().catch(e => console.log("Audio play blocked until user gesture", e));
+                kaziniAudio.muted = true;
+                const p = kaziniAudio.play();
+                const back = () => { kaziniAudio.pause(); kaziniAudio.currentTime = 0; kaziniAudio.muted = false; };
+                if (p && p.then) p.then(back).catch(() => { kaziniAudio.muted = false; }); else back();
+            } catch (e) { kaziniAudio.muted = false; }
+            try { const C = kaziniAC(); if (C) { kaziniCtx = kaziniCtx || new C(); if (kaziniCtx.state === 'suspended') kaziniCtx.resume(); } } catch (e) {}
+        }
+        ['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, unlockKaziniAudio, { passive: true }));
+        function kaziniBeep() {
+            try {
+                const C = kaziniAC(); if (!C) return;
+                kaziniCtx = kaziniCtx || new C(); if (kaziniCtx.state === 'suspended') kaziniCtx.resume();
+                const t = kaziniCtx.currentTime, o = kaziniCtx.createOscillator(), g = kaziniCtx.createGain();
+                o.type = 'sine'; o.frequency.setValueAtTime(880, t); o.frequency.setValueAtTime(1175, t + 0.12);
+                g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+                o.connect(g); g.connect(kaziniCtx.destination); o.start(t); o.stop(t + 0.32);
             } catch (e) {}
+        }
+        function playKaziniMessageSound() {
+            if (localStorage.getItem('chania_sound') === 'off') return;
+            try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) {}   // Android only; iPhones do not allow web vibration
+            try {
+                kaziniAudio.muted = false; kaziniAudio.currentTime = 0;
+                const p = kaziniAudio.play();
+                if (p && p.catch) p.catch(() => kaziniBeep());
+            } catch (e) { kaziniBeep(); }
         }
 
         const jobData = [];   // filled with the person's own matches from the server
@@ -3149,7 +3179,21 @@
 
         /* the small popup: earning message, Google, then the M-Pesa number */
         const affBody = h => { byId('affPopBody').innerHTML = h; lucide.createIcons(); };
-        function openAffPop() { byId('affPop').style.display = 'flex'; if (localStorage.getItem('chania_email')) affCheckExisting(); else affStepSignIn(); }
+        let affInstallSeen = false;
+        function openAffPop() { byId('affPop').style.display = 'flex'; if (!isInstalled() && !affInstallSeen) affStepInstall(); else affAfterInstall(); }
+        function affAfterInstall() { if (localStorage.getItem('chania_email')) affCheckExisting(); else affStepSignIn(); }
+        function affStepInstall() {   // agents are asked to install the app first, once per visit
+            affInstallSeen = true;
+            affBody(`<div style="text-align:center"><div style="width:56px;height:56px;border-radius:16px;margin:0 auto 10px;background:var(--accent-orange);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="smartphone" style="width:28px;height:28px"></i></div>
+                <p style="font-size:15px;font-weight:800;color:var(--text-primary);margin:0 0 6px">Install Chania AI first</p>
+                <p style="font-size:12.5px;color:var(--text-secondary);line-height:1.55;margin:0 0 14px">Open your earnings and your poster in one tap from your home screen, just like WhatsApp.</p>
+                <button class="aff-btn" onclick="affInstallGo()" style="width:100%">Install app</button>
+                <button onclick="affAfterInstall()" style="display:block;margin:10px auto 0;background:none;border:none;color:var(--text-secondary);font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline">Not now</button></div>`);
+        }
+        async function affInstallGo() {
+            if (await installPrompt()) return affAfterInstall();   // accepted or declined: carry on to sign in
+            affBody(`<p style="font-size:13px;color:var(--text-primary);line-height:1.6;margin:0 0 14px">${installHow()}</p><button class="aff-btn" onclick="affAfterInstall()" style="width:100%">Continue</button>`);
+        }
         function closeAffPop() { window.affPending = false; byId('affPop').style.display = 'none'; }
         function affStepSignIn() {
             window.affPending = true;
@@ -3345,7 +3389,7 @@
             f.style.display = arr.length ? 'flex' : 'none';
         }
         function restoreReplies() {
-            setQuickReplies(flow === 'google_gate' ? ['Continue without Google'] : flow === 'ask_help' ? ['Find Me a Job'] : flow === 'ask_profile' ? ['Create Profile'] : flow === 'review' ? ['Submit Profile'] : flow === 'onboarding' ? stepReplies(Q[qi]) : []);
+            setQuickReplies(flow === 'google_gate' ? ['Continue without Google'] : flow === 'ask_help' ? ['Find Me a Job'] : flow === 'ask_profile' ? ['Create Profile'] : flow === 'review' ? ['Submit Profile'] : flow === 'install' ? ['Install App', 'Skip for now'] : flow === 'onboarding' ? stepReplies(Q[qi]) : []);
         }
         const BOT_AVATAR_SRC = 'kazini-ai-avatar.png';
         const MIN_BOT_DELAY = 3000; // replies feel human: never faster than 3s
@@ -3413,7 +3457,8 @@
             if (flow === 'ask_help' && AGREE.test(text)) return askProfile();
             if (flow === 'ask_profile' && AGREE.test(text)) return startOnboarding();
             if (flow === 'onboarding') return isSideQuestion(text) ? sideQuestion(text) : answer(text);
-            if (flow === 'review' && /submit|confirm|done/i.test(text)) return submitProfile();
+            if (flow === 'install') return /^\s*(install|yes|ndio|sawa)/i.test(text) ? doInstall() : submitProfile();
+            if (flow === 'review' && /submit|confirm|done/i.test(text)) return offerInstall();
             return freeChat(text);
         }
         function sendChatMessage() {
@@ -3557,6 +3602,37 @@
             wrap.innerHTML = `<div>${n > 1 ? 'I have already found several matches for your profile.' : 'I have already found a match for your profile.'} Would you like to explore ${n > 1 ? 'them' : 'it'}?</div><button class="chat-cta" style="margin-top:10px" onclick="openDiscoverTab()">View Opportunities</button>`;
             bubble.insertBefore(wrap, bubble.lastElementChild);   // the time label stays last
             const c = byId('chatMessages'); c.scrollTop = c.scrollHeight;
+        }
+        /* Last step before submitting: offer to install the app, once. It is skipped when the app is already installed or running as an installed app. */
+        let installOffered = false;
+        const isInstalled = () => window.__installed || (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+        function offerInstall() {
+            if (installOffered || isInstalled()) return submitProfile();
+            installOffered = true; flow = 'install'; setQuickReplies([]);
+            bot('One last thing before we submit 📲<br><br>Install Chania AI on your phone. Here is why:<br><br>'
+                + '🔔 <b>Get job alerts on your phone</b> the moment a job matches your profile, so you apply before it closes.<br>'
+                + '⚡ <b>Open it in one tap</b> from your home screen, just like WhatsApp. No searching for the link.<br>'
+                + '🆓 <b>It is free</b> and takes a few seconds. No app store needed.', restoreReplies);
+        }
+        async function installPrompt() {   // Android Chrome's real install box: 'accepted', 'dismissed', or null when the browser offers none
+            const ev = window.__installEv; if (!ev) return null;
+            window.__installEv = null;
+            try { ev.prompt(); const c = await ev.userChoice; return c && c.outcome === 'accepted' ? 'accepted' : 'dismissed'; } catch (e) { return 'dismissed'; }
+        }
+        function installHow() {   // what to do by hand when the browser has no install box
+            const ua = navigator.userAgent || '';
+            const ios = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const inApp = /FBAN|FBAV|Instagram|Line\/|TikTok|musical_ly/i.test(ua);
+            return ios ? 'Tap the <b>Share</b> button in Safari, then choose <b>Add to Home Screen</b>.'
+                : inApp ? 'This browser cannot install apps. Open this page in <b>Chrome</b>, tap the <b>⋮</b> menu, then choose <b>Install app</b> (or <b>Add to Home screen</b>).'
+                : 'Tap the <b>⋮</b> menu in your browser, then choose <b>Install app</b> (or <b>Add to Home screen</b>).';
+        }
+        async function doInstall() {
+            const r = await installPrompt();
+            if (r === 'accepted') return bot('Great choice 🎉 Chania AI is installing on your phone.', submitProfile);
+            if (r) return submitProfile();
+            flow = 'review';   // the next "Submit Profile" goes straight through, because the offer was made
+            bot(installHow() + '<br><br>When you are done, tap Submit Profile 👇', restoreReplies);
         }
         function submitProfile() {
             flow = 'chat'; setQuickReplies([]);
