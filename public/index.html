@@ -1325,7 +1325,7 @@
                     <div class="brand-text">Chania <span>AI</span></div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <button class="theme-toggle" id="modeSwitchBtn" onclick="enterBusinessMode()" title="Switch to business mode" aria-label="Switch to business mode" style="display:none;">
+                    <button class="theme-toggle" id="modeSwitchBtn" onclick="enterBusinessMode()" title="Switch to agent mode" aria-label="Switch to agent mode" style="display:none;">
                         <i data-lucide="arrow-left-right" style="width:18px; height:18px;"></i>
                     </button>
                     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
@@ -1704,7 +1704,7 @@
                     <div class="svg-logo-icon"><svg width="34" height="34" aria-hidden="true"><use href="#chania-logo"/></svg></div>
                     <div><div class="brand-text">Chania <span>AI</span></div><div class="agent-eyebrow">Agent dashboard</div></div>
                 </div>
-                <button class="agent-switch" onclick="exitBusinessMode()" title="Switch to user mode" aria-label="Switch to user mode"><i data-lucide="arrow-left-right" style="width: 20px; height: 20px;"></i></button>
+                <button class="agent-switch" onclick="exitBusinessMode()" title="Switch to job seeker mode" aria-label="Switch to job seeker mode"><i data-lucide="arrow-left-right" style="width: 20px; height: 20px;"></i></button>
             </div>
             <div id="agentBody" style="flex: 1; overflow-y: auto; padding: 4px 18px 24px; width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box;"></div>
             <div class="agent-nav"><button class="agent-nav-item on" data-t="home" onclick="agentTab('home')"><i data-lucide="layout-dashboard" style="width: 22px; height: 22px;"></i><span>Home</span></button><button class="agent-nav-item" data-t="promote" onclick="agentTab('promote')"><i data-lucide="megaphone" style="width: 22px; height: 22px;"></i><span>Promote</span></button><button class="agent-nav-item" data-t="levels" onclick="agentTab('levels')"><i data-lucide="trophy" style="width: 22px; height: 22px;"></i><span>Levels</span></button><button class="agent-nav-item" data-t="guide" onclick="agentTab('guide')"><i data-lucide="circle-help" style="width: 22px; height: 22px;"></i><span>Guide</span></button><button class="agent-nav-item" data-t="account" onclick="agentTab('account')"><i data-lucide="user-round" style="width: 22px; height: 22px;"></i><span>Account</span></button></div>
@@ -3218,7 +3218,7 @@
                 <div style="text-align:center;padding:30px 8px 10px">
                     <div style="width:68px;height:68px;border-radius:20px;margin:0 auto 14px;background:var(--accent-orange);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="wallet" style="width:32px;height:32px"></i></div>
                     <div style="font-size:19px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Earn with Chania AI</div>
-                    <div style="font-size:13px;color:var(--text-secondary);line-height:1.55;max-width:300px;margin:0 auto 22px">Become an affiliate agent and get paid to your M-Pesa through Paystack on a T+2 schedule (2 business days).</div>
+                    <div style="font-size:13px;color:var(--text-secondary);line-height:1.55;max-width:300px;margin:0 auto 22px">Become an affiliate agent and earn income whenever your network applies to opportunities on Chania AI.</div>
                     <button class="aff-btn" onclick="openAffPop()">${AFF_G} Login / Sign up with Google</button>
                 </div>`;
             lucide.createIcons();
@@ -3350,7 +3350,7 @@
                 const kv = (k, v) => `<div class="ag-kv"><span>${k}</span><b>${v}</b></div>`;
                 h = head('Account', 'Your details') + `<div class="aff-card" style="padding:6px 16px">${kv('Level', lv.cur)}${kv('Paid to', E(d.pay_phone))}${kv('Payment', d.auto_pay ? 'Paystack, T+2' : 'By hand')}${kv('Referral code', E(d.code || ''))}</div>
                     <div class="aff-card"><div style="font-size:12px;color:var(--text-secondary);line-height:1.6">${d.auto_pay ? 'Your earnings are not paid instantly. They are paid to your M-Pesa through Paystack on a T+2 schedule, which means 2 business days after someone you referred applies.' : 'Your earnings are not paid instantly. Until your Paystack payout is set up on your account, they are paid to you by hand.'} You earn KSh ${d.per_unlock_kes} each time someone you referred applies to a job opportunity. Paystack's small fee is shared equally, so you receive about ${affKes(net)}.</div></div>
-                    <button class="aff-btn ghost" style="width:100%" onclick="exitBusinessMode()"><i data-lucide="arrow-left-right" style="width:16px;height:16px"></i> Switch to user mode</button>`;
+                    <button class="aff-btn ghost" style="width:100%" onclick="exitBusinessMode()"><i data-lucide="arrow-left-right" style="width:16px;height:16px"></i> Switch to job seeker mode</button>`;
             }
             el.innerHTML = h; lucide.createIcons();
             if (agentTabName === 'promote') affLoadPoster();
