@@ -2043,184 +2043,197 @@ const ADMIN_DASH_HTML = String.raw`<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#FF5500">
+<meta name="theme-color" content="#000000">
 <title>Chania AI Admin</title>
 <style>
-:root{--bg:#f1f5f9;--card:#fff;--surface:#f8fafc;--fg:#0f172a;--muted:#64748b;--line:#e2e8f0;--or:#FF5500;--or2:#E04B00;--orl:rgba(255,85,0,.10);--good:#16a34a;--bad:#dc2626;--warn:#d97706}
-@media (prefers-color-scheme:dark){:root{--bg:#050505;--card:#0f0f0f;--surface:#161616;--fg:#fff;--muted:#9ca3af;--line:#24242a;--good:#22c55e;--bad:#f87171;--warn:#fbbf24}}
+:root{--bg:#f4f5f7;--pane:#fff;--p2:#f6f7f9;--ink:#0b0c10;--mu:#6b7280;--ln:#e7e9ee;--or:#FF5500;--gr:#0a9f55;--am:#c77700;--rd:#d92d20;--sh:0 1px 2px rgba(16,24,40,.04),0 10px 28px -14px rgba(16,24,40,.12);--tp:rgba(0,0,0,.06)}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--pane:#0b0b0c;--p2:#131315;--ink:#f4f4f6;--mu:#8a8f99;--ln:#1e1e22;--gr:#2ecc71;--am:#f5b942;--rd:#ff6b61;--sh:none;--tp:rgba(255,255,255,.07)}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-.top{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-.bar{max-width:1040px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
-.logo{width:34px;height:34px;flex:none}
-.brand{font-weight:800;font-size:19px;letter-spacing:-.02em;white-space:nowrap}.brand b{color:var(--or)}
-.tag{font-size:10.5px;font-weight:800;letter-spacing:.08em;background:var(--orl);color:var(--or);padding:3px 9px;border-radius:99px;margin-left:8px}
-.sp{flex:1}
-@media (max-width:560px){#upd{display:none}.bar{gap:8px}.tag{margin-left:6px}}
-button{min-height:42px;padding:0 18px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(255,85,0,.25)}
-button.alt{background:transparent;color:var(--or);border:1.5px solid var(--or);box-shadow:none}
-nav{max-width:1040px;margin:0 auto;display:flex;gap:4px;padding:0 12px 10px;overflow-x:auto;scrollbar-width:none}
-nav::-webkit-scrollbar{display:none}
-nav a{flex:none;padding:9px 16px;border-radius:99px;font-size:13.5px;font-weight:700;color:var(--muted);text-decoration:none;cursor:pointer}
-nav a.on{background:var(--or);color:#fff}
-.w{max-width:1040px;margin:0 auto;padding:6px 16px 70px}
-h2{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:24px 0 10px;font-weight:800}
-.muted{color:var(--muted);font-size:12.5px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
-.card.hot{background:linear-gradient(150deg,var(--orl),var(--card));border-color:rgba(255,85,0,.35)}
-.l{font-size:11.5px;color:var(--muted);font-weight:700}
-.v{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:2px;font-variant-numeric:tabular-nums}
-.s{font-size:12px;color:var(--muted);margin-top:2px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-@media (max-width:640px){.two{grid-template-columns:1fr}}
-.bars{display:flex;align-items:flex-end;gap:4px;height:110px;margin-top:10px}
-.b{flex:1;background:linear-gradient(180deg,var(--or),var(--or2));border-radius:4px 4px 0 0;min-height:2px}.b.z{background:var(--line)}
-.ax{display:flex;gap:4px;margin-top:4px}.ax span{flex:1;text-align:center;font-size:10px;color:var(--muted)}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:8px;border-bottom:1px solid var(--line)}
-td{padding:10px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
-tr:last-child td{border-bottom:0}
-td.r,th.r{text-align:right}td.r{white-space:nowrap}
-.pill{white-space:nowrap;display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;background:var(--surface);border:1px solid var(--line)}
-.ok{color:var(--good)}.no{color:var(--bad)}.wait{color:var(--warn)}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,"SF Pro Display",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+.sh{display:grid;grid-template-columns:244px 1fr;min-height:100vh}
+.sb{position:sticky;top:0;height:100vh;background:var(--pane);border-right:1px solid var(--ln);padding:24px 14px;display:flex;flex-direction:column;gap:4px}
+.bk{display:flex;align-items:center;gap:10px;padding:0 10px 22px;font-weight:800;font-size:18px;letter-spacing:-.02em}.bk b{color:var(--or)}.bk svg{width:30px;height:30px}
+.sb a{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;color:var(--mu);font-weight:600;cursor:pointer;transition:background .15s,color .15s}
+.sb a:hover{background:var(--p2);color:var(--ink)}
+.sb a.on{background:var(--p2);color:var(--ink);box-shadow:inset 2px 0 0 var(--or)}
+.sb a svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ft{margin-top:auto;padding:14px 12px;border-top:1px solid var(--ln);font-size:12.5px;color:var(--mu);display:flex;flex-direction:column;gap:6px}
+.dt{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:var(--gr);box-shadow:0 0 0 3px rgba(34,197,94,.18)}.dt.w{background:var(--am);box-shadow:0 0 0 3px rgba(245,185,66,.2)}.dt.b{background:var(--rd);box-shadow:0 0 0 3px rgba(255,107,97,.2)}
+main{padding:30px 36px 80px;max-width:1280px;width:100%}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px}
+h1{font-size:26px;letter-spacing:-.03em;margin:0;font-weight:700}.ph p{margin:2px 0 0;color:var(--mu)}
+.ac{display:flex;align-items:center;gap:12px;color:var(--mu);font-size:12.5px}
+button{height:38px;padding:0 16px;border-radius:10px;border:1px solid var(--ln);background:var(--pane);color:var(--ink);font-weight:600;font-size:13.5px;font-family:inherit;cursor:pointer}
+button.pr{background:var(--or);border-color:var(--or);color:#fff}
+.c{background:var(--pane);border:1px solid var(--ln);border-radius:16px;padding:20px;box-shadow:var(--sh)}
+.g4,.g3,.g2,.hero{display:grid;gap:16px;margin-bottom:16px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1.9fr 1fr}
+@media(max-width:1100px){.g4{grid-template-columns:1fr 1fr}.hero,.g3{grid-template-columns:1fr}}
+@media(max-width:900px){.sh{grid-template-columns:1fr}.sb{position:sticky;z-index:9;height:auto;flex-direction:row;overflow-x:auto;padding:10px;border-right:0;border-bottom:1px solid var(--ln)}.bk,.ft{display:none}.sb a{flex:none}main{padding:20px 14px 60px}.g2{grid-template-columns:1fr}h1{font-size:22px}#upd{display:none}}
+.l{color:var(--mu);font-weight:600;font-size:13px}.s{color:var(--mu);font-size:12.5px;margin-top:4px}
+.v{font-size:30px;font-weight:650;letter-spacing:-.035em;line-height:1.15;margin-top:6px}.v.xl{font-size:40px}
+.k{position:relative;overflow:hidden;min-height:128px}.k .sp{position:absolute;right:0;bottom:0;width:48%;height:46px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+.chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700}
+.up{color:var(--gr);background:rgba(34,197,94,.13)}.dw2{color:var(--rd);background:rgba(239,68,68,.13)}.fl{color:var(--mu);background:var(--p2)}
+.ok{color:var(--gr)}.no{color:var(--rd)}.wt{color:var(--am)}
+.ch{position:relative;touch-action:pan-y}.ch svg{display:block;width:100%;height:auto}
+.gl{stroke:var(--ln);stroke-width:1}.ax{fill:var(--mu);font-size:11px}
+.cur{position:absolute;top:5%;bottom:12%;width:1px;background:var(--mu);opacity:.5;display:none}
+.dot{position:absolute;width:11px;height:11px;border-radius:50%;border:2.5px solid var(--pane);transform:translate(-50%,-50%);display:none}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:7px 10px;border-radius:9px;transform:translate(-50%,-125%);white-space:nowrap;display:none;line-height:1.35;z-index:3}
+.row{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--ln)}.row:last-child{border:0;padding-bottom:0}.row b{font-weight:650;font-size:15px}
+.fn{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.fr{display:grid;grid-template-columns:128px 1fr 64px 52px;gap:12px;align-items:center;font-size:13px}
+.fr .ft2{height:26px;background:var(--p2);border-radius:8px;overflow:hidden}.fr .ft2 div{height:100%;background:var(--or);border-radius:8px}
+.fr b{text-align:right;font-weight:650}.fr em{font-style:normal;color:var(--mu);font-size:12px;text-align:right}
+@media(max-width:560px){.fr{grid-template-columns:92px 1fr 52px 40px;font-size:12px}}
+.dnut{display:flex;align-items:center;gap:22px;margin-top:12px;flex-wrap:wrap}
+.dwr{position:relative;width:132px;height:132px;flex:none}.dwr.sm{width:104px;height:104px}.dwr svg{width:100%;height:100%}
+.trk{stroke:var(--tp)}
+.dm{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}.dm b{font-size:21px;font-weight:700;letter-spacing:-.02em}.dm span{font-size:11.5px;color:var(--mu)}
+.lg{display:flex;flex-direction:column;gap:9px;flex:1;min-width:130px}.lg div{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:13px}.lg i{width:9px;height:9px;border-radius:3px}.lg b{margin-left:auto;color:var(--ink);font-weight:650}
+.rg{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--mu);font-weight:600;font-size:13px;text-align:center}.rg .dm b{font-size:19px}
+.rgs{display:flex;justify-content:space-around;gap:10px;flex-wrap:wrap;padding-top:8px}
+.tb{width:100%;border-collapse:collapse}.tb th{text-align:left;font-weight:600;color:var(--mu);font-size:12.5px;padding:0 10px 11px;border-bottom:1px solid var(--ln)}.tb td{padding:13px 10px;border-bottom:1px solid var(--ln)}.tb tr:last-child td{border:0;padding-bottom:0}.tb .r{text-align:right}
 .sc{overflow-x:auto}
-.fun{display:flex;flex-direction:column;gap:8px}
-.fr{display:grid;grid-template-columns:130px 1fr 92px;gap:10px;align-items:center;font-size:13px}
-@media (max-width:480px){.fr{grid-template-columns:96px 1fr 76px;font-size:12px}}
-.ft{height:22px;background:var(--surface);border-radius:8px;overflow:hidden}.ff{height:100%;background:linear-gradient(90deg,var(--or),#ff8a4d);border-radius:8px;min-width:3px}
-.fr .n{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
-.note{background:var(--orl);border:1px solid rgba(255,85,0,.25);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--fg);margin-top:12px}
-.login{max-width:420px;margin:60px auto;text-align:center}
-.login .logo{width:64px;height:64px;margin-bottom:8px}
-.login .row{display:flex;gap:8px;margin-top:14px}
-input{flex:1;min-width:0;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--fg);font-size:16px}
-#err{color:var(--bad);font-size:13px;text-align:center;margin-top:10px}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:650;background:var(--p2);border:1px solid var(--ln)}
+.mb{height:6px;border-radius:6px;background:var(--p2);min-width:70px;overflow:hidden;margin-top:6px}.mb div{height:100%;background:var(--or);border-radius:6px}
+.cmp{display:flex;flex-direction:column;gap:4px;min-width:130px}.cmp div{height:7px;border-radius:5px}
+.note{color:var(--mu);font-size:12.5px;line-height:1.6;padding:6px 2px 0}
+.hl{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--ln)}.hl:last-child{border:0}.hl span:last-child{margin-left:auto;font-weight:650}
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.lc{width:100%;max-width:400px;text-align:center}.lc svg{width:60px;height:60px}.lc h1{font-size:28px;margin:10px 0 4px}.lc p{color:var(--mu);margin:0 0 22px}
+.lc input{width:100%;height:50px;border-radius:12px;border:1px solid var(--ln);background:var(--pane);color:var(--ink);padding:0 16px;font-size:16px;margin-bottom:10px;outline:none}.lc input:focus{border-color:var(--or);box-shadow:0 0 0 3px rgba(255,85,0,.18)}
+.lc button{width:100%;height:50px;font-size:15px}#err{color:var(--rd);font-size:13px;margin-top:12px;min-height:18px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head>
 <body>
 <svg width="0" height="0" style="position:absolute"><symbol id="lg" viewBox="14 8 80 80"><rect x="18" y="34" width="64" height="48" rx="12" stroke="#FF5500" stroke-width="8" fill="none"/><path d="M38 34 V22 C38 18.5 41 16 45 16 H55 C59 16 62 18.5 62 22 V34" stroke="#FF5500" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M82 10 Q82 22 94 22 Q82 22 82 34 Q82 22 70 22 Q82 22 82 10 Z" fill="#FF5500"/></symbol></svg>
-<div id="gate" class="login">
-  <svg class="logo"><use href="#lg"/></svg>
-  <div class="brand" style="font-size:26px">Chania <b>AI</b> <span class="tag">ADMIN</span></div>
-  <p class="muted">Type your admin password. It stays on this screen and is never saved.</p>
-  <div class="row"><input id="k" type="password" placeholder="Admin password" autocomplete="off"><button id="go">Open</button></div>
-  <div id="err"></div>
-</div>
-<div id="app" style="display:none">
-  <div class="top"><div class="bar"><svg class="logo"><use href="#lg"/></svg><div class="brand">Chania <b>AI</b><span class="tag">ADMIN</span></div><div class="sp"></div><span class="muted" id="upd"></span><button class="alt" id="rf">Refresh</button></div>
-  <nav id="tabs"></nav></div>
-  <div class="w" id="main"></div>
+<div id="gate" class="login"><div class="lc"><svg><use href="#lg"/></svg><h1>Chania <span style="color:#FF5500">AI</span> Admin</h1><p>Enter your admin password. It stays on this screen and is never saved.</p><input id="k" type="password" placeholder="Admin password" autocomplete="off"><button id="go" class="pr">Open dashboard</button><div id="err"></div></div></div>
+<div id="app" class="sh" style="display:none">
+  <aside class="sb"><div class="bk"><svg><use href="#lg"/></svg><span>Chania <b>AI</b></span></div><div id="tabs" style="display:contents"></div><div class="ft" id="ftr"></div></aside>
+  <main><div class="ph"><div><h1 id="ttl"></h1><p id="sub"></p></div><div class="ac"><span id="upd"></span><button id="rf">Refresh</button></div></div><div id="main"></div></main>
 </div>
 <script>
 (function () {
-  var key = "", timer = null, DATA = null, TAB = "overview";
-  var TABS = [["overview", "Overview"], ["matching", "Matching"], ["money", "Money"], ["agents", "Agents"], ["weekly", "Weekly report"], ["system", "System"]];
+  var key = "", timer = null, D = null, TAB = "overview", CH = {};
+  var OR = "#FF5500", BL = "#3b7bff", GR = "#22c55e", AM = "#f5b942", RD = "#ef4444", PL = ["#FF5500", "#3b7bff", "#22c55e", "#f5b942", "#a78bfa", "#8a8f99"];
+  var IC = { overview: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>', matching: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8"/>', money: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h3"/>', agents: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 4.7a3.5 3.5 0 0 1 0 6.6M18 14.8c2 .7 3.2 2.4 3.5 5.2"/>', weekly: '<path d="M5 20v-8M12 20V5M19 20v-5"/>', system: '<path d="M3 12h4l3-8 4 16 3-8h4"/>' };
+  var TABS = [["overview", "Overview", "Today at a glance"], ["matching", "Matching", "Jobs, matches and unlocks"], ["money", "Money", "Revenue and payments"], ["agents", "Agents", "Referral partners and payouts"], ["weekly", "Weekly report", "This week against last week"], ["system", "System", "Health and backlog"]];
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function kes(n) { return n == null ? "-" : "KSh " + Number(n).toLocaleString("en-KE", { maximumFractionDigits: 2 }); }
   function num(n) { return n == null ? "-" : Number(n).toLocaleString("en-KE", { maximumFractionDigits: 2 }); }
   function pct(a, b) { return (a == null || !b) ? "-" : Math.round(a / b * 100) + "%"; }
-  function card(l, v, s, hot) { return '<div class="card' + (hot ? ' hot' : '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div>' + (s ? '<div class="s">' + s + '</div>' : '') + '</div>'; }
-  function bars(list, label, fmt) {
-    fmt = fmt || num;
-    var have = list.filter(function (x) { return x.n != null; });
-    var max = Math.max.apply(null, have.map(function (x) { return x.n; }).concat([1]));
-    var b = list.map(function (x) { var n = x.n == null ? 0 : x.n; return '<div class="b' + (n ? '' : ' z') + '" style="height:' + Math.max(2, Math.round(n / max * 100)) + '%" title="' + esc(x.day) + ': ' + (x.n == null ? "no data" : fmt(x.n)) + '"></div>'; }).join("");
-    var a = list.map(function (x) { return '<span>' + esc(x.day.slice(8)) + '</span>'; }).join("");
-    var total = have.reduce(function (t, x) { return t + x.n; }, 0);
-    return '<div class="card"><div class="l">' + esc(label) + ' &middot; last 14 days</div><div class="v">' + (have.length ? fmt(total) : "-") + '</div><div class="bars">' + b + '</div><div class="ax">' + a + '</div></div>';
+  function ago(ms) { if (!ms) return "-"; var s = Math.round((Date.now() - ms) / 1000); if (s < 90) return "just now"; if (s < 5400) return Math.round(s / 60) + " min ago"; if (s < 129600) return Math.round(s / 3600) + " h ago"; return new Date(ms).toLocaleDateString("en-KE", { day: "numeric", month: "short" }); }
+  function chip(a, b) { if (a == null || b == null) return ""; var p = b === 0 ? (a > 0 ? 100 : 0) : Math.round((a - b) / b * 100); return '<span class="chip ' + (p > 0 ? "up" : p < 0 ? "dw2" : "fl") + '">' + (p > 0 ? "+" : "") + p + "%</span>"; }
+  function series(k) { return D.daily.map(function (x) { return { day: x.day, n: x[k] }; }); }
+  function tot(l) { var t = 0, s = false; l.forEach(function (x) { if (x.n != null) { t += x.n; s = true; } }); return s ? t : null; }
+  function fill(l) { var v = l.map(function (x) { return x.n; }), f = null; v.forEach(function (x) { if (f == null && x != null) f = x; }); var p = f == null ? 0 : f; return v.map(function (x) { if (x != null) p = x; return p; }); }
+  function spark(l, c) { var v = fill(l), mx = Math.max.apply(null, v.concat([1])), n = v.length, pts = v.map(function (y, i) { return (i / (n - 1) * 100).toFixed(1) + "," + (26 - y / mx * 22).toFixed(1); }).join(" "); return '<svg class="sp" viewBox="0 0 100 28" preserveAspectRatio="none"><polygon points="0,28 ' + pts + ' 100,28" fill="' + c + '" opacity=".13"/><polyline points="' + pts + '" fill="none" stroke="' + c + '" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>'; }
+  function kpi(l, v, s, sp, c) { return '<div class="c k"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + (s || "&nbsp;") + "</div>" + (sp ? spark(sp, c || OR) : "") + "</div>"; }
+  function chart(id, l, fmt, type, c) {
+    var W = 640, H = 210, pl = 6, pr = 6, pt = 14, pb = 24, n = l.length, v = l.map(function (x) { return x.n || 0; }), mx = Math.max.apply(null, v.concat([1])), iw = W - pl - pr, ih = H - pt - pb;
+    var X = function (i) { return type === "bar" ? pl + iw * (i + .5) / n : pl + iw * i / (n - 1); }, Y = function (a) { return pt + ih * (1 - a / mx); };
+    var s = '<svg viewBox="0 0 ' + W + " " + H + '"><defs><linearGradient id="g' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + c + '" stop-opacity=".34"/><stop offset="1" stop-color="' + c + '" stop-opacity="0"/></linearGradient></defs>';
+    for (var g = 0; g < 4; g++) { var y = pt + ih * g / 3; s += '<line x1="0" x2="' + W + '" y1="' + y + '" y2="' + y + '" class="gl"/>'; }
+    if (type === "bar") { var bw = iw / n * .56; l.forEach(function (x, i) { var h = Math.max(2, ih * (x.n || 0) / mx); s += '<rect x="' + (X(i) - bw / 2) + '" y="' + (pt + ih - h) + '" width="' + bw + '" height="' + h + '" rx="3.5" fill="' + c + '" opacity="' + (x.n == null ? .15 : .92) + '"/>'; }); }
+    else { var pts = v.map(function (a, i) { return X(i).toFixed(1) + "," + Y(a).toFixed(1); }).join(" "); s += '<polygon points="' + pl + "," + (pt + ih) + " " + pts + " " + (W - pr) + "," + (pt + ih) + '" fill="url(#g' + id + ')"/><polyline points="' + pts + '" fill="none" stroke="' + c + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'; }
+    l.forEach(function (x, i) { if (i % 2 === (n - 1) % 2) s += '<text x="' + X(i) + '" y="' + (H - 6) + '" text-anchor="middle" class="ax">' + esc(x.day.slice(8)) + "</text>"; });
+    CH[id] = { l: l, f: fmt, t: type, W: W, H: H, X: X, Y: Y, n: n };
+    return '<div class="ch" data-c="' + id + '">' + s + '</svg><i class="cur"></i><i class="dot" style="background:' + c + '"></i><div class="tip"></div></div>';
   }
-  function series(k) { return DATA.daily.map(function (x) { return { day: x.day, n: x[k] }; }); }
-  function ago(ms) {
-    if (!ms) return "-"; var s = Math.round((Date.now() - ms) / 1000);
-    if (s < 90) return "just now"; if (s < 5400) return Math.round(s / 60) + " min ago";
-    if (s < 129600) return Math.round(s / 3600) + " h ago"; return new Date(ms).toLocaleDateString("en-KE", { day: "numeric", month: "short" });
+  function hover(e) {
+    var all = document.querySelectorAll(".tip,.cur,.dot"), h = e.target.closest && e.target.closest(".ch");
+    if (!h) { for (var q = 0; q < all.length; q++) all[q].style.display = "none"; return; }
+    var c = CH[h.dataset.c], r = h.getBoundingClientRect(), f = (e.clientX - r.left) / r.width * c.W, i = 0, b = 1e9;
+    for (var k = 0; k < c.n; k++) { var d = Math.abs(c.X(k) - f); if (d < b) { b = d; i = k; } }
+    var x = c.l[i], px = c.X(i) / c.W * 100, py = c.Y(x.n || 0) / c.H * 100, cu = h.querySelector(".cur"), dt = h.querySelector(".dot"), tp = h.querySelector(".tip");
+    cu.style.display = "block"; cu.style.left = px + "%"; dt.style.display = c.t === "bar" ? "none" : "block"; dt.style.left = px + "%"; dt.style.top = py + "%";
+    tp.style.display = "block"; tp.style.left = Math.min(86, Math.max(14, px)) + "%"; tp.style.top = py + "%"; tp.innerHTML = "<b>" + (x.n == null ? "No data" : c.f(x.n)) + "</b><br>" + esc(x.day);
   }
-  function delta(a, b) {
-    if (a == null || b == null) return '<span class="muted">-</span>';
-    if (b === 0) return a > 0 ? '<span class="ok">new</span>' : '<span class="muted">0%</span>';
-    var p = Math.round((a - b) / b * 100); if (p === 0) return '<span class="muted">0%</span>';
-    return '<span class="' + (p > 0 ? 'ok' : 'no') + '">' + (p > 0 ? "&#9650; " : "&#9660; ") + Math.abs(p) + '%</span>';
+  function donut(parts, mid, sub) {
+    var t = 0, o = 25, s = ""; parts.forEach(function (p) { t += p.v || 0; });
+    parts.forEach(function (p) { var d = t ? p.v / t * 100 : 0, a = Math.max(0, d - .8); s += '<circle r="15.9" cx="21" cy="21" fill="none" stroke="' + p.c + '" stroke-width="5" stroke-dasharray="' + a.toFixed(2) + " " + (100 - a).toFixed(2) + '" stroke-dashoffset="' + o.toFixed(2) + '"/>'; o -= d; });
+    return '<div class="dnut"><div class="dwr"><svg viewBox="0 0 42 42"><circle r="15.9" cx="21" cy="21" fill="none" class="trk" stroke-width="5"/>' + s + '</svg><div class="dm"><b>' + mid + "</b><span>" + sub + '</span></div></div><div class="lg">' + parts.map(function (p) { return '<div><i style="background:' + p.c + '"></i>' + esc(p.l) + "<b>" + num(p.v) + "</b></div>"; }).join("") + "</div></div>";
   }
+  function ring(p, l, c) { p = p == null ? 0 : Math.max(0, Math.min(100, p)); return '<div class="rg"><div class="dwr sm"><svg viewBox="0 0 42 42"><circle r="15.9" cx="21" cy="21" fill="none" class="trk" stroke-width="4"/><circle r="15.9" cx="21" cy="21" fill="none" stroke="' + c + '" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + p + " " + (100 - p) + '" stroke-dashoffset="25"/></svg><div class="dm"><b>' + p + "%</b></div></div>" + l + "</div>"; }
+  function funnel(f) { var top = f[0][1] || 1; return '<div class="fn">' + f.map(function (x, i) { var w = Math.max(3, Math.round((x[1] || 0) / top * 100)); return '<div class="fr"><span>' + esc(x[0]) + '</span><div class="ft2"><div style="width:' + w + "%;opacity:" + (1 - i * .13) + '"></div></div><b>' + num(x[1]) + "</b><em>" + (i ? pct(x[1], f[i - 1][1]) : "") + "</em></div>"; }).join("") + "</div>"; }
+  function card(l, body, extra) { return '<div class="c"' + (extra || "") + '><div class="l">' + l + "</div>" + body + "</div>"; }
+  function payParts(r) { return [{ l: "Successful", v: r.payments_ok, c: GR }, { l: "Pending", v: r.payments_pending, c: AM }, { l: "Failed", v: r.payments_failed, c: RD }]; }
+  function revHero(d, side) {
+    var w = d.weekly;
+    return '<div class="hero"><div class="c"><div class="hd"><div><div class="l">Revenue, last 14 days</div><div class="v xl">' + kes(tot(series("revenue_kes"))) + '</div></div><div style="text-align:right">' + chip(w.this.revenue_kes, w.prev.revenue_kes) + '<div class="s">vs previous 7 days</div></div></div>' + chart("rev", series("revenue_kes"), kes, "area", OR) + '</div><div class="c">' + side + "</div></div>";
+  }
+  function line(l, v) { return '<div class="row"><span class="l">' + l + "</span><b>" + v + "</b></div>"; }
   var VIEWS = {
     overview: function (d) {
-      var p = d.people, r = d.revenue, a = d.activity, m = d.matching;
-      var h = '<h2>Today</h2><div class="grid">' + card("Earned today", kes(r.today_kes), "", true) + card("Jobs fetched today", num(d.jobs.today), num(d.jobs.week) + " this week") + card("Profiles matched today", num(m.profiles_matched_today), num(m.matches_today) + " new matches") + card("Applications (24 h)", num(a.applications_24h)) + '</div>';
-      h += '<h2>People</h2><div class="grid">' + card("Profiles", num(p.profiles), num(p.submitted) + " submitted") + card("Signed in with Google", num(p.with_email)) + card("Referred by agents", num(p.referred)) + card("Push devices", num(p.push_devices)) + '</div>';
-      var top = d.funnel[0][1] || 1;
-      h += '<h2>Journey: from sign-up to paying</h2><div class="card"><div class="fun">' + d.funnel.map(function (f, i) {
-        var w = Math.max(0, Math.min(100, Math.round((f[1] || 0) / top * 100))), of = i === 1 ? pct(f[1], d.funnel[0][1]) + " of created" : i > 1 ? pct(f[1], d.funnel[1][1]) + " of submitted" : "";
-        return '<div class="fr"><div>' + esc(f[0]) + '</div><div class="ft"><div class="ff" style="width:' + w + '%"></div></div><div class="n">' + num(f[1]) + '<div class="muted" style="font-weight:400;font-size:10.5px">' + of + '</div></div></div>';
-      }).join("") + '</div></div>';
-      h += '<div class="two">' + bars(series("jobs"), "Jobs fetched") + bars(series("apps"), "Applications") + '</div>';
+      var r = d.revenue, p = d.people, a = d.activity, m = d.matching;
+      var h = revHero(d, '<div class="l" style="margin-bottom:4px">Today</div>' + line("Earned", kes(r.today_kes)) + line("Jobs fetched", num(d.jobs.today)) + line("Profiles matched", num(m.profiles_matched_today)) + line("Applications, 24 h", num(a.applications_24h)));
+      h += '<div class="g4">' + kpi("Profiles", num(p.profiles), num(p.submitted) + " submitted", series("profiles"), BL) + kpi("Applications", num(a.applications), num(a.applicants) + " applicants", series("apps"), OR) + kpi("Paid unlocks", num(r.paid_unlocks), (d.unlocks.paid_rate_pct == null ? "-" : d.unlocks.paid_rate_pct + "%") + " of submitted", series("paid"), GR) + kpi("Jobs in database", num(d.jobs.total), num(d.jobs.week) + " fetched this week", series("jobs"), AM) + "</div>";
+      h += '<div class="g2">' + card("Journey from sign-up to paying", funnel(d.funnel)) + card("Payment outcomes", donut(payParts(r), pct(r.payments_ok, r.payments_ok + r.payments_failed + r.payments_pending), "success rate")) + "</div>";
+      h += '<div class="g2">' + card("Jobs fetched per day", chart("jb", series("jobs"), num, "bar", AM)) + card("Applications per day", chart("ap", series("apps"), num, "bar", OR)) + "</div>";
       return h;
     },
     matching: function (d) {
       var m = d.matching, u = d.unlocks, j = d.jobs;
-      var h = '<h2>Jobs fetched</h2><div class="grid">' + card("Jobs in database", num(j.total), num(j.untracked) + " added before tracking began") + card("Fetched today", num(j.today), "", true) + card("Fetched, last 7 days", num(j.week), "before that: " + num(j.prev_week)) + '</div>';
-      h += '<h2>Matches</h2><div class="grid">' + card("Profiles matched today", num(m.profiles_matched_today), num(m.matches_today) + " matches created", true) + card("Avg matches per profile", num(m.avg_per_matched_profile), "among the " + num(m.profiles_with_matches) + " profiles with live matches") + card("Avg per submitted profile", num(m.avg_per_submitted_profile), "all " + num(d.people.submitted) + " submitted profiles") + card("Live matches", num(m.matches_now), "matches expire after 24 h") + card("Avg match score", m.avg_score == null ? "-" : m.avg_score + "%") + '</div>';
-      h += '<h2>Unlocks</h2><div class="grid">' + card("Avg unlocks per profile", num(u.avg_per_profile), "free + paid, over all submitted profiles", true) + card("Per unlocking profile", num(u.avg_per_unlocking_profile), num(u.profiles_unlocked) + " profiles unlocked at least 1") + card("Profiles that unlocked", u.unlock_rate_pct == null ? "-" : u.unlock_rate_pct + "%", "of submitted profiles") + card("Free unlocks", num(u.free), num(u.free_used) + " used") + card("Paid unlocks", num(u.paid), num(u.profiles_paid) + " paying profiles") + card("Repeat payers", num(u.repeat_payers), "paid for 2 or more jobs") + '</div>';
-      h += '<div class="two">' + bars(series("matches"), "Matches created") + bars(series("matched_profiles"), "Profiles matched") + '</div>';
-      h += '<div class="note">Matches are deleted after 24 hours, so match history is kept as a daily snapshot' + (d.snapshot_since ? ' that began on ' + esc(d.snapshot_since) : '') + '. Earlier days show no data. Each day is the highest figure seen that day.</div>';
-      return h;
+      var h = '<div class="g4">' + kpi("Fetched today", num(j.today), num(j.untracked) + " added before tracking", series("jobs"), AM) + kpi("Live matches", num(m.matches_now), "expire after 24 h", series("matches"), OR) + kpi("Avg per matched profile", num(m.avg_per_matched_profile), num(m.profiles_with_matches) + " profiles with matches") + kpi("Profiles matched today", num(m.profiles_matched_today), num(m.matches_today) + " new matches", series("matched_profiles"), BL) + "</div>";
+      h += '<div class="g2">' + card("Matches created per day", chart("mt", series("matches"), num, "bar", OR)) + card("Profiles matched per day", chart("mp", series("matched_profiles"), num, "area", BL)) + "</div>";
+      h += '<div class="g2">' + card("Conversion quality", '<div class="rgs">' + ring(m.avg_score, "Avg match score", OR) + ring(u.unlock_rate_pct, "Unlocked a job", BL) + ring(u.paid_rate_pct, "Paid for a job", GR) + "</div>") + card("Unlocks", line("Avg per profile", num(u.avg_per_profile)) + line("Free unlocks", num(u.free) + " (" + num(u.free_used) + " used)") + line("Paid unlocks", num(u.paid)) + line("Repeat payers", num(u.repeat_payers))) + "</div>";
+      return h + '<div class="note">Matches are deleted after 24 hours, so history comes from a daily snapshot' + (d.snapshot_since ? " that began on " + esc(d.snapshot_since) : "") + ". Earlier days show no data.</div>";
     },
     money: function (d) {
       var r = d.revenue, u = d.unlocks;
-      var h = '<h2>Revenue</h2><div class="grid">' + card("Earned today", kes(r.today_kes), "", true) + card("Last 7 days", kes(r.week_kes), "week before: " + kes(r.prev_week_kes)) + card("All time", kes(r.all_kes), num(r.paid_unlocks) + (r.paid_unlocks === 1 ? " paid unlock" : " paid unlocks") + " at " + kes(r.price_kes)) + card("Per paying profile", kes(r.per_paying_profile_kes), num(u.profiles_paid) + " paying profiles") + '</div>';
-      h += '<h2>Payments</h2><div class="grid">' + card("Successful", '<span class="ok">' + num(r.payments_ok) + '</span>') + card("Failed", '<span class="no">' + num(r.payments_failed) + '</span>') + card("Pending", '<span class="wait">' + num(r.payments_pending) + '</span>') + card("Paid conversion", u.paid_rate_pct == null ? "-" : u.paid_rate_pct + "%", "of submitted profiles") + '</div>';
-      h += '<div class="two">' + bars(series("revenue_kes"), "Revenue", kes) + bars(series("paid"), "Paid unlocks") + '</div>';
-      h += '<h2>Latest payments</h2><div class="card sc" style="padding:6px"><table><tr><th>When</th><th>Ref</th><th class="r">Amount</th><th>Status</th></tr>' +
-        (d.recent_payments.length ? d.recent_payments.map(function (x) { var c = x.status === "success" ? "ok" : x.status === "failed" ? "no" : "wait"; return '<tr><td>' + ago(x.at) + '</td><td>&hellip;' + esc(x.ref) + '</td><td class="r">' + kes(x.kes) + '</td><td class="' + c + '">' + esc(x.status) + '</td></tr>'; }).join("") : '<tr><td colspan="4" class="muted">No payments yet.</td></tr>') + '</table></div>';
+      var h = revHero(d, '<div class="l" style="margin-bottom:4px">Summary</div>' + line("Earned today", kes(r.today_kes)) + line("Last 7 days", kes(r.week_kes)) + line("All time", kes(r.all_kes)) + line("Per paying profile", kes(r.per_paying_profile_kes)));
+      h += '<div class="g2">' + card("Payment outcomes", donut(payParts(r), pct(r.payments_ok, r.payments_ok + r.payments_failed + r.payments_pending), "success rate")) + card("Paid unlocks per day", chart("pu", series("paid"), num, "bar", GR)) + "</div>";
+      h += '<div class="c sc"><div class="l" style="margin-bottom:14px">Latest payments</div><table class="tb"><tr><th>When</th><th>Reference</th><th class="r">Amount</th><th>Status</th></tr>' + (d.recent_payments.length ? d.recent_payments.map(function (x) { var c = x.status === "success" ? "ok" : x.status === "failed" ? "no" : "wt"; return "<tr><td>" + ago(x.at) + "</td><td>&hellip;" + esc(x.ref) + '</td><td class="r">' + kes(x.kes) + '</td><td class="' + c + '"><b>' + esc(x.status) + "</b></td></tr>"; }).join("") : '<tr><td colspan="4" class="s">No payments yet.</td></tr>') + "</table></div>";
       return h;
     },
     agents: function (d) {
-      var g = d.agents;
-      var h = '<h2>Agents</h2><div class="grid">' + card("Agents", num(g.count), "", true) + card("People they referred", num(d.people.referred)) + card("Earned by agents", kes(g.earned_kes)) + card("Owed by hand", '<span class="' + (g.owed_by_hand_kes > 0 ? 'wait' : '') + '">' + kes(g.owed_by_hand_kes) + '</span>', "not auto-paid to M-Pesa") + '</div>';
-      h += '<h2>Leaderboard</h2><div class="card sc" style="padding:6px"><table><tr><th>Code</th><th class="r">People</th><th class="r">Applied</th><th class="r">Earned</th><th class="r">Owed</th><th>Pay</th></tr>' +
-        (g.top.length ? g.top.map(function (x) { return '<tr><td><b>' + esc(x.code) + '</b></td><td class="r">' + num(x.people) + '</td><td class="r">' + num(x.unlocks) + '</td><td class="r">' + kes(x.earned_kes) + '</td><td class="r">' + (x.owed_kes > 0 ? '<span class="wait">' + kes(x.owed_kes) + '</span>' : '-') + '</td><td>' + (x.auto_pay ? '<span class="pill ok">auto</span>' : '<span class="pill wait">by hand</span>') + '</td></tr>'; }).join("") : '<tr><td colspan="6" class="muted">No agents yet.</td></tr>') + '</table></div>';
+      var g = d.agents, mx = Math.max.apply(null, g.top.map(function (x) { return x.earned_kes; }).concat([1])), auto = g.top.filter(function (x) { return x.auto_pay; }).length;
+      var h = '<div class="g4">' + kpi("Agents", num(g.count)) + kpi("People referred", num(d.people.referred)) + kpi("Earned by agents", kes(g.earned_kes)) + kpi("Owed by hand", '<span class="' + (g.owed_by_hand_kes > 0 ? "wt" : "") + '">' + kes(g.owed_by_hand_kes) + "</span>", "not paid to M-Pesa automatically") + "</div>";
+      h += '<div class="hero"><div class="c sc"><div class="l" style="margin-bottom:14px">Leaderboard</div><table class="tb"><tr><th>Agent</th><th class="r">People</th><th class="r">Applied</th><th style="min-width:150px">Earned</th><th class="r">Owed</th><th>Payout</th></tr>' + (g.top.length ? g.top.map(function (x) { return "<tr><td><b>" + esc(x.code) + '</b></td><td class="r">' + num(x.people) + '</td><td class="r">' + num(x.unlocks) + "</td><td>" + kes(x.earned_kes) + '<div class="mb"><div style="width:' + Math.round(x.earned_kes / mx * 100) + '%"></div></div></td><td class="r">' + (x.owed_kes > 0 ? '<span class="wt">' + kes(x.owed_kes) + "</span>" : "-") + "</td><td>" + (x.auto_pay ? '<span class="pill ok">Automatic</span>' : '<span class="pill wt">By hand</span>') + "</td></tr>"; }).join("") : '<tr><td colspan="6" class="s">No agents yet.</td></tr>') + "</table></div>" + card("Payout method (top 15)", donut([{ l: "Automatic", v: auto, c: GR }, { l: "By hand", v: g.top.length - auto, c: AM }], num(auto) + "/" + num(g.top.length), "automatic")) + "</div>";
       return h;
     },
     weekly: function (d) {
       var t = d.weekly.this, p = d.weekly.prev;
       var R = [["New profiles", "new_profiles", num], ["Jobs fetched", "jobs_fetched", num], ["Matches created", "matches_created", num], ["Free unlocks", "free_unlocks", num], ["Paid unlocks", "paid_unlocks", num], ["Applications", "applications", num], ["Revenue", "revenue_kes", kes], ["Agent earnings", "agent_earned_kes", kes]];
-      var h = '<h2>Weekly report</h2><div class="card sc" style="padding:6px"><table><tr><th>Metric</th><th class="r">Last 7 days</th><th class="r">Week before</th><th class="r">Change</th></tr>' + R.map(function (x) { return '<tr><td>' + x[0] + '</td><td class="r"><b>' + x[2](t[x[1]]) + '</b></td><td class="r">' + x[2](p[x[1]]) + '</td><td class="r">' + delta(t[x[1]], p[x[1]]) + '</td></tr>'; }).join("") + '</table></div>';
-      h += '<p style="margin-top:12px"><button id="cp">Copy report for WhatsApp</button></p><div class="note">Last 7 days means today and the 6 days before it, in Nairobi time. Jobs fetched, matches and new profiles only count from when tracking began' + (d.snapshot_since ? ' (' + esc(d.snapshot_since) + ')' : '') + ', so the first weeks will look low. A dash means there is no data yet.</div>';
-      return h;
+      var h = '<div class="c sc"><table class="tb"><tr><th>Metric</th><th class="r">Last 7 days</th><th class="r">Week before</th><th class="r">Change</th><th>Comparison</th></tr>' + R.map(function (x) { var a = t[x[1]], b = p[x[1]], m = Math.max(a || 0, b || 0, 1); return "<tr><td>" + x[0] + '</td><td class="r"><b>' + x[2](a) + '</b></td><td class="r">' + x[2](b) + '</td><td class="r">' + (chip(a, b) || "-") + '</td><td><div class="cmp"><div style="width:' + Math.round((a || 0) / m * 100) + '%;background:' + OR + '"></div><div style="width:' + Math.round((b || 0) / m * 100) + '%;background:var(--tp)"></div></div></td></tr>'; }).join("") + "</table></div>";
+      return h + '<p style="margin:16px 0"><button id="cp" class="pr">Copy report for WhatsApp</button></p><div class="note">Last 7 days means today and the 6 days before it, in Nairobi time. Jobs fetched, matches and new profiles count only from when tracking began' + (d.snapshot_since ? " (" + esc(d.snapshot_since) + ")" : "") + ". A dash means there is no data yet.</div>";
     },
     system: function (d) {
-      var s = d.system;
-      var h = '<h2>System</h2><div class="grid">' + card("Paystack key", '<span class="' + (s.paystack === "live" ? "ok" : "no") + '">' + esc(s.paystack) + '</span>', s.paystack === "TEST" ? "no real M-Pesa prompts" : "") + card("Profiles to embed", num(s.profiles_waiting_to_embed)) + card("Jobs to embed", num(s.jobs_waiting_to_embed)) + card("Pay debug", s.pay_debug ? '<span class="no">on</span>' : "off", s.pay_debug ? "turn off before launch" : "") + '</div>';
-      if (d.activity.apps_by_status.length) h += '<h2>Applications by status</h2><div class="card">' + d.activity.apps_by_status.map(function (x) { return '<span class="pill" style="margin:2px">' + esc(x.status) + ' &middot; ' + num(x.n) + '</span>'; }).join("") + '</div>';
+      var s = d.system, st = d.activity.apps_by_status;
+      function hl(c, l, v) { return '<div class="hl"><span class="dt ' + c + '" style="margin:0"></span><span>' + l + "</span><span>" + v + "</span></div>"; }
+      var h = '<div class="g2">' + card("Health", hl(s.paystack === "live" ? "" : s.paystack === "TEST" ? "w" : "b", "Paystack key", esc(s.paystack)) + hl(s.profiles_waiting_to_embed ? "w" : "", "Profiles waiting to embed", num(s.profiles_waiting_to_embed)) + hl(s.jobs_waiting_to_embed ? "w" : "", "Jobs waiting to embed", num(s.jobs_waiting_to_embed)) + hl(s.pay_debug ? "w" : "", "Payment debug mode", s.pay_debug ? "On, turn off before launch" : "Off")) + card("Applications by status", st.length ? donut(st.map(function (x, i) { return { l: x.status, v: x.n, c: PL[i % PL.length] }; }), num(d.activity.applications), "total") : '<div class="s" style="margin-top:12px">No applications yet.</div>') + "</div>";
       return h;
     }
   };
   function reportText(d) {
     var t = d.weekly.this, p = d.weekly.prev;
     function ln(l, k, f) { var a = t[k], b = p[k]; return "- " + l + ": " + (a == null ? "-" : f(a)) + (b == null ? "" : " (before: " + f(b) + ")"); }
-    return ["*Chania AI weekly report*", "Last 7 days to " + d.daily[13].day, "",
-      ln("New profiles", "new_profiles", num), ln("Jobs fetched", "jobs_fetched", num), ln("Matches created", "matches_created", num), ln("Free unlocks", "free_unlocks", num), ln("Paid unlocks", "paid_unlocks", num), ln("Applications", "applications", num), ln("Revenue", "revenue_kes", kes), ln("Agent earnings", "agent_earned_kes", kes), "",
-      "Totals: " + num(d.people.profiles) + " profiles, " + num(d.agents.count) + " agents, " + num(d.jobs.total) + " jobs.",
-      "Avg matches per profile: " + num(d.matching.avg_per_matched_profile) + ". Avg unlocks per profile: " + num(d.unlocks.avg_per_profile) + "."].join("\n");
+    return ["*Chania AI weekly report*", "Last 7 days to " + d.daily[13].day, "", ln("New profiles", "new_profiles", num), ln("Jobs fetched", "jobs_fetched", num), ln("Matches created", "matches_created", num), ln("Free unlocks", "free_unlocks", num), ln("Paid unlocks", "paid_unlocks", num), ln("Applications", "applications", num), ln("Revenue", "revenue_kes", kes), ln("Agent earnings", "agent_earned_kes", kes), "", "Totals: " + num(d.people.profiles) + " profiles, " + num(d.agents.count) + " agents, " + num(d.jobs.total) + " jobs.", "Avg matches per profile: " + num(d.matching.avg_per_matched_profile) + ". Avg unlocks per profile: " + num(d.unlocks.avg_per_profile) + "."].join("\n");
   }
   function show() {
-    $("tabs").innerHTML = TABS.map(function (t) { return '<a data-t="' + t[0] + '" class="' + (t[0] === TAB ? "on" : "") + '">' + t[1] + '</a>'; }).join("");
-    $("main").innerHTML = VIEWS[TAB](DATA);
-    var cp = $("cp"); if (cp) cp.onclick = function () {
-      var txt = reportText(DATA);
-      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { cp.textContent = "Copied"; }, function () { window.prompt("Copy this report:", txt); });
-    };
+    var cur = TABS.filter(function (t) { return t[0] === TAB; })[0], s = D.system, pc = s.paystack === "live" ? "" : s.paystack === "TEST" ? "w" : "b";
+    $("tabs").innerHTML = TABS.map(function (t) { return '<a data-t="' + t[0] + '" class="' + (t[0] === TAB ? "on" : "") + '"><svg viewBox="0 0 24 24">' + IC[t[0]] + "</svg>" + t[1] + "</a>"; }).join("");
+    $("ftr").innerHTML = '<span><i class="dt ' + pc + '"></i>Paystack ' + esc(s.paystack) + "</span><span>" + num(D.people.profiles) + " profiles &middot; " + num(D.agents.count) + " agents</span>";
+    $("ttl").textContent = cur[1]; $("sub").textContent = cur[2]; CH = {};
+    $("main").innerHTML = VIEWS[TAB](D);
+    var cp = $("cp"); if (cp) cp.onclick = function () { var txt = reportText(D); (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { cp.textContent = "Copied"; }, function () { window.prompt("Copy this report:", txt); }); };
   }
-  $("tabs").onclick = function (e) { var t = e.target && e.target.getAttribute && e.target.getAttribute("data-t"); if (t && DATA) { TAB = t; try { location.hash = t; } catch (x) {} show(); window.scrollTo(0, 0); } };
+  $("tabs").onclick = function (e) { var a = e.target.closest && e.target.closest("a"), t = a && a.getAttribute("data-t"); if (t && D) { TAB = t; try { location.hash = t; } catch (x) {} show(); window.scrollTo(0, 0); } };
+  document.addEventListener("pointermove", hover); document.addEventListener("pointerdown", hover);
   async function load() {
     $("err").textContent = "";
     try {
       var r = await fetch("/admin/overview", { headers: { Authorization: "Bearer " + key }, cache: "no-store" });
       if (r.status === 401) { stop(); $("app").style.display = "none"; $("gate").style.display = ""; $("err").textContent = "Wrong admin password."; return; }
       var d = await r.json(); if (!d.ok) throw new Error(d.error || "failed");
-      DATA = d; $("gate").style.display = "none"; $("app").style.display = ""; $("upd").textContent = "Updated " + new Date(d.at).toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" }); show();
-    } catch (e) { $("err").textContent = "Could not load: " + (e && e.message || e); if (DATA) $("upd").textContent = "Offline"; }
+      D = d; $("gate").style.display = "none"; $("app").style.display = ""; $("upd").textContent = "Updated " + new Date(d.at).toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" }); show();
+    } catch (e) { $("err").textContent = "Could not load: " + (e && e.message || e); if (D) $("upd").textContent = "Offline"; }
   }
-  function stop() { if (timer) clearInterval(timer); timer = null; key = ""; DATA = null; }
+  function stop() { if (timer) clearInterval(timer); timer = null; key = ""; D = null; }
   function start() { key = $("k").value.trim(); if (!key) { $("err").textContent = "Enter your admin password first."; return; } $("k").value = ""; var h = (location.hash || "").slice(1); if (VIEWS[h]) TAB = h; if (timer) clearInterval(timer); load(); timer = setInterval(load, 300000); }
   $("go").onclick = start; $("k").onkeydown = function (e) { if (e.key === "Enter") start(); }; $("rf").onclick = load;
 })();
