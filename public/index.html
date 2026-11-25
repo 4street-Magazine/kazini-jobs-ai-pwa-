@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <script>
         /* Agent links look like chaniajobsai.co.ke/a/CODE. When a host serves this page for that address, hand the code to the app as ?ref=CODE */
-        (function () { var m = location.pathname.match(/^\/a\/([A-Za-z0-9]{3,16})\/?$/); if (m) location.replace('/?ref=' + m[1].toUpperCase()); })();
+        (function () { var m = location.pathname.match(/^\/a\/([A-Za-z0-9]{3,16})\/?$/); if (m) location.replace('/?ref=' + m[1].toUpperCase());
+          /* Short link for the Affiliate tab: chaniajobsai.co.ke/agent */
+          if (/^\/(agent|agents|earn)\/?$/i.test(location.pathname)) location.replace('/?tab=affiliate'); })();
         /* Chrome fires this once the app can be installed; it is kept until the person taps Install App at the end of the career profile */
         window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__installEv = e; });
         window.addEventListener('appinstalled', function () { window.__installed = true; window.__installEv = null; });
@@ -3977,6 +3979,7 @@
             } else {
                 splashDone.then(() => withSkeleton('discoverTab', () => { renderJobs(); lucide.createIcons(); }));
             }
+            if (/[?&]tab=affiliate\b/.test(location.search)) switchTab(document.querySelector('.bottom-nav .nav-item:last-child'), 'affiliateTab');   // the short link /agent lands here
             lucide.createIcons();
         });
     </script>
