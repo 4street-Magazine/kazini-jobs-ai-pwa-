@@ -1250,6 +1250,51 @@
         .agent-typing .td:nth-child(2) { animation-delay: 0.2s; }
         .agent-typing .td:nth-child(3) { animation-delay: 0.4s; }
         @keyframes tdBlink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+    
+        /* ===== Agent dashboard (premium) ===== */
+        .agent-head { border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        .agent-eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0; color: var(--text-muted); }
+        .agent-nav { padding-top: 10px; border-top: 1px solid var(--border-color); }
+        .agent-nav-item { position: relative; transition: color .15s; }
+        .agent-nav-item.on::before { content: ''; position: absolute; top: -11px; left: 50%; width: 24px; height: 3px; margin-left: -12px; border-radius: 0 0 3px 3px; background: var(--accent-orange); }
+        .aff-card { border-radius: 18px; box-shadow: var(--card-shadow); }
+        .aff-btn { border-radius: 12px; }
+        .ag-title { margin: 6px 0 16px; }
+        .ag-title span { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .ag-title h2 { font-size: 24px; font-weight: 800; letter-spacing: -.03em; color: var(--text-primary); margin-top: 2px; }
+        .ag-l { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+        .ag-sub { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
+        .ag-hero { position: relative; overflow: hidden; border-radius: 22px; padding: 20px 18px 14px; margin: 6px 0 12px; border: 1px solid rgba(255,85,0,.32); background: radial-gradient(120% 90% at 0% 0%, rgba(255,85,0,.20), transparent 62%), var(--bg-card); box-shadow: var(--card-shadow); }
+        .ag-big { font-size: 38px; font-weight: 800; letter-spacing: -.04em; line-height: 1.1; color: var(--text-primary); margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+        .ag-bars { display: block; width: 100%; height: auto; margin-top: 18px; }
+        .ag-axis { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-muted); margin-top: 6px; }
+        .ag-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+        .ag-st { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 13px 12px; min-width: 0; }
+        .ag-st b { display: block; margin-top: 4px; font-size: 15.5px; font-weight: 800; letter-spacing: -.02em; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ag-st b.aff-money { color: #16a34a; }
+        .ag-lvl, .ag-tier { display: flex; align-items: center; gap: 14px; }
+        .ag-tier.on { border-color: rgba(255,85,0,.55); }
+        .ag-ring { position: relative; flex: none; }
+        .ag-ring svg { width: 100%; height: 100%; display: block; }
+        .ag-ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--text-primary); }
+        .ag-rt { font-size: 14px; font-weight: 800; color: var(--text-primary); letter-spacing: -.01em; }
+        .ag-rs { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .ag-tag { font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--bg-surface); color: var(--text-muted); }
+        .ag-tag.got { background: rgba(22,163,74,.14); color: #16a34a; }
+        .ag-tag.nx { background: var(--accent-orange-light); color: var(--accent-orange); }
+        .ag-link { flex: 1; min-width: 0; padding: 12px; border-radius: 12px; background: var(--bg-surface); font-size: 12.5px; font-weight: 700; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ag-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+        .ag-row:last-child { border-bottom: 0; }
+        .ag-row > div { flex: 1; min-width: 0; }
+        .ag-row b { font-size: 13px; font-weight: 800; white-space: nowrap; }
+        .ag-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-orange); box-shadow: 0 0 0 4px var(--accent-orange-light); flex: none; }
+        .ag-step { display: flex; gap: 14px; }
+        .ag-sn { position: relative; flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--accent-orange); color: var(--accent-orange); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+        .ag-sn i { position: absolute; top: 34px; left: 50%; width: 1.5px; height: 40px; margin-left: -.75px; background: var(--border-subtle); }
+        .ag-kv { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-muted); }
+        .ag-kv:last-child { border-bottom: 0; }
+        .ag-kv b { color: var(--text-primary); font-weight: 700; }
+        @media (min-width: 1024px) { #agentBody { max-width: 560px !important; } }
     </style>
 </head>
 <body class="dark-theme">
@@ -1655,7 +1700,7 @@
             <div class="agent-head">
                 <div class="brand-logo">
                     <div class="svg-logo-icon"><svg width="34" height="34" aria-hidden="true"><use href="#chania-logo"/></svg></div>
-                    <div><div class="brand-text">Chania <span>AI</span></div><div class="agent-eyebrow">AGENT MODE</div></div>
+                    <div><div class="brand-text">Chania <span>AI</span></div><div class="agent-eyebrow">Agent dashboard</div></div>
                 </div>
                 <button class="agent-switch" onclick="exitBusinessMode()" title="Switch to user mode" aria-label="Switch to user mode"><i data-lucide="arrow-left-right" style="width: 20px; height: 20px;"></i></button>
             </div>
@@ -3260,36 +3305,49 @@
             const from = prev ? prev[1] : 0;
             return { cur, next, pct: next ? Math.min(100, Math.round(((people - from) / (next[1] - from)) * 100)) : 100 };
         }
+        function agDays(d) {   // earnings per day for the last 14 days, from the recent payouts the server sends
+            const day = 864e5, t = new Date(); t.setHours(0, 0, 0, 0);
+            const start = t.getTime() - 13 * day, out = Array.from({ length: 14 }, (_, i) => ({ t: start + i * day, v: 0 }));
+            (d.recent || []).forEach(x => { const i = Math.floor((x.at - start) / day); if (i >= 0 && i < 14) out[i].v += Number(x.kes) || 0; });
+            return out;
+        }
+        function agBars(a) {
+            const mx = Math.max(...a.map(x => x.v), 1), w = 300 / a.length;
+            return `<svg class="ag-bars" viewBox="0 0 300 76" role="img" aria-label="Earnings over the last 14 days">${a.map((x, i) => { const h = x.v ? Math.max(5, x.v / mx * 64) : 3; return `<rect x="${i * w + 2.5}" y="${72 - h}" width="${w - 5}" height="${h}" rx="3" fill="${x.v ? 'var(--accent-orange)' : 'var(--border-subtle)'}" opacity="${x.v && i < a.length - 1 ? .72 : 1}"><title>${new Date(x.t).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })}: ${affKes(x.v)}</title></rect>`; }).join('')}</svg>`;
+        }
+        function agRing(p, txt, sz) {
+            return `<div class="ag-ring" style="width:${sz}px;height:${sz}px"><svg viewBox="0 0 42 42"><circle r="17" cx="21" cy="21" fill="none" stroke="var(--border-subtle)" stroke-width="3.6"/><circle r="17" cx="21" cy="21" fill="none" stroke="var(--accent-orange)" stroke-width="3.6" stroke-linecap="round" stroke-dasharray="${(p * 1.0681).toFixed(1)} 107" transform="rotate(-90 21 21)"/></svg><b>${txt}</b></div>`;
+        }
         function renderAgent() {
             const el = byId('agentBody'), d = affData;
             if (!d) { el.innerHTML = '<div class="aff-card" style="text-align:center;font-size:13px;color:var(--text-secondary)">Loading your dashboard…</div>'; return; }
             const E = escapeHtml, net = Math.max(0, d.per_unlock_kes - 0.26), people = d.people || 0, lv = affLevel(people);   // Paystack's fee is shared 50-50, so a little under the full amount
-            const title = t => `<div class="aff-label" style="margin-top:6px">${t[0]}</div><div style="font-size:20px;font-weight:800;color:var(--text-primary);margin:2px 0 14px">${t[1]}</div>`;
-            const step = (n, t, x) => `<div class="aff-card" style="display:flex;gap:14px;align-items:flex-start"><div style="width:30px;height:30px;flex:none;border-radius:10px;border:1px solid var(--border-subtle);background:var(--bg-surface);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--accent-orange)">${n}</div><div><div style="font-size:15px;font-weight:800;color:var(--text-primary)">${t}</div><div style="font-size:13px;line-height:1.55;color:var(--text-secondary);margin-top:3px">${x}</div></div></div>`;
+            const head = (a, b) => `<div class="ag-title"><span>${a}</span><h2>${b}</h2></div>`;
             let h = '';
             if (agentTabName === 'home') {
-                const rows = d.recent.slice(0, 5).map(x => `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-subtle);font-size:13px;color:var(--text-primary)"><div>Applied to a job opportunity<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">${new Date(x.at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })}</div></div><span class="aff-money" style="font-weight:700">+ ${affKes(x.kes)}</span></div>`).join('');
-                h = `<div class="aff-card" style="background:linear-gradient(160deg,rgba(255,85,0,.14),var(--bg-card));border-color:rgba(255,85,0,.35)"><div class="aff-label">TOTAL EARNED</div><div style="font-size:34px;font-weight:800;color:var(--text-primary);margin:4px 0">${affKes(d.earned_kes)}</div><div style="font-size:12px;color:var(--text-secondary)">from ${d.paid_unlocks} job application${d.paid_unlocks === 1 ? '' : 's'} by people you referred</div></div>
-                    <div style="display:flex;gap:12px"><div class="aff-card" style="flex:1"><div class="aff-label">THIS WEEK</div><div class="aff-money" style="font-size:19px;font-weight:800;margin-top:4px">${affKes(d.week_kes)}</div></div><div class="aff-card" style="flex:1"><div class="aff-label">PER APPLICATION</div><div style="font-size:19px;font-weight:800;color:var(--text-primary);margin-top:4px">≈ ${affKes(net)}</div></div></div>
+                const days = agDays(d), act = days.filter(x => x.v).length;
+                const rows = (d.recent || []).slice(0, 6).map(x => `<div class="ag-row"><span class="ag-dot"></span><div><div class="ag-rt">Referral applied to a job</div><div class="ag-rs">${new Date(x.at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })} · ${x.auto ? 'Sent to M-Pesa' : 'Paid by hand'}</div></div><b class="aff-money">+ ${affKes(x.kes)}</b></div>`).join('');
+                h = `<div class="ag-hero"><div class="ag-l">Total earned</div><div class="ag-big">${affKes(d.earned_kes)}</div><div class="ag-sub">from ${d.paid_unlocks} job application${d.paid_unlocks === 1 ? '' : 's'} by people you referred</div>${agBars(days)}<div class="ag-axis"><span>14 days ago</span><span>${act} active day${act === 1 ? '' : 's'}</span><span>Today</span></div></div>
+                    <div class="ag-stats"><div class="ag-st"><div class="ag-l">This week</div><b class="aff-money">${affKes(d.week_kes)}</b></div><div class="ag-st"><div class="ag-l">Per application</div><b>≈ ${affKes(net)}</b></div><div class="ag-st"><div class="ag-l">People referred</div><b>${people}</b></div></div>
                     ${d.owed_by_hand_kes > 0 ? `<div class="aff-card" style="border-color:#f59e0b"><div style="font-size:12.5px;color:var(--text-primary);line-height:1.5"><b>${affKes(d.owed_by_hand_kes)}</b> of your earnings will be paid to you by hand.</div></div>` : ''}
-                    <div class="aff-card"><div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:8px"><span style="padding:3px 10px;border-radius:99px;background:var(--bg-surface);font-size:11px;font-weight:800;color:var(--text-primary)">${lv.cur.toUpperCase()}</span><span style="font-size:13px;font-weight:700;color:var(--text-primary)">${lv.next ? 'Next level: ' + lv.next[0] : 'Top level reached'}</span></div>${lv.next ? `<span style="font-size:12px;color:var(--text-muted)">${people} / ${lv.next[1]} people</span>` : ''}</div><div style="height:8px;border-radius:99px;background:var(--bg-surface);margin-top:12px"><div style="width:${lv.pct}%;height:8px;border-radius:99px;background:var(--accent-orange)"></div></div></div>
-                    <div class="aff-card"><div class="aff-label" style="margin-bottom:10px">YOUR REFERRAL LINK</div><div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0;padding:12px;border-radius:12px;background:var(--bg-surface);font-size:12.5px;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(d.link.replace(/^https?:\/\//, ''))}</div><button class="aff-btn" style="min-height:44px;padding:0 16px" onclick="affCopy(this)"><i data-lucide="copy" style="width:16px;height:16px"></i>Copy</button></div></div>
-                    <div class="aff-card" style="padding:6px 16px">${rows || '<div style="padding:14px 0;font-size:13px;color:var(--text-secondary);line-height:1.55;text-align:center">No earnings yet. Share your poster and you earn when someone applies to a job opportunity.</div>'}</div>`;
+                    <div class="aff-card ag-lvl">${agRing(lv.pct, lv.pct + '%', 64)}<div style="flex:1;min-width:0"><div class="ag-rt">${lv.cur} level</div><div class="ag-rs">${lv.next ? `${people} of ${lv.next[1]} people to reach ${lv.next[0]}` : 'Top level reached'}</div></div></div>
+                    <div class="aff-card"><div class="ag-l" style="margin-bottom:10px">Your referral link</div><div style="display:flex;gap:8px;align-items:center"><div class="ag-link">${E(d.link.replace(/^https?:\/\//, ''))}</div><button class="aff-btn" style="min-height:44px;padding:0 16px" onclick="affCopy(this)"><i data-lucide="copy" style="width:16px;height:16px"></i>Copy</button></div></div>
+                    <div class="aff-card" style="padding:6px 16px"><div class="ag-l" style="padding:12px 0 2px">Recent earnings</div>${rows || '<div style="padding:14px 0;font-size:13px;color:var(--text-secondary);line-height:1.55;text-align:center">No earnings yet. Share your poster and you earn when someone applies to a job opportunity.</div>'}</div>`;
             } else if (agentTabName === 'promote') {
-                h = title(['PROMOTE', 'Share the poster']) + `<div class="aff-card" style="padding:0;overflow:hidden;text-align:center"><img src="${AFF_POSTER}" alt="Chania AI poster" style="display:block;width:100%;max-height:420px;object-fit:contain;background:var(--bg-surface)" onerror="this.outerHTML='<div style=&quot;height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--text-primary);font-size:14px;font-weight:700&quot;><i data-lucide=&quot;image&quot; style=&quot;width:30px;height:30px;color:var(--accent-orange)&quot;></i>Your Chania AI poster</div>'; lucide.createIcons();"></div>
+                h = head('Promote', 'Share the poster') + `<div class="aff-card" style="padding:0;overflow:hidden;text-align:center"><img src="${AFF_POSTER}" alt="Chania AI poster" style="display:block;width:100%;max-height:420px;object-fit:contain;background:var(--bg-surface)" onerror="this.outerHTML='<div style=&quot;height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--text-primary);font-size:14px;font-weight:700&quot;><i data-lucide=&quot;image&quot; style=&quot;width:30px;height:30px;color:var(--accent-orange)&quot;></i>Your Chania AI poster</div>'; lucide.createIcons();"></div>
                     <button class="aff-btn" id="affPromoBtn" style="width:100%;margin-bottom:12px" onclick="promoteDeal(this)"><i data-lucide="megaphone" style="width:18px;height:18px"></i>Promote Deal</button>
                     <div class="aff-card" style="display:flex;gap:12px;align-items:flex-start;background:rgba(255,85,0,.08);border-color:rgba(255,85,0,.3)"><i data-lucide="trending-up" style="width:20px;height:20px;flex:none;color:var(--accent-orange);margin-top:1px"></i><div><div style="font-size:13.5px;font-weight:800;color:var(--text-primary)">Tip: boost your post</div><div style="font-size:12.5px;line-height:1.55;color:var(--text-secondary);margin-top:3px">Boosting your post on your social media can bring more people, faster.</div></div></div>`;
             } else if (agentTabName === 'levels') {
-                const rows = AFF_LEVELS.map(l => { const on = lv.next && lv.next[0] === l[0], est = (Math.round(l[1] * net / 10) * 10).toLocaleString('en-KE'); return `<div class="aff-card" style="${on ? 'border-color:var(--accent-orange)' : ''}"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:16px;font-weight:800;color:var(--text-primary)">${l[0]}</div><span style="font-size:11px;font-weight:800;color:${people >= l[1] ? '#16a34a' : on ? 'var(--accent-orange)' : 'var(--text-muted)'}">${people >= l[1] ? 'REACHED' : on ? 'NEXT' : ''}</span></div><div style="font-size:12.5px;color:var(--text-secondary);margin:6px 0 10px">${l[1].toLocaleString('en-KE')} people who apply</div><div class="aff-label">ESTIMATED EARNINGS</div><div class="aff-money" style="font-size:22px;font-weight:800;margin-top:2px">≈ KSh ${est}</div></div>`; }).join('');
-                h = title(['LEVELS', 'Grow your level']) + rows + `<div style="font-size:11.5px;line-height:1.5;color:var(--text-muted)">Estimates assume each person applies to 1 job opportunity, earning you about ${affKes(net)}.</div>`;
+                const tiers = AFF_LEVELS.map(l => { const got = people >= l[1], on = lv.next && lv.next[0] === l[0], est = (Math.round(l[1] * net / 10) * 10).toLocaleString('en-KE'), p = got ? 100 : on ? lv.pct : 0; return `<div class="aff-card ag-tier${on ? ' on' : ''}">${agRing(p, got ? '✓' : p + '%', 58)}<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="ag-rt" style="font-size:16px">${l[0]}</div><span class="ag-tag${got ? ' got' : on ? ' nx' : ''}">${got ? 'Reached' : on ? 'Next' : 'Locked'}</span></div><div class="ag-rs">${l[1].toLocaleString('en-KE')} people who apply</div><div class="aff-money" style="font-size:19px;font-weight:800;margin-top:6px">≈ KSh ${est}</div><div class="ag-rs">estimated earnings</div></div></div>`; }).join('');
+                h = head('Levels', 'Grow your level') + `<div class="ag-sub" style="margin:-6px 0 14px">You are at <b style="color:var(--text-primary)">${lv.cur}</b> with ${people} ${people === 1 ? 'person' : 'people'}.</div>` + tiers + `<div style="font-size:11.5px;line-height:1.5;color:var(--text-muted)">Estimates assume each person applies to 1 job opportunity, earning you about ${affKes(net)}.</div>`;
             } else if (agentTabName === 'guide') {
-                h = title(['GUIDE', 'How you earn']) + step(1, 'Share the poster', 'Post it on WhatsApp, Facebook, Instagram or TikTok. That is all you have to do.') + step(2, 'People join Chania AI', 'Chania AI hunts for job opportunities that match each person’s career.') + step(3, 'They apply, you get paid', `When someone from your poster applies to a job opportunity, you earn about ${affKes(net)} on your M-Pesa.`)
+                const step = (n, t, x, last) => `<div class="ag-step"><div class="ag-sn">${n}${last ? '' : '<i></i>'}</div><div style="padding-bottom:${last ? 0 : 22}px"><div class="ag-rt" style="font-size:15px">${t}</div><div class="ag-rs" style="font-size:13px;line-height:1.55;margin-top:3px">${x}</div></div></div>`;
+                h = head('Guide', 'How you earn') + `<div class="aff-card" style="padding:20px 18px">${step(1, 'Share the poster', 'Post it on WhatsApp, Facebook, Instagram or TikTok. That is all you have to do.')}${step(2, 'People join Chania AI', 'Chania AI hunts for job opportunities that match each person’s career.')}${step(3, 'They apply, you get paid', `When someone from your poster applies to a job opportunity, you earn about ${affKes(net)} on your M-Pesa.`, 1)}</div>`
                     + '<div class="aff-card"><div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:6px">Good to know</div><div style="font-size:13px;line-height:1.6;color:var(--text-secondary)">You earn only when someone applies to a job opportunity. Joining alone does not pay. Want more people, faster? Boost your post on your social media.</div></div>';
             } else {
-                h = title(['ACCOUNT', 'Your details']) + `<div class="aff-card"><div class="aff-label">LEVEL</div><div style="font-size:16px;font-weight:800;color:var(--text-primary);margin:4px 0 14px">${lv.cur}</div>
-                    <div class="aff-label">PAID TO</div><div style="font-size:15px;font-weight:700;color:var(--text-primary);margin:4px 0 14px">${E(d.pay_phone)}</div>
-                    <div class="aff-label">PAYMENT</div><div style="font-size:12.5px;color:var(--text-primary);line-height:1.5;margin-top:4px">${d.auto_pay ? 'Automatic. Your share goes to your M-Pesa when someone you referred applies.' : 'Paid by hand. Automatic payment is not active on your account yet.'}</div></div>
-                    <div class="aff-card"><div style="font-size:12px;color:var(--text-secondary);line-height:1.6">You earn KSh ${d.per_unlock_kes} each time someone you referred applies to a job opportunity. Paystack's small fee is shared equally, so you receive about ${affKes(net)}.</div></div>
+                const kv = (k, v) => `<div class="ag-kv"><span>${k}</span><b>${v}</b></div>`;
+                h = head('Account', 'Your details') + `<div class="aff-card" style="padding:6px 16px">${kv('Level', lv.cur)}${kv('Paid to', E(d.pay_phone))}${kv('Payment', d.auto_pay ? 'Automatic' : 'By hand')}${kv('Referral code', E(d.code || ''))}</div>
+                    <div class="aff-card"><div style="font-size:12px;color:var(--text-secondary);line-height:1.6">${d.auto_pay ? 'Your share goes to your M-Pesa when someone you referred applies.' : 'Automatic payment is not active on your account yet, so earnings are paid to you by hand.'} You earn KSh ${d.per_unlock_kes} each time someone you referred applies to a job opportunity. Paystack's small fee is shared equally, so you receive about ${affKes(net)}.</div></div>
                     <button class="aff-btn ghost" style="width:100%" onclick="exitBusinessMode()"><i data-lucide="arrow-left-right" style="width:16px;height:16px"></i> Switch to user mode</button>`;
             }
             el.innerHTML = h; lucide.createIcons();
